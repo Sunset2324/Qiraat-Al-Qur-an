@@ -1,0 +1,9 @@
+{
+	"config": {
+		"genesis.pinf.org/0": {
+			"programs": {
+				"demos/01-HelloWorld": "./demos/01-HelloWorld/program.json"
+			}
+		}
+	}
+}
