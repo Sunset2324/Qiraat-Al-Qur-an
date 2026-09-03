@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Qiraat-Al-Qur-an",
+    "slug": "qiraat-al-qur-an",
+    "version": "1.0.0",
+    "scheme": "qiraat-al-qur-an",
+    "web": {
+      "bundler": "metro"
+    },
+    "jsEngine": "hermes",
+    "plugins": [
+      "expo-router",
+      "expo-status-bar"
+    ]
+  }
+}
