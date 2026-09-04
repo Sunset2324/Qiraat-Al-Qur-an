@@ -1,13 +1,26 @@
+// GANTI baris paling atas menjadi seperti ini:
+import "../src/globals.css";
+
 import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
+import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
+
+function RootLayoutContent() {
+  const { isDarkMode } = useTheme();
+
+  return (
+    <View className={`flex-1 ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fbf8ef]"}`}>
+      <StatusBar style={isDarkMode ? "light" : "dark"} backgroundColor={isDarkMode ? "#1a1a1a" : "#fbf8ef"} />
+      <Slot />
+    </View>
+  );
+}
 
 export default function RootLayout() {
   return (
-    // bg-gray-50 memberikan warna latar abu-abu sangat muda agar footer putih terlihat kontras
-    <View className="flex-1 bg-gray-50">
-      <StatusBar style="dark" />
-      <Slot />
-    </View>
+    <ThemeProvider>
+      <RootLayoutContent />
+    </ThemeProvider>
   );
 }
