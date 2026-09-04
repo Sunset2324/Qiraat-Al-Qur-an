@@ -47,7 +47,7 @@ export default function BismillahScreen() {
 
         {/* Tombol Pintu (Posisinya sudah di bawah teks, ukuran besar, navigasi ke jurnal) */}
         <Pressable
-          onPress={() => router.push("/journal")}
+          onPress={() => router.push("/dashboard")}
           className="mt-6 items-center justify-center rounded-full bg-emerald-700 p-4 shadow-lg active:opacity-80"
         >
           <DoorOpen size={36} color="#ffffff" />
