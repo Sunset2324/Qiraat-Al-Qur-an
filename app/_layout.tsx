@@ -1,4 +1,5 @@
 // GANTI baris paling atas menjadi seperti ini:
+// @ts-ignore NativeWind's global stylesheet is loaded at runtime.
 import "../src/globals.css";
 
 import { Slot } from "expo-router";
@@ -11,7 +12,10 @@ function RootLayoutContent() {
 
   return (
     <View className={`flex-1 ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fbf8ef]"}`}>
-      <StatusBar style={isDarkMode ? "light" : "dark"} backgroundColor={isDarkMode ? "#1a1a1a" : "#fbf8ef"} />
+      <StatusBar
+        style={isDarkMode ? "light" : "dark"}
+        backgroundColor={isDarkMode ? "#1a1a1a" : "#fbf8ef"}
+      />
       <Slot />
     </View>
   );

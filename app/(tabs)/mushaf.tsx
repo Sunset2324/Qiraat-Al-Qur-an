@@ -1,10 +1,63 @@
-import { View, Text, Pressable, ScrollView } from "react-native";
+import { useState, useEffect } from "react";
+import { View, Text, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Bell, Headphones, ChevronRight } from "lucide-react-native";
 import { useTheme } from "../../src/context/ThemeContext";
+import { getDaftarSurah } from "../../src/services/quranService";
 
 export default function MushafScreen() {
   const { isDarkMode, theme } = useTheme();
+  const [surahs, setSurahs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadSurahs();
+  }, []);
+
+  const loadSurahs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getDaftarSurah();
+      setSurahs(data);
+    } catch (err) {
+      setError("Gagal memuat data surah. Pastikan backend berjalan.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Ambil surah pertama sebagai "Lanjutkan Belajar" (default: Al-Fatihah)
+  const lastReadSurah = surahs[0];
+
+  // Array statis 30 Juz (API EQuran.id tidak menyediakan endpoint juz)
+  const juzList = Array.from({ length: 30 }, (_, i) => i + 1);
+
+  // Loading State
+  if (loading) {
+    return (
+      <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center`} edges={['top']}>
+        <ActivityIndicator size="large" color={isDarkMode ? "#34d399" : "#047857"} />
+        <Text className={`mt-4 ${theme.textMuted}`}>Memuat data mushaf...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center p-6`} edges={['top']}>
+        <Text className={`text-center font-semibold mb-4 ${theme.text}`}>{error}</Text>
+        <Pressable 
+          onPress={loadSurahs} 
+          className={`px-6 py-3 rounded-full ${isDarkMode ? 'bg-emerald-600' : 'bg-emerald-700'}`}
+        >
+          <Text className="text-white font-bold">Coba Lagi</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
@@ -48,47 +101,49 @@ export default function MushafScreen() {
           </Pressable>
         </View>
 
-        {/* Card Lanjutkan Belajar */}
-        <View className="px-6 mb-6">
-          <Pressable className={`${theme.bgHeader} rounded-3xl p-5 active:opacity-90`}>
-            <Text className={`text-[10px] font-bold tracking-[2px] ${isDarkMode ? "text-emerald-300" : "text-emerald-200"} mb-2`}>
-              LANJUTKAN BELAJAR
-            </Text>
+        {/* Card Lanjutkan Belajar - Data dari Backend */}
+        {lastReadSurah && (
+          <View className="px-6 mb-6">
+            <Pressable className={`${theme.bgHeader} rounded-3xl p-5 active:opacity-90`}>
+              <Text className={`text-[10px] font-bold tracking-[2px] ${isDarkMode ? "text-emerald-300" : "text-emerald-200"} mb-2`}>
+                LANJUTKAN BELAJAR
+              </Text>
 
-            <View className="flex-row items-center justify-between mb-3">
-              <View className="flex-1 pr-4">
-                <Text className={`text-2xl font-bold leading-tight ${isDarkMode ? "text-white" : "text-white"}`}>
-                  Al-Fātihah
-                </Text>
-                <Text className={`text-xs mt-1 ${isDarkMode ? "text-emerald-300" : "text-emerald-200"}`}>
-                  Surah pembuka • 7 ayat
+              <View className="flex-row items-center justify-between mb-3">
+                <View className="flex-1 pr-4">
+                  <Text className={`text-2xl font-bold leading-tight text-white`}>
+                    {lastReadSurah.namaLatin}
+                  </Text>
+                  <Text className={`text-xs mt-1 ${isDarkMode ? "text-emerald-300" : "text-emerald-200"}`}>
+                    {lastReadSurah.arti} • {lastReadSurah.jumlahAyat} ayat
+                  </Text>
+                </View>
+                <View className={`h-14 w-14 rounded-full border-2 ${isDarkMode ? "border-emerald-500" : "border-emerald-600"} items-center justify-center`}>
+                  <Text className={`font-bold text-lg text-white`}>{lastReadSurah.nomor}</Text>
+                </View>
+              </View>
+
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className={`text-xs ${isDarkMode ? "text-emerald-300" : "text-emerald-200"}`}>Progress Surah</Text>
+                <Text className={`text-xs font-bold ${isDarkMode ? "text-emerald-200" : "text-emerald-100"}`}>
+                  0 dari {lastReadSurah.jumlahAyat} ayat
                 </Text>
               </View>
-              <View className={`h-14 w-14 rounded-full border-2 ${isDarkMode ? "border-emerald-500" : "border-emerald-600"} items-center justify-center`}>
-                <Text className={`font-bold text-lg ${isDarkMode ? "text-white" : "text-white"}`}>1</Text>
+              <View className={`h-1.5 ${isDarkMode ? "bg-emerald-900" : "bg-emerald-900/50"} rounded-full overflow-hidden mb-4`}>
+                <View className="h-full bg-emerald-400 rounded-full" style={{ width: "0%" }} />
               </View>
-            </View>
 
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className={`text-xs ${isDarkMode ? "text-emerald-300" : "text-emerald-200"}`}>Progress Surah</Text>
-              <Text className={`text-xs font-bold ${isDarkMode ? "text-emerald-200" : "text-emerald-100"}`}>
-                4 dari 7 ayat
-              </Text>
-            </View>
-            <View className={`h-1.5 ${isDarkMode ? "bg-emerald-900" : "bg-emerald-900/50"} rounded-full overflow-hidden mb-4`}>
-              <View className="h-full bg-emerald-400 rounded-full" style={{ width: "57%" }} />
-            </View>
-
-            <Pressable className={`${theme.bgCard} rounded-full py-3 flex-row items-center justify-center gap-2 active:opacity-90`}>
-              <Text className={`font-bold text-sm ${isDarkMode ? "text-emerald-700" : "text-emerald-800"}`}>
-                Buka Mushaf
-              </Text>
-              <ChevronRight size={18} color={isDarkMode ? "#059669" : "#065f46"} />
+              <Pressable className={`${theme.bgCard} rounded-full py-3 flex-row items-center justify-center gap-2 active:opacity-90`}>
+                <Text className={`font-bold text-sm ${isDarkMode ? "text-emerald-700" : "text-emerald-800"}`}>
+                  Buka Mushaf
+                </Text>
+                <ChevronRight size={18} color={isDarkMode ? "#059669" : "#065f46"} />
+              </Pressable>
             </Pressable>
-          </Pressable>
-        </View>
+          </View>
+        )}
 
-        {/* Section: Perjalanan Anda */}
+        {/* Section: Perjalanan Anda - 30 Juz */}
         <View className="mb-6">
           <View className="mb-3 px-6">
             <Text className={`text-[10px] font-bold tracking-[2px] ${theme.textSecondary}`}>
@@ -105,22 +160,22 @@ export default function MushafScreen() {
             className="flex-row gap-3 px-6"
             contentContainerStyle={{ paddingRight: 20 }}
           >
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((juz) => (
+            {juzList.map((juz) => (
               <Pressable key={juz} className={`w-[110px] ${theme.bgCard} border ${theme.border} rounded-2xl p-3 active:opacity-90`}>
                 <View className={`h-6 w-6 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"} items-center justify-center mb-2`}>
                   <Text className={`text-[10px] font-bold ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>{juz}</Text>
                 </View>
                 <Text className={`font-bold text-sm ${theme.text}`}>Juz {juz}</Text>
                 <View className={`h-1 ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"} rounded-full mt-2 overflow-hidden`}>
-                  <View className="h-full bg-emerald-600 rounded-full" style={{ width: juz === 1 ? "30%" : juz === 5 ? "15%" : "0%" }} />
+                  <View className="h-full bg-emerald-600 rounded-full" style={{ width: "0%" }} />
                 </View>
-                <Text className={`text-[10px] mt-1 ${theme.textSecondary}`}>{juz === 1 ? "30%" : juz === 5 ? "15%" : "0%"}</Text>
+                <Text className={`text-[10px] mt-1 ${theme.textSecondary}`}>0%</Text>
               </Pressable>
             ))}
           </ScrollView>
         </View>
 
-        {/* Section: Surah untuk dipelajari */}
+        {/* Section: Surah untuk dipelajari - Data dari Backend */}
         <View className="px-6 mb-6">
           <View className="flex-row items-center justify-between mb-3">
             <Text className={`font-bold text-base ${theme.text}`}>
@@ -131,20 +186,17 @@ export default function MushafScreen() {
             </Pressable>
           </View>
 
-          {[
-            { no: 1, name: "Al-Fātihah", info: "7 ayat • Pembuka", progress: "80%" },
-            { no: 2, name: "Al-Baqarah", info: "286 ayat • Madani", progress: "0%" },
-          ].map((surah) => (
-            <Pressable key={surah.no} className={`${theme.bgCard} border ${theme.border} rounded-2xl p-4 flex-row items-center mb-3 active:opacity-90`}>
+          {surahs.slice(0, 10).map((surah) => (
+            <Pressable key={surah.nomor} className={`${theme.bgCard} border ${theme.border} rounded-2xl p-4 flex-row items-center mb-3 active:opacity-90`}>
               <View className={`h-10 w-10 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"} items-center justify-center mr-3`}>
-                <Text className={`font-bold ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>{surah.no}</Text>
+                <Text className={`font-bold ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>{surah.nomor}</Text>
               </View>
               <View className="flex-1 pr-2">
-                <Text className={`font-bold leading-tight ${theme.text}`}>{surah.name}</Text>
-                <Text className={`text-xs mt-0.5 ${theme.textSecondary}`}>{surah.info}</Text>
+                <Text className={`font-bold leading-tight ${theme.text}`}>{surah.namaLatin}</Text>
+                <Text className={`text-xs mt-0.5 ${theme.textSecondary}`}>{surah.jumlahAyat} ayat • {surah.tempatTurun}</Text>
               </View>
               <View className="items-end">
-                <Text className={`font-bold text-sm ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`}>{surah.progress}</Text>
+                <Text className={`font-bold text-sm ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`}>0%</Text>
                 <ChevronRight size={18} color={isDarkMode ? "#34d399" : "#059669"} />
               </View>
             </Pressable>

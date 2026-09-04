@@ -1,101 +1,125 @@
-import { useState, useEffect } from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, Pressable } from 'react-native';
-import { BookOpen, AlertCircle } from 'lucide-react-native';
-import { router } from 'expo-router';
-import { useTheme } from '../../src/context/ThemeContext';
-import { getDaftarSurah } from '../../src/services/quranService';
+import { View, Text, Pressable, ScrollView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import { FileText, Mic, Hand, BookOpen, Heart, CloudSun } from "lucide-react-native";
+import { useState, useEffect } from "react";
+import { useTheme } from "../../src/context/ThemeContext";
 
-export default function MainScreen() {
+export default function DashboardScreen() {
   const { isDarkMode, theme } = useTheme();
-  const [surahs, setSurahs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  const [currentTime, setCurrentTime] = useState(
+    new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+  );
 
   useEffect(() => {
-    loadData();
+    const timer = setInterval(() => {
+      setCurrentTime(
+        new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+      );
+    }, 1000);
+    return () => clearInterval(timer);
   }, []);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getDaftarSurah();
-      setSurahs(data);
-    } catch (err) {
-      setError('Gagal terhubung ke backend. Pastikan server Node.js sedang berjalan.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 1. Tampilan Loading
-  if (loading) {
-    return (
-      <View className={`flex-1 items-center justify-center ${theme.bg}`}>
-        <ActivityIndicator size="large" color={isDarkMode ? '#34d399' : '#047857'} />
-        <Text className={`mt-4 ${theme.textMuted}`}>Memuat data dari backend...</Text>
-      </View>
-    );
-  }
-
-  // 2. Tampilan Error
-  if (error) {
-    return (
-      <View className={`flex-1 items-center justify-center p-6 ${theme.bg}`}>
-        <AlertCircle size={48} color={isDarkMode ? '#f87171' : '#ef4444'} />
-        <Text className={`mt-4 text-center font-semibold ${theme.text}`}>{error}</Text>
-        <Pressable 
-          onPress={loadData} 
-          className={`mt-6 px-6 py-3 rounded-full ${isDarkMode ? 'bg-emerald-600' : 'bg-emerald-700'}`}
-        >
-          <Text className="text-white font-bold">Coba Lagi</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  // 3. Tampilan Utama (FlatList)
   return (
-    <View className={`flex-1 ${theme.bg}`}>
-      {/* Header Sederhana */}
-      <View className={`px-5 pt-12 pb-4 border-b ${theme.border}`}>
-        <Text className={`text-2xl font-bold ${theme.text}`}>Daftar Surah</Text>
-        <Text className={`text-sm mt-1 ${theme.textMuted}`}>{surahs.length} Surah tersedia</Text>
-      </View>
-
-      <FlatList
-        data={surahs}
-        keyExtractor={(item) => item.nomor.toString()}
-        contentContainerClassName="p-4 pb-20"
+    <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
+      <ScrollView 
+        className="flex-1" 
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <TouchableOpacity 
-            onPress={() => router.push(`/surah/${item.nomor}`)} // Nanti arahkan ke detail
-            className={`flex-row items-center p-4 mb-3 rounded-2xl border ${theme.border} ${theme.bgCard} shadow-sm active:opacity-80`}
+        contentContainerStyle={{ paddingBottom: 120 }}
+      >
+        
+        {/* 1. HEADER: Jam & Adzan */}
+        <View className={`h-[30vh] min-h-[220px] ${theme.bgHeader} rounded-b-[40px] px-6 pt-6 relative overflow-hidden`}>
+          <View className={`absolute -right-10 -top-10 h-40 w-40 ${isDarkMode ? "bg-emerald-900" : "bg-emerald-700"} rounded-full opacity-50`} />
+          
+          <View className="flex-row justify-between items-start mb-4">
+            <View>
+              <Text className={`text-sm font-medium ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>
+                Jakarta, ID
+              </Text>
+              <Text className={`text-4xl font-bold mt-1 tracking-tight ${isDarkMode ? "text-white" : "text-white"}`}>
+                {currentTime}
+              </Text>
+            </View>
+            <View className={`${isDarkMode ? "bg-emerald-800" : "bg-emerald-700/50"} p-3 rounded-2xl`}>
+              <CloudSun size={24} color="#fbbf24" />
+            </View>
+          </View>
+
+          <View className={`${isDarkMode ? "bg-emerald-900/60" : "bg-emerald-700/40"} p-4 rounded-2xl border ${isDarkMode ? "border-emerald-700" : "border-emerald-600/50"} mt-2`}>
+            <Text className={`text-xs font-medium mb-1 ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>Adzan Terdekat</Text>
+            <View className="flex-row items-center justify-between">
+              <Text className={`text-lg font-bold ${isDarkMode ? "text-white" : "text-white"}`}>Ashar</Text>
+              <Text className={`text-sm ${isDarkMode ? "text-emerald-300" : "text-emerald-200"}`}>15:12 WIB</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 2. MAIN CONTENT */}
+        <View className="flex-1 px-6 -mt-16">
+          
+          {/* Tombol Jurnal Kesehatan */}
+          <Pressable
+            onPress={() => router.push("/journal")}
+            className={`${theme.bgCard} rounded-3xl border ${theme.border} py-8 flex-row items-center justify-center gap-3 mb-8 shadow-sm active:opacity-90`}
           >
-            {/* Nomor */}
-            <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 border ${theme.border} bg-opacity-10`} 
-                  style={{ backgroundColor: isDarkMode ? 'rgba(52, 211, 153, 0.1)' : 'rgba(4, 120, 87, 0.1)' }}>
-              <Text className={`text-lg font-bold ${isDarkMode ? 'text-emerald-400' : 'text-emerald-700'}`}>
-                {item.nomor}
-              </Text>
-            </View>
-
-            {/* Info Latin & Arti */}
-            <View className="flex-1">
-              <Text className={`text-base font-semibold ${theme.text}`}>{item.namaLatin}</Text>
-              <Text className={`text-xs mt-1 ${theme.textMuted}`}>
-                {item.arti} • {item.jumlahAyat} Ayat
-              </Text>
-            </View>
-
-            {/* Nama Arab */}
-            <Text className={`text-xl ${isDarkMode ? 'text-emerald-300' : 'text-emerald-800'}`} style={{ fontFamily: 'System' }}>
-              {item.nama}
+            <FileText size={28} color={theme.iconColor} />
+            <Text className={`font-bold text-lg ${isDarkMode ? "text-gray-100" : "text-[#7a6132]"}`}>
+              Jurnal Kesehatan
             </Text>
-          </TouchableOpacity>
-        )}
-      />
-    </View>
+          </Pressable>
+
+          {/* Grid 4 Fitur */}
+          <Text className={`font-bold text-lg mb-4 ${theme.text}`}>Eksplorasi Fitur</Text>
+          <View className="flex-row flex-wrap justify-between mb-8">
+            
+            {/* Qiraat */}
+            <Pressable 
+              onPress={() => router.push("/qiraat")}
+              className={`w-[48%] ${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center mb-4 shadow-sm active:opacity-90`}
+            >
+              <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
+                <Mic size={28} color={theme.iconColor} />
+              </View>
+              <Text className={`font-bold text-sm ${theme.text}`}>Qiraat</Text>
+            </Pressable>
+
+            {/* Dzikir & Doa - SUDAH DISAMBUNGKAN */}
+            <Pressable 
+              onPress={() => router.push("/screen/dzikir-doa/dzikir-doa")}
+              className={`w-[48%] ${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center mb-4 shadow-sm active:opacity-90`}
+            >
+              <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
+                <Hand size={28} color={theme.iconColor} />
+              </View>
+              <Text className={`font-bold text-sm text-center ${theme.text}`}>Dzikir & Doa</Text>
+            </Pressable>
+
+            {/* Tajweed */}
+            <Pressable 
+              onPress={() => router.push("/tajweed")}
+              className={`w-[48%] ${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center shadow-sm active:opacity-90`}
+            >
+              <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
+                <BookOpen size={28} color={theme.iconColor} />
+              </View>
+              <Text className={`font-bold text-sm ${theme.text}`}>Tajweed</Text>
+            </Pressable>
+
+            {/* Thibbun Nabawi */}
+            <Pressable 
+              onPress={() => router.push("/thibbun-nabawi")}
+              className={`w-[48%] ${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center shadow-sm active:opacity-90`}
+            >
+              <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
+                <Heart size={28} color={theme.iconColor} />
+              </View>
+              <Text className={`font-bold text-sm text-center ${theme.text}`}>Thibbun Nabawi</Text>
+            </Pressable>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
