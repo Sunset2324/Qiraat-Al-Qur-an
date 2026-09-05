@@ -9,6 +9,7 @@
     "axios": "^1.20.0",
     "config": "^5.0.1",
     "expo": "^57.0.20",
+    "expo-av": "^16.0.8",
     "expo-constants": "~57.0.17",
     "expo-linking": "~57.0.9",
     "expo-router": "^57.0.19",

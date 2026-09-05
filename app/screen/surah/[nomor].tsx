@@ -5,6 +5,8 @@ import { useLocalSearchParams, router } from "expo-router";
 import { ArrowLeft, Bookmark, Headphones, Volume2 } from "lucide-react-native";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { getDetailSurah } from "../../../src/services/quranService";
+import { useAudio } from "../../../src/hooks/useaudio";
+import AudioPlayer from "../../../src/components/AudioPlayer";
 
 // Type untuk Ayat
 interface AyatItem {
