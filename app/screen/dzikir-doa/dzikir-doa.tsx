@@ -1,69 +1,121 @@
-import { View, Text, Pressable, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, Pressable, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { 
   ArrowLeft, Check, Sun, Moon, HandHeart, Building2, 
-  Bed, DoorOpen, Utensils, ArrowDown, ArrowUp, BookOpen 
+  Bed, DoorOpen, Utensils, ArrowDown, ArrowUp, BookOpen, AlertCircle 
 } from "lucide-react-native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "../../../src/context/ThemeContext";
+import { getDaftarDoa } from "../../../src/services/quranService"; // <-- IMPORT DARI SERVICE
 
-// Type untuk Dzikir & Doa
-interface DzikirDoaItem {
-  id: string;
-  title: string;
-  arabic: string;
-  category: "pagi" | "petang" | "sholat" | "doa";
-  iconName: string;
+// Type untuk data dari API
+interface DoaItem {
+  id: number;
+  judul: string;
+  doa: string;
+  latin?: string;
+  arti: string;
+  grup?: string;
+  tags?: string[];
 }
 
-// DATA DUMMY LENGKAP
-const DZIKIR_DOA_DATA: DzikirDoaItem[] = [
-  { id: "1", title: "DZIKIR PAGI", arabic: "أَذْكَارُ الصَّبَاحِ", category: "pagi", iconName: "sun" },
-  { id: "2", title: "DZIKIR PETANG", arabic: "أَذْكَارُ الْمَسَاءِ", category: "petang", iconName: "moon" },
-  { id: "3", title: "SETELAH SHOLAT", arabic: "بَعْدَ الصَّلاةِ", category: "sholat", iconName: "prayer" },
-  { id: "4", title: "DOA RUKUK", arabic: "سُبْحَانَ رَبِّيَ الْعَظِيمِ", category: "sholat", iconName: "arrow-down" },
-  { id: "5", title: "DOA SUJUD", arabic: "سُبْحَانَ رَبِّيَ الْأَعْلَى", category: "sholat", iconName: "arrow-down" },
-  { id: "6", title: "DOA I'TIDAL", arabic: "سَمِعَ اللهُ لِمَنْ حَمِدَهُ", category: "sholat", iconName: "arrow-up" },
-  { id: "7", title: "MASUK MASJID", arabic: "اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ", category: "doa", iconName: "mosque" },
-  { id: "8", title: "DOA TIDUR", arabic: "بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا", category: "doa", iconName: "bed" },
-  { id: "9", title: "DOA MAKAN", arabic: "اللَّهُمَّ بَارِكْ لَنَا فِيمَا رَزَقْتَنَا", category: "doa", iconName: "utensils" },
-  { id: "10", title: "KELUAR RUMAH", arabic: "بِسْمِ اللهِ تَوَكَّلْتُ عَلَى اللهِ", category: "doa", iconName: "door-open" },
-];
-
 const FILTERS = [
-  { key: "all", label: "semua" },
-  { key: "pagi-petang", label: "Pagi & sore" },
+  { key: "all", label: "Semua" },
+  { key: "pagi-petang", label: "Pagi & Sore" },
   { key: "sholat", label: "Sholat" },
-  { key: "doa", label: "Doa" },
+  { key: "doa", label: "Doa Harian" },
 ];
 
-const IconMap: { [key: string]: any } = {
-  sun: Sun,
-  moon: Moon,
-  prayer: HandHeart,
-  "arrow-down": ArrowDown,
-  "arrow-up": ArrowUp,
-  mosque: Building2,
-  bed: Bed,
-  utensils: Utensils,
-  "door-open": DoorOpen,
+// Fungsi pintar untuk menentukan ikon berdasarkan data API
+const getIconForDoa = (item: DoaItem) => {
+  const textToCheck = `${item.judul} ${item.grup} ${(item.tags || []).join(" ")}`.toLowerCase();
+  
+  if (textToCheck.includes("pagi")) return Sun;
+  if (textToCheck.includes("petang") || textToCheck.includes("sore")) return Moon;
+  if (textToCheck.includes("sholat") || textToCheck.includes("shalat") || textToCheck.includes("rukuk") || textToCheck.includes("sujud")) return HandHeart;
+  if (textToCheck.includes("masjid") || textToCheck.includes("mosque")) return Building2;
+  if (textToCheck.includes("tidur")) return Bed;
+  if (textToCheck.includes("makan")) return Utensils;
+  if (textToCheck.includes("rumah") || textToCheck.includes("keluar") || textToCheck.includes("masuk")) return DoorOpen;
+  
+  return BookOpen; // Default icon
 };
 
 export default function DzikirDoaScreen() {
   const { isDarkMode, theme } = useTheme();
   const [activeFilter, setActiveFilter] = useState("all");
-  const [activeBacaan, setActiveBacaan] = useState<string | null>(null);
+  const [activeBacaan, setActiveBacaan] = useState<number | null>(null);
 
-  const activeItem = DZIKIR_DOA_DATA.find((item) => item.id === activeBacaan);
+  // State untuk Data API
+  const [doaList, setDoaList] = useState<DoaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredData = DZIKIR_DOA_DATA.filter((item) => {
+  // 1. Fetch Data dari Backend saat komponen pertama kali dimuat
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getDaftarDoa(); // Memanggil service yang sudah kita buat
+        setDoaList(data);
+      } catch (err) {
+        setError("Gagal memuat data doa. Pastikan backend berjalan.");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const activeItem = doaList.find((item) => item.id === activeBacaan);
+
+  // 2. Logika Filter yang disesuaikan dengan data API
+  const filteredData = doaList.filter((item) => {
     if (activeFilter === "all") return true;
+    
+    const textToCheck = `${item.judul} ${item.grup}`.toLowerCase();
+
     if (activeFilter === "pagi-petang") {
-      return item.category === "pagi" || item.category === "petang";
+      return textToCheck.includes("pagi") || textToCheck.includes("petang") || textToCheck.includes("sore");
     }
-    return item.category === activeFilter;
+    if (activeFilter === "sholat") {
+      return textToCheck.includes("sholat") || textToCheck.includes("shalat") || textToCheck.includes("rukuk") || textToCheck.includes("sujud") || textToCheck.includes("iftitah");
+    }
+    if (activeFilter === "doa") {
+      // Tampilkan yang bukan sholat, pagi, atau petang (Doa umum)
+      return !textToCheck.includes("sholat") && !textToCheck.includes("pagi") && !textToCheck.includes("petang");
+    }
+    return true;
   });
+
+  // 3. Tampilan Loading
+  if (loading) {
+    return (
+      <SafeAreaView className={`flex-1 justify-center items-center ${theme.bg}`}>
+        <ActivityIndicator size="large" color={isDarkMode ? "#34d399" : "#047857"} />
+        <Text className={`mt-4 ${theme.textMuted}`}>Memuat Dzikir & Doa...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // 4. Tampilan Error
+  if (error) {
+    return (
+      <SafeAreaView className={`flex-1 justify-center items-center p-6 ${theme.bg}`}>
+        <AlertCircle size={48} color={isDarkMode ? "#f87171" : "#ef4444"} />
+        <Text className={`mt-4 text-center font-semibold ${theme.text}`}>{error}</Text>
+        <Pressable 
+          onPress={() => { setActiveFilter("all"); setLoading(true); }} 
+          className={`mt-6 px-6 py-3 rounded-full ${isDarkMode ? "bg-emerald-600" : "bg-emerald-700"}`}
+        >
+          <Text className="text-white font-bold">Coba Lagi</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
@@ -99,13 +151,13 @@ export default function DzikirDoaScreen() {
         <View className="px-6 mb-3">
           <View className={`${theme.bgCard} border ${theme.border} rounded-2xl p-4 flex-row items-center justify-between`}>
             <View className="flex-1 pr-4">
-              <Text className={`text-xs font-medium ${theme.textSecondary} mb-1`}>
+              <Text className={`text-xs font-medium ${theme.textMuted} mb-1`}>
                 Bacaan aktif
               </Text>
               
               {activeItem ? (
-                <Text className={`text-base font-bold ${theme.text}`}>
-                  {activeItem.title}
+                <Text className={`text-base font-bold ${theme.text}`} numberOfLines={1}>
+                  {activeItem.judul}
                 </Text>
               ) : (
                 <Text className={`text-base font-bold ${theme.textMuted}`}>
@@ -139,7 +191,7 @@ export default function DzikirDoaScreen() {
               onPress={() => setActiveFilter(filter.key)}
               className={`px-5 py-2 rounded-full border ${
                 activeFilter === filter.key
-                  ? "bg-emerald-800 border-emerald-800"
+                  ? "bg-emerald-700 border-emerald-700"
                   : `${theme.bgCard} ${theme.border}`
               }`}
             >
@@ -165,12 +217,12 @@ export default function DzikirDoaScreen() {
       >
         <View className="flex-row flex-wrap justify-between">
           {filteredData.map((item) => {
-            const IconComponent = IconMap[item.iconName] || BookOpen;
+            const IconComponent = getIconForDoa(item);
             const isActive = activeBacaan === item.id;
 
             return (
               <Pressable
-                key={item.id}
+                key={item.id.toString()}
                 onPress={() => setActiveBacaan(item.id)}
                 className={`w-[48%] ${theme.bgCard} border ${theme.border} rounded-2xl p-4 mb-4 active:opacity-90 relative ${
                   isActive ? "border-emerald-600 border-2" : ""
@@ -180,15 +232,15 @@ export default function DzikirDoaScreen() {
                   <IconComponent size={22} color={theme.iconColor} />
                 </View>
 
-                <Text className={`font-bold text-xs ${theme.text} mb-2 tracking-wide`}>
-                  {item.title}
+                <Text className={`font-bold text-xs ${theme.text} mb-2 tracking-wide`} numberOfLines={2}>
+                  {item.judul}
                 </Text>
 
                 <Text 
                   className={`text-sm ${theme.textMuted} text-right leading-6`} 
                   numberOfLines={2}
                 >
-                  {item.arabic}
+                  {item.doa}
                 </Text>
 
                 {isActive && (
@@ -204,9 +256,10 @@ export default function DzikirDoaScreen() {
         </View>
 
         {/* EMPTY STATE */}
-        {filteredData.length === 0 && (
+        {filteredData.length === 0 && !loading && (
           <View className="py-12 items-center">
-            <Text className={`text-center ${theme.textMuted}`}>
+            <BookOpen size={48} color={isDarkMode ? "#4B5563" : "#9CA3AF"} />
+            <Text className={`mt-4 text-center ${theme.textMuted}`}>
               Tidak ada dzikir atau doa untuk kategori ini
             </Text>
           </View>
