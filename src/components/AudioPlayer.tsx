@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Play, Pause, SkipBack, SkipForward } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
-import { useAudio } from '../hooks/useaudio';
+import { useAudio } from '../hooks/useAudio';
 
 interface AudioPlayerProps {
   audioUrl: string;

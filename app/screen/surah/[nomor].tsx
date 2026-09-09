@@ -25,14 +25,17 @@ interface SuratDetail {
   arti: string;
   jumlahAyat: number;
   tempatTurun: string;
+  audioFull?: string;
   ayat: AyatItem[];
 }
 
-// Pilihan Qira'at
+// Pilihan Qari (Sesuai ID dari EQuran.id API)
 const QIRAAT_OPTIONS = [
-  { id: 1, name: "Hafs", label: "1 Hafs", qariId: "05" },
-  { id: 2, name: "Warsh", label: "2 Warsh", qariId: "01" },
-  { id: 3, name: "Qalun", label: "3 Qalun", qariId: "02" },
+  { id: "05", label: "Mishary Rashid Alafasy", qariId: "05" },
+  { id: "01", label: "Abdurrahman As-Sudais", qariId: "01" },
+  { id: "03", label: "Abdul Basit Abdul Samad", qariId: "03" },
+  { id: "04", label: "Sa'ad Al-Ghamdi", qariId: "04" },
+  { id: "02", label: "Maher Al-Muaiqly", qariId: "02" },
 ];
 
 export default function SurahDetailScreen() {
@@ -42,10 +45,15 @@ export default function SurahDetailScreen() {
   const [surahData, setSurahData] = useState<SuratDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedQiraat, setSelectedQiraat] = useState("1 Hafs");
   const [selectedQariId, setSelectedQariId] = useState("05");
   const [showQiraatOptions, setShowQiraatOptions] = useState(false);
   const [playingAyat, setPlayingAyat] = useState<number | null>(null);
+
+  // Cari nama Qari yang sedang aktif untuk ditampilkan di UI
+  const activeQariName = QIRAAT_OPTIONS.find(q => q.qariId === selectedQariId)?.label || "Mishary Rashid Alafasy";
+
+  // Aktifkan Hook Audio
+  const { playAudio } = useAudio();
 
   useEffect(() => {
     loadSurahData();
@@ -65,22 +73,16 @@ export default function SurahDetailScreen() {
     }
   };
 
-  // ==========================================
-  // SOLUSI FINAL: Langsung navigate ke Mushaf
-  // ==========================================
   const handleBack = () => {
     console.log("Tombol back ditekan - Force ke Mushaf");
     router.replace('/(tabs)/mushaf');
   };
 
-  const handlePlayAyat = (ayatNomor: number, audioUrl: string) => {
-    if (playingAyat === ayatNomor) {
-      setPlayingAyat(null);
-    } else {
-      setPlayingAyat(ayatNomor);
-      console.log("Memutar audio:", audioUrl);
-      setTimeout(() => setPlayingAyat(null), 3000);
-    }
+  // Fungsi Play Audio per Ayat
+  const handlePlayAyat = async (ayatNomor: number, audioUrl: string) => {
+    setPlayingAyat(ayatNomor);
+    console.log("Memutar audio ayat:", audioUrl);
+    await playAudio(audioUrl);
   };
 
   // Loading State
@@ -115,8 +117,6 @@ export default function SurahDetailScreen() {
       
       {/* ========== HEADER ========== */}
       <View className={`flex-row items-center justify-between px-4 py-4 border-b ${theme.border}`}>
-        
-        {/* TOMBOL BACK - Force ke Mushaf */}
         <Pressable 
           onPress={handleBack}
           className="h-11 w-11 items-center justify-center rounded-full active:opacity-70"
@@ -134,7 +134,6 @@ export default function SurahDetailScreen() {
           </Text>
         </View>
 
-        {/* TOMBOL BOOKMARK */}
         <Pressable 
           className="h-11 w-11 items-center justify-center rounded-full active:opacity-70"
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -148,7 +147,7 @@ export default function SurahDetailScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
-        {/* ========== CARD BACAAN PILIHAN ========== */}
+        {/* ========== 1. CARD BACAAN PILIHAN ========== */}
         <View className={`mx-6 mt-6 p-4 ${theme.bgCard} border ${theme.border} rounded-2xl`}>
           <Text className={`text-xs font-medium ${theme.textSecondary} mb-3`}>
             Bacaan pilihan
@@ -159,16 +158,19 @@ export default function SurahDetailScreen() {
               onPress={() => setShowQiraatOptions(!showQiraatOptions)}
               className="flex-row items-center gap-2"
             >
-              <Text className={`font-bold ${theme.text}`}>Select Qira'at</Text>
+              <Text className={`font-bold ${theme.text}`}>Pilih Qari</Text>
               <Text className={`text-xs ${theme.textSecondary}`}>
                 {showQiraatOptions ? "▲" : "▼"}
               </Text>
             </Pressable>
 
-            <Pressable className={`flex-row items-center gap-2 px-4 py-2 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-[#f5f0e1]"}`}>
+            <Pressable 
+              onPress={() => setShowQiraatOptions(!showQiraatOptions)}
+              className={`flex-row items-center gap-2 px-4 py-2 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-[#f5f0e1]"}`}
+            >
               <Headphones size={16} color={isDarkMode ? "#34d399" : "#047857"} />
-              <Text className={`text-xs ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>
-                Ust. Yudha
+              <Text className={`text-xs font-medium ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>
+                {activeQariName}
               </Text>
             </Pressable>
           </View>
@@ -179,18 +181,17 @@ export default function SurahDetailScreen() {
                 <Pressable
                   key={qiraat.id}
                   onPress={() => {
-                    setSelectedQiraat(qiraat.label);
                     setSelectedQariId(qiraat.qariId);
                     setShowQiraatOptions(false);
                   }}
                   className={`px-4 py-2 rounded-full ${
-                    selectedQiraat === qiraat.label
+                    selectedQariId === qiraat.qariId
                       ? "bg-emerald-600"
                       : isDarkMode ? "bg-gray-700" : "bg-gray-200"
                   }`}
                 >
                   <Text className={`text-xs font-medium ${
-                    selectedQiraat === qiraat.label ? "text-white" : theme.text
+                    selectedQariId === qiraat.qariId ? "text-white" : theme.text
                   }`}>
                     {qiraat.label}
                   </Text>
@@ -200,7 +201,7 @@ export default function SurahDetailScreen() {
           )}
         </View>
 
-        {/* ========== INFORMASI SURAT ========== */}
+        {/* ========== 2. INFORMASI SURAT ========== */}
         <View className="px-6 mt-6 mb-4">
           <View className="flex-row items-start justify-between">
             <View className="flex-1">
@@ -223,7 +224,17 @@ export default function SurahDetailScreen() {
           </View>
         </View>
 
-        {/* ========== AYAT-AYAT ========== */}
+        {/* ========== 3. AUDIO PLAYER FULL SURAH ========== */}
+        {surahData.audioFull && (
+          <View className="px-6 mb-4">
+            <AudioPlayer 
+              audioUrl={surahData.audioFull} 
+              title={`Murottal Full: ${surahData.namaLatin}`}
+            />
+          </View>
+        )}
+
+        {/* ========== 4. AYAT-AYAT ========== */}
         <View className="px-6">
           {surahData.ayat.map((ayat) => {
             const isPlaying = playingAyat === ayat.nomor;
@@ -268,7 +279,11 @@ export default function SurahDetailScreen() {
             );
           })}
         </View>
+        {/* ✅ TUTUP View px-6 (Pembungkus Map) */}
+        
       </ScrollView>
+      {/* ✅ TUTUP ScrollView */}
+      
     </SafeAreaView>
   );
 }
