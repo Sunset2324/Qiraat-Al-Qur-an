@@ -1,106 +1,41 @@
-import { useState, useEffect } from 'react';
-import { Audio } from 'expo-av';
+import { useState } from 'react';
 
+// ⚠️ FALLBACK SEMENTARA: Versi ini tidak menggunakan expo-av
+// Tujuannya agar aplikasi tidak crash di Expo Go sementara kita menyiapkan Dev Build
 export const useAudio = () => {
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Cleanup sound saat unmount
-  useEffect(() => {
-    return () => {
-      if (sound) {
-        sound.unloadAsync();
-      }
-    };
-  }, [sound]);
-
-  // Load dan play audio
   const playAudio = async (uri: string) => {
-    try {
-      setIsLoading(true);
-      
-      // Stop audio sebelumnya jika ada
-      if (sound) {
-        await sound.unloadAsync();
-      }
-
-      // Load audio baru
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri },
-        { shouldPlay: true }
-      );
-
-      setSound(newSound);
-      setIsPlaying(true);
-
-      // Update progress
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded) {
-          setPosition(status.positionMillis);
-          setDuration(status.durationMillis || 0);
-          
-          if (status.didJustFinish) {
-            setIsPlaying(false);
-          }
-        }
-      });
-
-    } catch (error) {
-      console.error('Error playing audio:', error);
-    } finally {
+    console.log('⚠️ [MOCK AUDIO] URL yang seharusnya diputar:', uri);
+    console.log('💡 INFO: Audio asli memerlukan Development Build (EAS). Ini hanya simulasi.');
+    
+    setIsLoading(true);
+    // Simulasi loading dan play
+    setTimeout(() => {
       setIsLoading(false);
-    }
-  };
-
-  // Pause audio
-  const pauseAudio = async () => {
-    if (sound) {
-      await sound.pauseAsync();
-      setIsPlaying(false);
-    }
-  };
-
-  // Resume audio
-  const resumeAudio = async () => {
-    if (sound) {
-      await sound.playAsync();
       setIsPlaying(true);
-    }
+      setDuration(180000); // Mock durasi 3 menit
+    }, 1000);
   };
 
-  // Toggle play/pause
-  const togglePlayPause = async () => {
-    if (isPlaying) {
-      await pauseAudio();
-    } else {
-      await resumeAudio();
-    }
+  const pauseAudio = async () => setIsPlaying(false);
+  
+  const togglePlayPause = async () => setIsPlaying(!isPlaying);
+  
+  const stopAudio = async () => { 
+    setIsPlaying(false); 
+    setPosition(0); 
   };
+  
+  const seekTo = async (pos: number) => setPosition(pos);
 
-  // Stop audio
-  const stopAudio = async () => {
-    if (sound) {
-      await sound.stopAsync();
-      setIsPlaying(false);
-      setPosition(0);
-    }
-  };
-
-  // Seek to position
-  const seekTo = async (positionMillis: number) => {
-    if (sound) {
-      await sound.setPositionAsync(positionMillis);
-    }
-  };
-
-  // Format waktu (ms -> mm:ss)
   const formatTime = (millis: number) => {
-    const minutes = Math.floor(millis / 60000);
-    const seconds = Math.floor((millis % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const m = Math.floor(millis / 60000);
+    const s = Math.floor((millis % 60000) / 1000);
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   return {

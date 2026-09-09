@@ -281,9 +281,7 @@ export default function SurahDetailScreen() {
         </View>
         {/* ✅ TUTUP View px-6 (Pembungkus Map) */}
         
-      </ScrollView>
-      {/* ✅ TUTUP ScrollView */}
-      
+            </ScrollView>
     </SafeAreaView>
   );
 }
