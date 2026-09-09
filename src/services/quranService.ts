@@ -1,6 +1,20 @@
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 
+
+/**
+ * Ambil daftar Mushaf/Qiraat dari Backend (sumber: Quranpedia)
+ * Endpoint: GET /mushafs
+ */
+export const getMushafList = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/mushafs`);
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching mushaf list:', error);
+    throw error;
+  }
+};
 /**
  * Ambil daftar semua surah dari Backend
  * Endpoint: GET /surat

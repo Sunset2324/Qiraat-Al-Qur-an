@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { ArrowLeft, Bookmark, Headphones, Volume2 } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { getDetailSurah } from "../../../src/services/quranService";
 import { useAudio } from "../../../src/hooks/useAudio";
@@ -45,7 +46,7 @@ export default function SurahDetailScreen() {
   const [surahData, setSurahData] = useState<SuratDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedQariId, setSelectedQariId] = useState("05");
+  const [selectedQariId, setSelectedQariId] = useState("05"); // Default awal
   const [showQiraatOptions, setShowQiraatOptions] = useState(false);
   const [playingAyat, setPlayingAyat] = useState<number | null>(null);
 
@@ -55,8 +56,45 @@ export default function SurahDetailScreen() {
   // Aktifkan Hook Audio
   const { playAudio } = useAudio();
 
+  // ✅ 1. LOAD DEFAULT QIRAAT DARI ASYNCSTORAGE (HAFS = 05)
   useEffect(() => {
-    loadSurahData();
+    const loadDefaultQiraat = async () => {
+      try {
+        const savedMushafId = await AsyncStorage.getItem("selected_mushaf_id");
+        let qariIdToUse = "05"; // DEFAULT MUTLAK: Hafs (Mishary/Umum)
+
+        if (savedMushafId) {
+          // Mapping ID Mushaf/Qiraat ke qariId backend EQuran.id
+          const qariMap: Record<string, string> = {
+            "hafs": "05",      // Hafs 'an 'Asim
+            "warsh": "10",     // Warsh 'an Nafi' (Sesuaikan ID jika backend EQuran.id berbeda)
+            "qalun": "11",     // Qalun 'an Nafi'
+            "al-duri": "12",   // Ad-Duri
+            "al-susi": "13",   // As-Susi
+            "shu'bah": "14"    // Syu'bah
+          };
+          
+          // Jika user pernah memilih dan ID-nya ada di mapping, gunakan ID tersebut
+          if (qariMap[savedMushafId]) {
+            qariIdToUse = qariMap[savedMushafId];
+          }
+        }
+        
+        setSelectedQariId(qariIdToUse);
+      } catch (e) {
+        console.error("Gagal memuat Qiraat default", e);
+        setSelectedQariId("05"); // Fallback aman ke Hafs
+      }
+    };
+    
+    loadDefaultQiraat();
+  }, []);
+
+  // ✅ 2. LOAD DATA SURAH (Akan otomatis reload jika selectedQariId berubah dari AsyncStorage)
+  useEffect(() => {
+    if (nomor) {
+      loadSurahData();
+    }
   }, [nomor, selectedQariId]);
 
   const loadSurahData = async () => {
@@ -74,7 +112,6 @@ export default function SurahDetailScreen() {
   };
 
   const handleBack = () => {
-    console.log("Tombol back ditekan - Force ke Mushaf");
     router.replace('/(tabs)/mushaf');
   };
 
@@ -279,9 +316,7 @@ export default function SurahDetailScreen() {
             );
           })}
         </View>
-        {/* ✅ TUTUP View px-6 (Pembungkus Map) */}
-        
-            </ScrollView>
+      </ScrollView>
     </SafeAreaView>
   );
 }

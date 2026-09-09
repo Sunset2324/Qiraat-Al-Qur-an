@@ -1,7 +1,7 @@
 import { View, Text, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { FileText, Mic, Hand, BookOpen, Heart, CloudSun } from "lucide-react-native";
+import { FileText, Mic, Hand, BookOpen, Heart, CloudSun, Clock } from "lucide-react-native";
 import { useState, useEffect } from "react";
 import { useTheme } from "../../src/context/ThemeContext";
 
@@ -70,13 +70,13 @@ export default function DashboardScreen() {
             </Text>
           </Pressable>
 
-          {/* Grid 4 Fitur */}
+          {/* Grid Fitur */}
           <Text className={`font-bold text-lg mb-4 ${theme.text}`}>Eksplorasi Fitur</Text>
           <View className="flex-row flex-wrap justify-between mb-8">
             
-            {/* Qiraat */}
+            {/* Qiraat - RUTE DIPERBAIKI */}
             <Pressable 
-              onPress={() => router.push("/qiraat")}
+              onPress={() => router.push("/screen/qiraat/qiraat")}
               className={`w-[48%] ${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center mb-4 shadow-sm active:opacity-90`}
             >
               <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
@@ -85,7 +85,7 @@ export default function DashboardScreen() {
               <Text className={`font-bold text-sm ${theme.text}`}>Qiraat</Text>
             </Pressable>
 
-            {/* Dzikir & Doa - SUDAH DISAMBUNGKAN */}
+            {/* Dzikir & Doa */}
             <Pressable 
               onPress={() => router.push("/screen/dzikir-doa/dzikir-doa")}
               className={`w-[48%] ${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center mb-4 shadow-sm active:opacity-90`}
@@ -94,6 +94,17 @@ export default function DashboardScreen() {
                 <Hand size={28} color={theme.iconColor} />
               </View>
               <Text className={`font-bold text-sm text-center ${theme.text}`}>Dzikir & Doa</Text>
+            </Pressable>
+
+            {/* Jadwal Shalat - FITUR BARU (Backend Sudah Siap) */}
+            <Pressable 
+              onPress={() => router.push("/screen/jadwal-shalat/jadwal-shalat")}
+              className={`w-[48%] ${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center mb-4 shadow-sm active:opacity-90`}
+            >
+              <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
+                <Clock size={28} color={theme.iconColor} />
+              </View>
+              <Text className={`font-bold text-sm text-center ${theme.text}`}>Jadwal Shalat</Text>
             </Pressable>
 
             {/* Tajweed */}

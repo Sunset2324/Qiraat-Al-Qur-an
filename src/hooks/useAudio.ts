@@ -1,7 +1,7 @@
+// src/hooks/useAudio.ts
 import { useState } from 'react';
 
-// ⚠️ FALLBACK SEMENTARA: Versi ini tidak menggunakan expo-av
-// Tujuannya agar aplikasi tidak crash di Expo Go sementara kita menyiapkan Dev Build
+// VERSI MOCK: Tidak mengimpor 'expo-av' agar tidak crash di Expo Go
 export const useAudio = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -9,27 +9,20 @@ export const useAudio = () => {
   const [duration, setDuration] = useState(0);
 
   const playAudio = async (uri: string) => {
-    console.log('⚠️ [MOCK AUDIO] URL yang seharusnya diputar:', uri);
-    console.log('💡 INFO: Audio asli memerlukan Development Build (EAS). Ini hanya simulasi.');
+    console.log('⚠️ [MOCK] Simulasi memutar audio:', uri);
+    console.log('💡 INFO: Audio asli memerlukan Development Build (EAS).');
     
     setIsLoading(true);
-    // Simulasi loading dan play
     setTimeout(() => {
       setIsLoading(false);
       setIsPlaying(true);
-      setDuration(180000); // Mock durasi 3 menit
+      setDuration(180000); // Simulasi durasi 3 menit
     }, 1000);
   };
 
   const pauseAudio = async () => setIsPlaying(false);
-  
   const togglePlayPause = async () => setIsPlaying(!isPlaying);
-  
-  const stopAudio = async () => { 
-    setIsPlaying(false); 
-    setPosition(0); 
-  };
-  
+  const stopAudio = async () => { setIsPlaying(false); setPosition(0); };
   const seekTo = async (pos: number) => setPosition(pos);
 
   const formatTime = (millis: number) => {
@@ -39,16 +32,9 @@ export const useAudio = () => {
   };
 
   return {
-    isPlaying,
-    isLoading,
-    position,
-    duration,
+    isPlaying, isLoading, position, duration,
     formattedPosition: formatTime(position),
     formattedDuration: formatTime(duration),
-    playAudio,
-    pauseAudio,
-    togglePlayPause,
-    stopAudio,
-    seekTo,
+    playAudio, pauseAudio, togglePlayPause, stopAudio, seekTo,
   };
 };

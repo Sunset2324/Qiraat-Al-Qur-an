@@ -1,10 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./app/**/*.{js,jsx,ts,tsx}", "./src/**/*.{js,jsx,ts,tsx}"],
+  // Pastikan path ini mencakup semua file komponen Anda
+  content: [
+    "./app/**/*.{js,jsx,ts,tsx}", 
+    "./src/**/*.{js,jsx,ts,tsx}"
+  ],
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
       colors: {
+        // Warna Kustom Anda
         cream: {
           50: "#FBF8F1",
           100: "#F6F1E4",
@@ -13,7 +18,7 @@ module.exports = {
         },
         ink: {
           DEFAULT: "#211D16",
-          muted: "#6B6558",
+          muted: "#6B6558", // <-- Ini yang harus dipakai: text-ink-muted
         },
         emerald: {
           50: "#EAF3EE",
