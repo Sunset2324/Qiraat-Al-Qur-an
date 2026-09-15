@@ -1,4 +1,3 @@
-// src/hooks/useAudio.ts
 import { useState } from 'react';
 
 // VERSI MOCK: Tidak mengimpor 'expo-av' agar tidak crash di Expo Go

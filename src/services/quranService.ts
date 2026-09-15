@@ -1,9 +1,8 @@
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 
-
 /**
- * Ambil daftar Mushaf/Qiraat dari Backend (sumber: Quranpedia)
+ * 1. Ambil daftar Mushaf/Qiraat dari Backend (sumber: Quranpedia)
  * Endpoint: GET /mushafs
  */
 export const getMushafList = async () => {
@@ -15,14 +14,14 @@ export const getMushafList = async () => {
     throw error;
   }
 };
+
 /**
- * Ambil daftar semua surah dari Backend
+ * 2. Ambil daftar semua surah dari Backend
  * Endpoint: GET /surat
  */
 export const getDaftarSurah = async () => {
   try {
     const response = await axios.get(`${API_BASE_URL}/surat`);
-    
     const surahList = response.data.data;
     
     return surahList.map((item: any) => ({
@@ -40,30 +39,33 @@ export const getDaftarSurah = async () => {
 };
 
 /**
- * Ambil detail surat beserta ayat-ayatnya dari Backend
+ * 3. Ambil detail surat beserta ayat-ayatnya dari Backend (Default Hafs)
  * Endpoint: GET /surat/:nomor?qari=05
  */
 export const getDetailSurah = async (nomor: number, qariId: string = '05') => {
   try {
     const response = await axios.get(`${API_BASE_URL}/surat/${nomor}?qari=${qariId}`);
-    
     const backendData = response.data.data;
-    const info = backendData.info;
-    const ayatList = backendData.ayat;
-
+    
+    // Backend mengembalikan struktur: { info: {...}, audioFull: "...", ayat: [...] }
+    const info = backendData.info || backendData; 
+    
     return {
-      nomor: info.nomor,
-      namaArab: info.nama,
-      namaLatin: info.namaLatin,
-      arti: info.arti,
-      jumlahAyat: info.jumlahAyat,
-      tempatTurun: 'Mekah', 
+      info: {
+        nomor: info.nomor,
+        nama: info.nama,
+        namaLatin: info.namaLatin,
+        arti: info.arti,
+        jumlahAyat: info.jumlahAyat,
+        tempatTurun: info.tempatTurun || 'Mekah',
+        mushafAktif: 'HAFS'
+      },
       audioFull: backendData.audioFull,
-      ayat: ayatList.map((ayat: any) => ({
+      ayat: (backendData.ayat || []).map((ayat: any) => ({
         nomor: ayat.nomor,
         teksArab: ayat.teksArab,
         teksLatin: ayat.teksLatin,
-        artiIndonesia: ayat.teksIndonesia,
+        teksIndonesia: ayat.teksIndonesia || ayat.artiIndonesia,
         audio: ayat.audio,
       })),
     };
@@ -73,17 +75,26 @@ export const getDetailSurah = async (nomor: number, qariId: string = '05') => {
   }
 };
 
-// ==========================================
-// TAMBAHKAN BAGIAN INI UNTUK DOA & DZIKIR
-// ==========================================
+/**
+ * 4. Ambil Detail Surah MERGED: Teks Arab dari Quranpedia + Terjemahan/Tafsir dari EQuran.id
+ * Endpoint: GET /surat-merged/:nomor?mushafId=...&qariId=...
+ */
+export const getDetailSurahMerged = async (nomor: number, mushafId: string, qariId: string = '05') => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/surat-merged/${nomor}?mushafId=${mushafId}&qariId=${qariId}`);
+    return response.data.data;
+  } catch (error) {
+    console.error(`Error fetching merged surah ${nomor}:`, error);
+    throw error;
+  }
+};
 
 /**
- * Ambil daftar doa dan dzikir dari Backend
+ * 5. Ambil daftar doa dan dzikir dari Backend
  * Endpoint: GET /doa (dengan opsional query ?grup=... atau ?tag=...)
  */
 export const getDaftarDoa = async (grup?: string, tag?: string) => {
   try {
-    // Bangun URL dengan query parameter jika ada
     let url = `${API_BASE_URL}/doa`;
     const params = new URLSearchParams();
     
@@ -95,7 +106,7 @@ export const getDaftarDoa = async (grup?: string, tag?: string) => {
     }
 
     const response = await axios.get(url);
-    return response.data.data; // Langsung kembalikan array doa
+    return response.data.data;
   } catch (error) {
     console.error('Error fetching doa list:', error);
     throw error;
@@ -103,13 +114,13 @@ export const getDaftarDoa = async (grup?: string, tag?: string) => {
 };
 
 /**
- * Ambil detail doa spesifik berdasarkan ID
+ * 6. Ambil detail doa spesifik berdasarkan ID
  * Endpoint: GET /doa/:id
  */
 export const getDetailDoa = async (id: number) => {
   try {
     const response = await axios.get(`${API_BASE_URL}/doa/${id}`);
-    return response.data.data; // Kembalikan object detail doa
+    return response.data.data;
   } catch (error) {
     console.error(`Error fetching doa detail for ID ${id}:`, error);
     throw error;

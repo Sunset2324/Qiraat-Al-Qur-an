@@ -5,32 +5,32 @@ import { useLocalSearchParams, router } from "expo-router";
 import { ArrowLeft, Bookmark, Headphones, Volume2 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../../src/context/ThemeContext";
-import { getDetailSurah } from "../../../src/services/quranService";
+import { getDetailSurahMerged } from "../../../src/services/quranService"; // ✅ Gunakan fungsi merged
 import { useAudio } from "../../../src/hooks/useAudio";
 import AudioPlayer from "../../../src/components/AudioPlayer";
 
-// Type untuk Ayat
 interface AyatItem {
   nomor: number;
   teksArab: string;
   teksLatin: string;
-  artiIndonesia: string;
+  teksIndonesia: string;
+  tafsir?: string;
   audio: string;
 }
 
-// Type untuk Surat
 interface SuratDetail {
-  nomor: number;
-  namaArab: string;
-  namaLatin: string;
-  arti: string;
-  jumlahAyat: number;
-  tempatTurun: string;
-  audioFull?: string;
+  info: {
+    nomor: number;
+    nama: string;
+    namaLatin: string;
+    arti: string;
+    jumlahAyat: number;
+    tempatTurun: string;
+    mushafAktif: string;
+  };
   ayat: AyatItem[];
 }
 
-// Pilihan Qari (Sesuai ID dari EQuran.id API)
 const QIRAAT_OPTIONS = [
   { id: "05", label: "Mishary Rashid Alafasy", qariId: "05" },
   { id: "01", label: "Abdurrahman As-Sudais", qariId: "01" },
@@ -46,83 +46,49 @@ export default function SurahDetailScreen() {
   const [surahData, setSurahData] = useState<SuratDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedQariId, setSelectedQariId] = useState("05"); // Default awal
+  const [selectedQariId, setSelectedQariId] = useState("05");
   const [showQiraatOptions, setShowQiraatOptions] = useState(false);
   const [playingAyat, setPlayingAyat] = useState<number | null>(null);
 
-  // Cari nama Qari yang sedang aktif untuk ditampilkan di UI
   const activeQariName = QIRAAT_OPTIONS.find(q => q.qariId === selectedQariId)?.label || "Mishary Rashid Alafasy";
-
-  // Aktifkan Hook Audio
   const { playAudio } = useAudio();
 
-  // ✅ 1. LOAD DEFAULT QIRAAT DARI ASYNCSTORAGE (HAFS = 05)
+  // ✅ LOAD DATA SURAH (Merged: Arab dari Quranpedia + Terjemahan dari EQuran)
   useEffect(() => {
-    const loadDefaultQiraat = async () => {
+    const loadSurahWithMushaf = async () => {
+      if (!nomor) return;
+      
       try {
-        const savedMushafId = await AsyncStorage.getItem("selected_mushaf_id");
-        let qariIdToUse = "05"; // DEFAULT MUTLAK: Hafs (Mishary/Umum)
-
-        if (savedMushafId) {
-          // Mapping ID Mushaf/Qiraat ke qariId backend EQuran.id
-          const qariMap: Record<string, string> = {
-            "hafs": "05",      // Hafs 'an 'Asim
-            "warsh": "10",     // Warsh 'an Nafi' (Sesuaikan ID jika backend EQuran.id berbeda)
-            "qalun": "11",     // Qalun 'an Nafi'
-            "al-duri": "12",   // Ad-Duri
-            "al-susi": "13",   // As-Susi
-            "shu'bah": "14"    // Syu'bah
-          };
-          
-          // Jika user pernah memilih dan ID-nya ada di mapping, gunakan ID tersebut
-          if (qariMap[savedMushafId]) {
-            qariIdToUse = qariMap[savedMushafId];
-          }
-        }
+        setLoading(true);
+        setError(null);
         
-        setSelectedQariId(qariIdToUse);
-      } catch (e) {
-        console.error("Gagal memuat Qiraat default", e);
-        setSelectedQariId("05"); // Fallback aman ke Hafs
+        // 1. Ambil mushafId yang dipilih user (default 'hafs')
+        const savedMushafId = await AsyncStorage.getItem("selected_mushaf_id") || "hafs";
+        
+        // 2. Panggil endpoint baru yang menggabungkan kedua API
+        const data = await getDetailSurahMerged(Number(nomor), savedMushafId, selectedQariId);
+        setSurahData(data);
+      } catch (err) {
+        setError("Gagal memuat data surat. Pastikan koneksi internet aktif.");
+        console.error("Error loading merged surah:", err);
+      } finally {
+        setLoading(false);
       }
     };
-    
-    loadDefaultQiraat();
-  }, []);
 
-  // ✅ 2. LOAD DATA SURAH (Akan otomatis reload jika selectedQariId berubah dari AsyncStorage)
-  useEffect(() => {
-    if (nomor) {
-      loadSurahData();
-    }
-  }, [nomor, selectedQariId]);
-
-  const loadSurahData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getDetailSurah(Number(nomor), selectedQariId);
-      setSurahData(data);
-    } catch (err) {
-      setError("Gagal memuat data surat. Pastikan koneksi internet aktif.");
-      console.error("Error loading surah:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    loadSurahWithMushaf();
+  }, [nomor, selectedQariId]); // Reload jika nomor atau qariId berubah
 
   const handleBack = () => {
     router.replace('/(tabs)/mushaf');
   };
 
-  // Fungsi Play Audio per Ayat
   const handlePlayAyat = async (ayatNomor: number, audioUrl: string) => {
     setPlayingAyat(ayatNomor);
     console.log("Memutar audio ayat:", audioUrl);
     await playAudio(audioUrl);
   };
 
-  // Loading State
   if (loading) {
     return (
       <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center`} edges={['top']}>
@@ -132,7 +98,6 @@ export default function SurahDetailScreen() {
     );
   }
 
-  // Error State
   if (error || !surahData) {
     return (
       <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center p-6`} edges={['top']}>
@@ -140,7 +105,7 @@ export default function SurahDetailScreen() {
           {error || "Surat tidak ditemukan"}
         </Text>
         <Pressable 
-          onPress={loadSurahData} 
+          onPress={() => { setLoading(true); setError(null); }} 
           className={`px-6 py-3 rounded-full ${isDarkMode ? 'bg-emerald-600' : 'bg-emerald-700'}`}
         >
           <Text className="text-white font-bold">Coba Lagi</Text>
@@ -151,60 +116,34 @@ export default function SurahDetailScreen() {
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
-      
-      {/* ========== HEADER ========== */}
       <View className={`flex-row items-center justify-between px-4 py-4 border-b ${theme.border}`}>
-        <Pressable 
-          onPress={handleBack}
-          className="h-11 w-11 items-center justify-center rounded-full active:opacity-70"
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
+        <Pressable onPress={handleBack} className="h-11 w-11 items-center justify-center rounded-full active:opacity-70" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <ArrowLeft size={24} color={theme.iconColor} />
         </Pressable>
 
         <View className="items-center flex-1">
-          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>
-            AL-QUR'AN STUDY
-          </Text>
-          <Text className={`text-base font-bold ${theme.text}`}>
-            Mushaf Belajar
-          </Text>
+          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>AL-QUR'AN STUDY</Text>
+          <Text className={`text-base font-bold ${theme.text}`}>Mushaf Belajar</Text>
         </View>
 
-        <Pressable 
-          className="h-11 w-11 items-center justify-center rounded-full active:opacity-70"
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
+        <Pressable className="h-11 w-11 items-center justify-center rounded-full active:opacity-70" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Bookmark size={24} color={theme.iconColor} />
         </Pressable>
       </View>
 
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        {/* ========== 1. CARD BACAAN PILIHAN ========== */}
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        
+        {/* 1. CARD BACAAN PILIHAN */}
         <View className={`mx-6 mt-6 p-4 ${theme.bgCard} border ${theme.border} rounded-2xl`}>
-          <Text className={`text-xs font-medium ${theme.textSecondary} mb-3`}>
-            Bacaan pilihan
-          </Text>
+          <Text className={`text-xs font-medium ${theme.textSecondary} mb-3`}>Bacaan pilihan</Text>
           
           <View className="flex-row items-center justify-between mb-3">
-            <Pressable 
-              onPress={() => setShowQiraatOptions(!showQiraatOptions)}
-              className="flex-row items-center gap-2"
-            >
+            <Pressable onPress={() => setShowQiraatOptions(!showQiraatOptions)} className="flex-row items-center gap-2">
               <Text className={`font-bold ${theme.text}`}>Pilih Qari</Text>
-              <Text className={`text-xs ${theme.textSecondary}`}>
-                {showQiraatOptions ? "▲" : "▼"}
-              </Text>
+              <Text className={`text-xs ${theme.textSecondary}`}>{showQiraatOptions ? "▲" : "▼"}</Text>
             </Pressable>
 
-            <Pressable 
-              onPress={() => setShowQiraatOptions(!showQiraatOptions)}
-              className={`flex-row items-center gap-2 px-4 py-2 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-[#f5f0e1]"}`}
-            >
+            <Pressable onPress={() => setShowQiraatOptions(!showQiraatOptions)} className={`flex-row items-center gap-2 px-4 py-2 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-[#f5f0e1]"}`}>
               <Headphones size={16} color={isDarkMode ? "#34d399" : "#047857"} />
               <Text className={`text-xs font-medium ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>
                 {activeQariName}
@@ -217,19 +156,10 @@ export default function SurahDetailScreen() {
               {QIRAAT_OPTIONS.map((qiraat) => (
                 <Pressable
                   key={qiraat.id}
-                  onPress={() => {
-                    setSelectedQariId(qiraat.qariId);
-                    setShowQiraatOptions(false);
-                  }}
-                  className={`px-4 py-2 rounded-full ${
-                    selectedQariId === qiraat.qariId
-                      ? "bg-emerald-600"
-                      : isDarkMode ? "bg-gray-700" : "bg-gray-200"
-                  }`}
+                  onPress={() => { setSelectedQariId(qiraat.qariId); setShowQiraatOptions(false); }}
+                  className={`px-4 py-2 rounded-full ${selectedQariId === qiraat.qariId ? "bg-emerald-600" : isDarkMode ? "bg-gray-700" : "bg-gray-200"}`}
                 >
-                  <Text className={`text-xs font-medium ${
-                    selectedQariId === qiraat.qariId ? "text-white" : theme.text
-                  }`}>
+                  <Text className={`text-xs font-medium ${selectedQariId === qiraat.qariId ? "text-white" : theme.text}`}>
                     {qiraat.label}
                   </Text>
                 </Pressable>
@@ -238,40 +168,40 @@ export default function SurahDetailScreen() {
           )}
         </View>
 
-        {/* ========== 2. INFORMASI SURAT ========== */}
+        {/* 2. INFORMASI SURAT */}
         <View className="px-6 mt-6 mb-4">
           <View className="flex-row items-start justify-between">
             <View className="flex-1">
               <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary} mb-1`}>
-                SURAH {String(surahData.nomor).padStart(2, '0')} • {surahData.tempatTurun === 'Mekah' ? 'MAKKIYAH' : 'MADANIYAH'}
+                SURAH {String(surahData.info.nomor).padStart(2, '0')} • {surahData.info.tempatTurun === 'Mekah' ? 'MAKKIYAH' : 'MADANIYAH'}
               </Text>
-              <Text className={`text-2xl font-bold ${theme.text} mb-1`}>
-                {surahData.namaLatin}
-              </Text>
-              <Text className={`text-sm ${theme.textMuted}`}>
-                {surahData.arti} • {surahData.jumlahAyat} ayat
-              </Text>
+              <Text className={`text-2xl font-bold ${theme.text} mb-1`}>{surahData.info.namaLatin}</Text>
+              <Text className={`text-sm ${theme.textMuted}`}>{surahData.info.arti} • {surahData.info.jumlahAyat} ayat</Text>
+              {/* Tampilkan badge mushaf yang sedang aktif */}
+              <View className="mt-2 px-2 py-1 rounded bg-emerald-600/20 self-start">
+                <Text className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                  Mushaf Aktif: {surahData.info.mushafAktif.toUpperCase()}
+                </Text>
+              </View>
             </View>
 
             <View className={`h-12 w-12 rounded-full border-2 ${isDarkMode ? "border-emerald-600" : "border-emerald-700"} items-center justify-center`}>
-              <Text className={`font-bold text-lg ${isDarkMode ? "text-emerald-400" : "text-emerald-800"}`}>
-                {surahData.nomor}
-              </Text>
+              <Text className={`font-bold text-lg ${isDarkMode ? "text-emerald-400" : "text-emerald-800"}`}>{surahData.info.nomor}</Text>
             </View>
           </View>
         </View>
 
-        {/* ========== 3. AUDIO PLAYER FULL SURAH ========== */}
-        {surahData.audioFull && (
+        {/* 3. AUDIO PLAYER FULL SURAH */}
+        {surahData.ayat[0]?.audio && (
           <View className="px-6 mb-4">
             <AudioPlayer 
-              audioUrl={surahData.audioFull} 
-              title={`Murottal Full: ${surahData.namaLatin}`}
+              audioUrl={surahData.ayat[0].audio.replace(/\/\d{3}\.mp3$/, '/000.mp3')} // Trik sederhana untuk mendapatkan link full surah jika API menyediakan pola yang sama
+              title={`Murottal Full: ${surahData.info.namaLatin}`}
             />
           </View>
         )}
 
-        {/* ========== 4. AYAT-AYAT ========== */}
+        {/* 4. AYAT-AYAT */}
         <View className="px-6">
           {surahData.ayat.map((ayat) => {
             const isPlaying = playingAyat === ayat.nomor;
@@ -280,9 +210,7 @@ export default function SurahDetailScreen() {
               <View key={ayat.nomor} className="mb-8">
                 <View className="flex-row items-center justify-between mb-4">
                   <View className={`h-8 w-8 rounded-full ${isDarkMode ? "bg-[#f5f0e1]" : "bg-[#f5f0e1]"} items-center justify-center`}>
-                    <Text className={`text-xs font-bold ${isDarkMode ? "text-emerald-800" : "text-emerald-800"}`}>
-                      {ayat.nomor}
-                    </Text>
+                    <Text className={`text-xs font-bold text-emerald-800`}>{ayat.nomor}</Text>
                   </View>
 
                   <Pressable 
@@ -295,21 +223,18 @@ export default function SurahDetailScreen() {
                 </View>
 
                 <View className="items-center mb-4">
-                  <Text 
-                    className={`text-3xl leading-[60px] text-center ${theme.text}`}
-                    style={{ fontFamily: "System", textAlign: "right" }}
-                  >
+                  <Text className={`text-3xl leading-[60px] text-center ${theme.text}`} style={{ fontFamily: "System", textAlign: "right" }}>
                     {ayat.teksArab}
                   </Text>
                 </View>
 
                 <View className={`p-4 rounded-xl ${isDarkMode ? "bg-[#242424]" : "bg-[#fffcf5]"} border ${theme.border}`}>
                   <Text className={`text-sm leading-6 ${theme.textMuted}`} style={{ textAlign: "center" }}>
-                    {ayat.artiIndonesia}
+                    {ayat.teksIndonesia}
                   </Text>
                 </View>
 
-                {ayat.nomor < surahData.jumlahAyat && (
+                {ayat.nomor < surahData.info.jumlahAyat && (
                   <View className={`h-px w-full my-6 ${isDarkMode ? "bg-gray-700" : "bg-gray-200"}`} />
                 )}
               </View>
