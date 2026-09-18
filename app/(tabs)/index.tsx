@@ -109,7 +109,7 @@ export default function DashboardScreen() {
 
             {/* Tajweed */}
             <Pressable 
-              onPress={() => router.push("/tajweed")}
+              onPress={() => router.push("../screen/tajweed/tajweed")}
               className={`w-[48%] ${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center shadow-sm active:opacity-90`}
             >
               <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
@@ -120,7 +120,7 @@ export default function DashboardScreen() {
 
             {/* Thibbun Nabawi */}
             <Pressable 
-              onPress={() => router.push("/thibbun-nabawi")}
+              onPress={() => router.push("../screen/thibbun-nabawi/thibbun-nabawi")}
               className={`w-[48%] ${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center shadow-sm active:opacity-90`}
             >
               <View className="bg-emerald-500/20 p-3 rounded-full mb-3">

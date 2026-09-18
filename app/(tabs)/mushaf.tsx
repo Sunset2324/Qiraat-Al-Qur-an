@@ -5,7 +5,7 @@ import { router } from "expo-router";
 import { Bell, Headphones, ChevronRight } from "lucide-react-native";
 import { useTheme } from "../../src/context/ThemeContext";
 import { getDaftarSurah } from "../../src/services/quranService";
-
+ 
 export default function MushafScreen() {
   const { isDarkMode, theme } = useTheme();
   const [surahs, setSurahs] = useState<any[]>([]);

@@ -5,7 +5,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { ArrowLeft, Bookmark, Headphones, Volume2 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../../src/context/ThemeContext";
-import { getDetailSurahMerged } from "../../../src/services/quranService"; // ✅ Gunakan fungsi merged
+import { getDetailSurahMerged } from "../../../src/services/quranService"; // ✅ PENTING: Gunakan fungsi merged
 import { useAudio } from "../../../src/hooks/useAudio";
 import AudioPlayer from "../../../src/components/AudioPlayer";
 
@@ -14,7 +14,6 @@ interface AyatItem {
   teksArab: string;
   teksLatin: string;
   teksIndonesia: string;
-  tafsir?: string;
   audio: string;
 }
 
@@ -49,35 +48,40 @@ export default function SurahDetailScreen() {
   const [selectedQariId, setSelectedQariId] = useState("05");
   const [showQiraatOptions, setShowQiraatOptions] = useState(false);
   const [playingAyat, setPlayingAyat] = useState<number | null>(null);
+  const [currentMushafId, setCurrentMushafId] = useState<string>("hafs");
 
   const activeQariName = QIRAAT_OPTIONS.find(q => q.qariId === selectedQariId)?.label || "Mishary Rashid Alafasy";
   const { playAudio } = useAudio();
 
-  // ✅ LOAD DATA SURAH (Merged: Arab dari Quranpedia + Terjemahan dari EQuran)
   useEffect(() => {
-    const loadSurahWithMushaf = async () => {
+    const loadSurahData = async () => {
       if (!nomor) return;
       
       try {
         setLoading(true);
         setError(null);
         
-        // 1. Ambil mushafId yang dipilih user (default 'hafs')
+        // 1. Ambil mushafId yang dipilih user dari AsyncStorage
         const savedMushafId = await AsyncStorage.getItem("selected_mushaf_id") || "hafs";
+        setCurrentMushafId(savedMushafId);
         
-        // 2. Panggil endpoint baru yang menggabungkan kedua API
+        console.log(`📖 Loading surah ${nomor} dengan mushaf: ${savedMushafId}`);
+        
+        // 2. Panggil endpoint MERGED (bukan yang biasa!)
         const data = await getDetailSurahMerged(Number(nomor), savedMushafId, selectedQariId);
+        
+        console.log('✅ Data berhasil dimuat:', data.info.mushafAktif);
         setSurahData(data);
-      } catch (err) {
+      } catch (err: any) {
+        console.error('❌ Error loading surah:', err.message);
         setError("Gagal memuat data surat. Pastikan koneksi internet aktif.");
-        console.error("Error loading merged surah:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    loadSurahWithMushaf();
-  }, [nomor, selectedQariId]); // Reload jika nomor atau qariId berubah
+    loadSurahData();
+  }, [nomor, selectedQariId]);
 
   const handleBack = () => {
     router.replace('/(tabs)/mushaf');
@@ -113,6 +117,11 @@ export default function SurahDetailScreen() {
       </SafeAreaView>
     );
   }
+
+  // Dapatkan URL audio full surah dari ayat pertama (biasanya pola URL-nya sama)
+  const audioFullUrl = surahData.ayat[0]?.audio 
+    ? surahData.ayat[0].audio.replace(/\/\d{3}\.mp3$/, '/000.mp3')
+    : undefined;
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
@@ -177,10 +186,11 @@ export default function SurahDetailScreen() {
               </Text>
               <Text className={`text-2xl font-bold ${theme.text} mb-1`}>{surahData.info.namaLatin}</Text>
               <Text className={`text-sm ${theme.textMuted}`}>{surahData.info.arti} • {surahData.info.jumlahAyat} ayat</Text>
-              {/* Tampilkan badge mushaf yang sedang aktif */}
-              <View className="mt-2 px-2 py-1 rounded bg-emerald-600/20 self-start">
-                <Text className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                  Mushaf Aktif: {surahData.info.mushafAktif.toUpperCase()}
+              
+              {/* Tampilkan mushaf yang sedang aktif */}
+              <View className="mt-2 px-3 py-1.5 rounded-lg bg-emerald-600/20 self-start">
+                <Text className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                  📜 Mushaf: {surahData.info.mushafAktif}
                 </Text>
               </View>
             </View>
@@ -192,10 +202,10 @@ export default function SurahDetailScreen() {
         </View>
 
         {/* 3. AUDIO PLAYER FULL SURAH */}
-        {surahData.ayat[0]?.audio && (
+        {audioFullUrl && (
           <View className="px-6 mb-4">
             <AudioPlayer 
-              audioUrl={surahData.ayat[0].audio.replace(/\/\d{3}\.mp3$/, '/000.mp3')} // Trik sederhana untuk mendapatkan link full surah jika API menyediakan pola yang sama
+              audioUrl={audioFullUrl} 
               title={`Murottal Full: ${surahData.info.namaLatin}`}
             />
           </View>
