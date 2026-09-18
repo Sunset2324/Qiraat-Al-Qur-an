@@ -5,7 +5,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { ArrowLeft, Bookmark, Headphones, Volume2 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../../src/context/ThemeContext";
-import { getDetailSurahMerged } from "../../../src/services/quranService"; // ✅ PENTING: Gunakan fungsi merged
+import { getDetailSurahMerged } from "../../../src/services/quranService";
 import { useAudio } from "../../../src/hooks/useAudio";
 import AudioPlayer from "../../../src/components/AudioPlayer";
 
@@ -27,6 +27,7 @@ interface SuratDetail {
     tempatTurun: string;
     mushafAktif: string;
   };
+  audioFull?: string;
   ayat: AyatItem[];
 }
 
@@ -40,7 +41,7 @@ const QIRAAT_OPTIONS = [
 
 export default function SurahDetailScreen() {
   const { isDarkMode, theme } = useTheme();
-  const { nomor } = useLocalSearchParams();
+  const { nomor, mushafId: routeMushafId } = useLocalSearchParams();
   
   const [surahData, setSurahData] = useState<SuratDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,11 +49,12 @@ export default function SurahDetailScreen() {
   const [selectedQariId, setSelectedQariId] = useState("05");
   const [showQiraatOptions, setShowQiraatOptions] = useState(false);
   const [playingAyat, setPlayingAyat] = useState<number | null>(null);
-  const [currentMushafId, setCurrentMushafId] = useState<string>("hafs");
+  const [activeMushafId, setActiveMushafId] = useState<string>("hafs");
 
   const activeQariName = QIRAAT_OPTIONS.find(q => q.qariId === selectedQariId)?.label || "Mishary Rashid Alafasy";
   const { playAudio } = useAudio();
 
+  // ✅ KUNCI: Prioritaskan mushafId dari route params, fallback ke AsyncStorage
   useEffect(() => {
     const loadSurahData = async () => {
       if (!nomor) return;
@@ -61,16 +63,24 @@ export default function SurahDetailScreen() {
         setLoading(true);
         setError(null);
         
-        // 1. Ambil mushafId yang dipilih user dari AsyncStorage
-        const savedMushafId = await AsyncStorage.getItem("selected_mushaf_id") || "hafs";
-        setCurrentMushafId(savedMushafId);
+        // 1. Tentukan mushafId: dari route > AsyncStorage > default "hafs"
+        let mushafIdToUse = "hafs";
         
-        console.log(`📖 Loading surah ${nomor} dengan mushaf: ${savedMushafId}`);
+        if (routeMushafId) {
+          mushafIdToUse = String(routeMushafId);
+        } else {
+          const saved = await AsyncStorage.getItem("selected_mushaf_id");
+          if (saved) mushafIdToUse = saved;
+        }
         
-        // 2. Panggil endpoint MERGED (bukan yang biasa!)
-        const data = await getDetailSurahMerged(Number(nomor), savedMushafId, selectedQariId);
+        setActiveMushafId(mushafIdToUse);
         
-        console.log('✅ Data berhasil dimuat:', data.info.mushafAktif);
+        console.log(`📖 Loading surah ${nomor} dengan mushaf: ${mushafIdToUse}`);
+        
+        // 2. Panggil endpoint MERGED dengan mushafId yang benar
+        const data = await getDetailSurahMerged(Number(nomor), mushafIdToUse, selectedQariId);
+        
+        console.log('✅ Data berhasil dimuat, mushaf aktif:', data.info.mushafAktif);
         setSurahData(data);
       } catch (err: any) {
         console.error('❌ Error loading surah:', err.message);
@@ -81,7 +91,7 @@ export default function SurahDetailScreen() {
     };
 
     loadSurahData();
-  }, [nomor, selectedQariId]);
+  }, [nomor, selectedQariId, routeMushafId]);
 
   const handleBack = () => {
     router.replace('/(tabs)/mushaf');
@@ -118,10 +128,9 @@ export default function SurahDetailScreen() {
     );
   }
 
-  // Dapatkan URL audio full surah dari ayat pertama (biasanya pola URL-nya sama)
-  const audioFullUrl = surahData.ayat[0]?.audio 
-    ? surahData.ayat[0].audio.replace(/\/\d{3}\.mp3$/, '/000.mp3')
-    : undefined;
+  const audioFullUrl = surahData.audioFull || (surahData.ayat[0]?.audio 
+  ? surahData.ayat[0].audio.replace(/\/\d{3}\.mp3$/, '/000.mp3')
+  : undefined);
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
@@ -187,10 +196,10 @@ export default function SurahDetailScreen() {
               <Text className={`text-2xl font-bold ${theme.text} mb-1`}>{surahData.info.namaLatin}</Text>
               <Text className={`text-sm ${theme.textMuted}`}>{surahData.info.arti} • {surahData.info.jumlahAyat} ayat</Text>
               
-              {/* Tampilkan mushaf yang sedang aktif */}
+              {/* ✅ Tampilkan mushaf aktif yang BENAR */}
               <View className="mt-2 px-3 py-1.5 rounded-lg bg-emerald-600/20 self-start">
                 <Text className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                  📜 Mushaf: {surahData.info.mushafAktif}
+                   Mushaf: {surahData.info.mushafAktif}
                 </Text>
               </View>
             </View>
@@ -202,12 +211,20 @@ export default function SurahDetailScreen() {
         </View>
 
         {/* 3. AUDIO PLAYER FULL SURAH */}
-        {audioFullUrl && (
+        {audioFullUrl ? (
           <View className="px-6 mb-4">
             <AudioPlayer 
               audioUrl={audioFullUrl} 
               title={`Murottal Full: ${surahData.info.namaLatin}`}
             />
+          </View>
+        ) : (
+          <View className="px-6 mb-4">
+            <View className={`p-4 rounded-2xl border ${theme.border} ${theme.bgCard} items-center`}>
+              <Text className={`text-sm ${theme.textMuted}`}>
+                🎵 Audio full surah tidak tersedia untuk mushaf ini
+              </Text>
+            </View>
           </View>
         )}
 

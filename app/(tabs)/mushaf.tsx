@@ -1,208 +1,213 @@
 import { useState, useEffect } from "react";
-import { View, Text, Pressable, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, Pressable, FlatList } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { Bell, Headphones, ChevronRight } from "lucide-react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { Headphones, ChevronRight, Bell } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../src/context/ThemeContext";
 import { getDaftarSurah } from "../../src/services/quranService";
- 
+
+interface SurahItem {
+  nomor: number;
+  namaLatin: string;
+  namaArab: string;
+  arti: string;
+  jumlahAyat: number;
+  tempatTurun: string;
+}
+
 export default function MushafScreen() {
   const { isDarkMode, theme } = useTheme();
-  const [surahs, setSurahs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { selectedMushafId, selectedMushafName } = useLocalSearchParams();
+  
+  const [currentMushaf, setCurrentMushaf] = useState({
+    id: "1",
+    name: "Hafs 'an 'Asim"
+  });
+  const [surahList, setSurahList] = useState<SurahItem[]>([]);
+  const [lastRead, setLastRead] = useState<{ nomor: number; nama: string } | null>(null);
 
   useEffect(() => {
-    loadSurahs();
-  }, []);
+    // ✅ KUNCI: Terima data mushaf dari halaman Qiraat
+    if (selectedMushafId && selectedMushafName) {
+      setCurrentMushaf({
+        id: String(selectedMushafId),
+        name: String(selectedMushafName)
+      });
+      AsyncStorage.setItem("selected_mushaf_id", String(selectedMushafId));
+    } else {
+      // Fallback: baca dari AsyncStorage
+      AsyncStorage.getItem("selected_mushaf_id").then(id => {
+        if (id) setCurrentMushaf(prev => ({ ...prev, id }));
+      });
+    }
 
-  const loadSurahs = async () => {
+    // Load daftar surah
+    loadSurahList();
+    loadLastRead();
+  }, [selectedMushafId, selectedMushafName]);
+
+  const loadSurahList = async () => {
     try {
-      setLoading(true);
-      setError(null);
       const data = await getDaftarSurah();
-      setSurahs(data);
-    } catch (err) {
-      setError("Gagal memuat data surah. Periksa koneksi internet atau backend.");
-    } finally {
-      setLoading(false);
+      setSurahList(data);
+    } catch (e) {
+      console.error("Gagal memuat daftar surah:", e);
     }
   };
 
-  const lastReadSurah = surahs[0];
-  const juzList = Array.from({ length: 30 }, (_, i) => i + 1);
+  const loadLastRead = async () => {
+    try {
+      const saved = await AsyncStorage.getItem("last_read_surah");
+      if (saved) setLastRead(JSON.parse(saved));
+    } catch (e) {
+      console.error("Gagal memuat last read:", e);
+    }
+  };
 
-  // Loading State
-  if (loading) {
-    return (
-      <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center`} edges={['top']}>
-        <ActivityIndicator size="large" color={isDarkMode ? "#34d399" : "#047857"} />
-        <Text className={`mt-4 ${theme.textMuted}`}>Memuat data mushaf...</Text>
-      </SafeAreaView>
-    );
-  }
-
-  // Error State
-  if (error) {
-    return (
-      <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center p-6`} edges={['top']}>
-        <Text className={`text-center font-semibold mb-4 ${theme.text}`}>{error}</Text>
-        <Pressable 
-          onPress={loadSurahs} 
-          className={`px-6 py-3 rounded-full ${isDarkMode ? 'bg-emerald-600' : 'bg-emerald-700'}`}
-        >
-          <Text className="text-white font-bold">Coba Lagi</Text>
-        </Pressable>
-      </SafeAreaView>
-    );
-  }
+  const handleOpenSurah = (nomor: number, nama: string) => {
+    // Simpan last read
+    AsyncStorage.setItem("last_read_surah", JSON.stringify({ nomor, nama }));
+    
+    // ✅ KUNCI: Oper mushafId ke halaman detail
+    router.push({
+      pathname: '/screen/surah/[nomor]',
+      params: { 
+        nomor: String(nomor),
+        mushafId: currentMushaf.id
+      }
+    });
+  };
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
-      <ScrollView 
-        className="flex-1" 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-      >
-        {/* 1. HEADER */}
-        <View className="px-6 pt-4 pb-4 flex-row items-start justify-between">
-          <View className="flex-1 pr-4">
-            <Text className={`text-[10px] font-bold tracking-[2px] ${theme.textSecondary}`}>
-              ASSALAMU'ALAIKUM
-            </Text>
-            <Text className={`text-2xl font-bold mt-1 leading-tight ${theme.text}`}>
-              Mushaf Belajar
-            </Text>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+        
+        {/* Header */}
+        <View className="px-6 pt-6 pb-4">
+          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>ASSALAMU'ALAIKUM</Text>
+          <View className="flex-row items-center justify-between mt-1">
+            <Text className={`text-2xl font-bold ${theme.text}`}>Mushaf Belajar</Text>
+            <Pressable className={`p-2 rounded-full border ${theme.border}`}>
+              <Bell size={20} color={theme.iconColor} />
+            </Pressable>
           </View>
-          <Pressable className={`${theme.bgCard} border ${theme.border} p-2.5 rounded-full active:opacity-80`}>
-            <Bell size={20} color={theme.iconColor} />
-          </Pressable>
         </View>
 
-        {/* 2. CARD QIRA'AT TERPILIH */}
-        <View className="px-6 mb-5">
-          <Pressable className={`${theme.bgCard} border ${theme.border} rounded-2xl p-4 flex-row items-center justify-between active:opacity-90`}>
-            <View className="flex-row items-center gap-3 flex-1">
-              <View className="bg-emerald-700 p-2 rounded-full">
-                <Headphones size={18} color="#fff" />
+        {/* Card Qira'at Terpilih */}
+        <View className="px-6 mb-6">
+          <Pressable 
+            onPress={() => router.push('/screen/qiraat/qiraat')}
+            className={`p-4 rounded-2xl border ${theme.border} ${theme.bgCard} flex-row items-center justify-between active:opacity-90`}
+          >
+            <View className="flex-row items-center gap-3">
+              <View className={`p-3 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"}`}>
+                <Headphones size={20} color={isDarkMode ? "#34d399" : "#047857"} />
               </View>
-              <View className="flex-1">
-                <Text className={`text-[10px] font-medium ${theme.textSecondary}`}>Qira'at terpilih</Text>
-                <Text className={`font-bold text-base ${theme.text}`}>Hafs 'an 'Asim</Text>
+              <View>
+                <Text className={`text-xs ${theme.textSecondary}`}>Qira'at terpilih</Text>
+                <Text className={`text-base font-bold ${theme.text}`}>{currentMushaf.name}</Text>
               </View>
             </View>
             <ChevronRight size={20} color={theme.iconColor} />
           </Pressable>
         </View>
 
-        {/* 3. CARD LANJUTKAN BELAJAR */}
-        {lastReadSurah && (
+        {/* Card Lanjutkan Belajar */}
+        {lastRead && (
           <View className="px-6 mb-6">
-            <Pressable className={`${theme.bgHeader} rounded-3xl p-5 active:opacity-90`}>
-              <Text className={`text-[10px] font-bold tracking-[2px] ${isDarkMode ? "text-emerald-300" : "text-emerald-200"} mb-2`}>
+            <View className={`p-6 rounded-3xl ${isDarkMode ? "bg-emerald-900" : "bg-emerald-700"}`}>
+              <Text className={`text-xs font-bold tracking-[2px] ${isDarkMode ? "text-emerald-300" : "text-emerald-100"} mb-2`}>
                 LANJUTKAN BELAJAR
               </Text>
-              <View className="flex-row items-center justify-between mb-3">
-                <View className="flex-1 pr-4">
-                  <Text className="text-2xl font-bold leading-tight text-white">{lastReadSurah.namaLatin}</Text>
-                  <Text className={`text-xs mt-1 ${isDarkMode ? "text-emerald-300" : "text-emerald-200"}`}>
-                    {lastReadSurah.arti} • {lastReadSurah.jumlahAyat} ayat
+              <View className="flex-row items-center justify-between mb-2">
+                <View className="flex-1">
+                  <Text className={`text-2xl font-bold text-white mb-1`}>{lastRead.nama}</Text>
+                  <Text className={`text-xs ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>
+                    Surah #{lastRead.nomor}
                   </Text>
                 </View>
-                <View className={`h-14 w-14 rounded-full border-2 ${isDarkMode ? "border-emerald-500" : "border-emerald-600"} items-center justify-center`}>
-                  <Text className="font-bold text-lg text-white">{lastReadSurah.nomor}</Text>
+                <View className={`h-14 w-14 rounded-full border-2 ${isDarkMode ? "border-emerald-600" : "border-emerald-500"} items-center justify-center`}>
+                  <Text className={`text-xl font-bold ${isDarkMode ? "text-emerald-300" : "text-white"}`}>
+                    {lastRead.nomor}
+                  </Text>
                 </View>
               </View>
-              <View className="flex-row items-center justify-between mb-3">
-                <Text className={`text-xs ${isDarkMode ? "text-emerald-300" : "text-emerald-200"}`}>Progress Surah</Text>
-                <Text className={`text-xs font-bold ${isDarkMode ? "text-emerald-200" : "text-emerald-100"}`}>0 dari {lastReadSurah.jumlahAyat} ayat</Text>
-              </View>
-              <View className={`h-1.5 ${isDarkMode ? "bg-emerald-900" : "bg-emerald-900/50"} rounded-full overflow-hidden mb-4`}>
-                <View className="h-full bg-emerald-400 rounded-full" style={{ width: "0%" }} />
-              </View>
-              <Pressable className={`${theme.bgCard} rounded-full py-3 flex-row items-center justify-center gap-2 active:opacity-90`}>
-                <Text className={`font-bold text-sm ${isDarkMode ? "text-emerald-700" : "text-emerald-800"}`}>Buka Mushaf</Text>
-                <ChevronRight size={18} color={isDarkMode ? "#059669" : "#065f46"} />
+              
+              <Text className={`text-xs ${isDarkMode ? "text-emerald-300" : "text-emerald-100"} mb-3`}>
+                Progress Surah • 0 dari 7 ayat
+              </Text>
+
+              <Pressable 
+                onPress={() => handleOpenSurah(lastRead.nomor, lastRead.nama)}
+                className={`py-3 rounded-xl ${isDarkMode ? "bg-emerald-700" : "bg-white"} items-center`}
+              >
+                <Text className={`text-sm font-bold ${isDarkMode ? "text-white" : "text-emerald-700"}`}>
+                  Buka Mushaf ›
+                </Text>
               </Pressable>
-            </Pressable>
+            </View>
           </View>
         )}
 
-        {/* 4. SECTION: 30 JUZ (RESPONSIF) */}
-        <View className="mb-6">
-          <View className="mb-3 px-6">
-            <Text className={`text-[10px] font-bold tracking-[2px] ${theme.textSecondary}`}>PERJALANAN ANDA</Text>
-            <Text className={`font-bold text-base mt-0.5 leading-tight ${theme.text}`}>30 Juz Al-Qur'an</Text>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, gap: 16 }}>
-            {juzList.map((juz) => (
-              <Pressable key={juz} className={`w-[120px] ${theme.bgCard} border ${theme.border} rounded-2xl p-4 active:opacity-90`}>
-                <View className={`h-7 w-7 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"} items-center justify-center mb-3`}>
-                  <Text className={`text-xs font-bold ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>{juz}</Text>
+        {/* Perjalanan Anda */}
+        <View className="px-6 mb-6">
+          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary} mb-1`}>PERJALANAN ANDA</Text>
+          <Text className={`text-lg font-bold ${theme.text} mb-4`}>30 Juz Al-Qur'an</Text>
+          
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {[1, 2, 3, 4, 5].map((juz) => (
+              <Pressable 
+                key={juz}
+                className={`w-32 p-4 rounded-2xl border ${theme.border} ${theme.bgCard} mr-3`}
+              >
+                <View className={`h-8 w-8 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"} items-center justify-center mb-3`}>
+                  <Text className={`text-sm font-bold ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`}>{juz}</Text>
                 </View>
-                <Text className={`font-bold text-sm ${theme.text} mb-2`}>Juz {juz}</Text>
-                <View className={`h-1.5 ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"} rounded-full overflow-hidden mb-2`}>
-                  <View className="h-full bg-emerald-600 rounded-full" style={{ width: "0%" }} />
+                <Text className={`text-base font-bold ${theme.text} mb-2`}>Juz {juz}</Text>
+                <View className={`h-1 rounded-full ${isDarkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}>
+                  <View className={`h-1 rounded-full ${isDarkMode ? "bg-emerald-600" : "bg-emerald-500"}`} style={{ width: '0%' }} />
                 </View>
-                <Text className={`text-[10px] ${theme.textSecondary}`}>0%</Text>
+                <Text className={`text-xs ${theme.textMuted}`}>0%</Text>
               </Pressable>
             ))}
           </ScrollView>
         </View>
 
-        {/* 5. SECTION: SURAH UNTUK DIPELAJARI (PROFESIONAL & MENAMPILKAN SEMUA 114 SURAH) */}
-        <View className="px-6 mb-6">
+        {/* Surah untuk dipelajari */}
+        <View className="px-6">
           <View className="flex-row items-center justify-between mb-4">
-            <Text className={`font-bold text-base ${theme.text}`}>
-              Surah untuk dipelajari
-            </Text>
-            <Text className={`text-xs font-bold ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`}>
-              {surahs.length} Surah
-            </Text>
+            <Text className={`text-lg font-bold ${theme.text}`}>Surah untuk dipelajari</Text>
+            <Text className={`text-sm ${theme.textSecondary}`}>114 Surah</Text>
           </View>
 
-          <View className="gap-3">
-            {/* Tampilkan semua surah tanpa di-slice */}
-            {surahs.map((surah) => (
-              <Pressable 
-                key={surah.nomor} 
-                onPress={() => router.push(`/screen/surah/${surah.nomor}`)} // WAJIB pakai push
-                className={`${theme.bgCard} border ${theme.border} rounded-2xl p-4 flex-row items-center active:opacity-90`}
-              >
-                {/* 1. Nomor Surah dalam Kotak */}
-                <View className={`h-12 w-12 rounded-xl ${isDarkMode ? "bg-emerald-900/50" : "bg-emerald-50"} items-center justify-center mr-4 border ${isDarkMode ? "border-emerald-800" : "border-emerald-200"}`}>
-                  <Text className={`text-lg font-bold ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`}>
-                    {surah.nomor}
-                  </Text>
-                </View>
-                
-                {/* 2. Informasi Surah */}
-                <View className="flex-1">
-                  <View className="flex-row items-center justify-between mb-1">
-                    <Text className={`font-bold text-base ${theme.text}`}>
-                      {surah.namaLatin}
-                    </Text>
-                    <Text 
-                      className={`text-lg font-semibold ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`} 
-                      style={{ fontFamily: "System" }}
-                    >
-                      {surah.namaArab}
-                    </Text>
-                  </View>
-                  <Text className={`text-xs ${theme.textSecondary}`}>
-                    {surah.arti} • {surah.jumlahAyat} Ayat • {surah.tempatTurun === 'Mekah' ? 'Makkiyah' : 'Madaniyah'}
-                  </Text>
-                </View>
+          {surahList.slice(0, 10).map((surah) => (
+            <Pressable
+              key={surah.nomor}
+              onPress={() => handleOpenSurah(surah.nomor, surah.namaLatin)}
+              className={`p-4 rounded-2xl border ${theme.border} ${theme.bgCard} mb-3 flex-row items-center active:opacity-90`}
+            >
+              <View className={`h-12 w-12 rounded-xl ${isDarkMode ? "bg-emerald-900/30" : "bg-emerald-100"} items-center justify-center mr-4`}>
+                <Text className={`text-lg font-bold ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`}>
+                  {surah.nomor}
+                </Text>
+              </View>
+              
+              <View className="flex-1">
+                <Text className={`text-base font-bold ${theme.text}`}>{surah.namaLatin}</Text>
+                <Text className={`text-xs ${theme.textMuted}`}>
+                  {surah.arti} • {surah.jumlahAyat} Ayat • {surah.tempatTurun === 'Mekah' ? 'Makkiyah' : 'Madaniyah'}
+                </Text>
+              </View>
 
-                {/* 3. Icon Panah */}
-                <View className="items-center justify-center ml-2">
-                  <ChevronRight size={20} color={isDarkMode ? "#34d399" : "#059669"} />
-                </View>
-              </Pressable>
-            ))}
-          </View>
+              <Text className={`text-xl ${theme.text} mr-3`} style={{ fontFamily: "System" }}>
+                {surah.namaArab}
+              </Text>
+              
+              <ChevronRight size={20} color={theme.iconColor} />
+            </Pressable>
+          ))}
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );

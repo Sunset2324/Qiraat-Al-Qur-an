@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, Pressable, Alert, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, Check, BookOpen } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../../src/context/ThemeContext";
@@ -16,11 +16,11 @@ interface MushafItem {
 
 export default function QiraatScreen() {
   const { isDarkMode, theme } = useTheme();
+  const { from } = useLocalSearchParams(); // Tangkap dari mana user datang
   const [mushafList, setMushafList] = useState<MushafItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMushafId, setSelectedMushafId] = useState<string>("");
 
-  // 1. Pindahkan fungsi load ke luar useEffect agar bisa dipanggil tombol retry
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -39,7 +39,6 @@ export default function QiraatScreen() {
       }
     } catch (e: any) {
       console.error("Gagal memuat data Mushaf:", e.message);
-      // Jangan tampilkan Alert yang mengganggu, biarkan Empty State yang menangani
     } finally {
       setLoading(false);
     }
@@ -54,13 +53,31 @@ export default function QiraatScreen() {
     try {
       await AsyncStorage.setItem("selected_mushaf_id", id);
       const selectedName = mushafList.find(m => m.id === id)?.name || "Mushaf";
-      Alert.alert("Berhasil", `${selectedName} berhasil dipilih sebagai default.`);
+      
+      Alert.alert(
+        "Mushaf Terpilih", 
+        `${selectedName} berhasil dipilih.`,
+        [
+          {
+            text: "Kembali ke Mushaf Belajar",
+            onPress: () => {
+              // ✅ KUNCI: Navigasi balik dengan membawa data mushaf terpilih
+              router.replace({
+                pathname: '/(tabs)/mushaf',
+                params: { 
+                  selectedMushafId: id,
+                  selectedMushafName: selectedName
+                }
+              });
+            }
+          }
+        ]
+      );
     } catch (e) {
       console.error("Gagal menyimpan preferensi Mushaf", e);
     }
   };
 
-  // 2. Loading State
   if (loading) {
     return (
       <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center`} edges={['top']}>
@@ -70,28 +87,18 @@ export default function QiraatScreen() {
     );
   }
 
-  // 3. Empty State / Error State (Khusus menangani Error 404)
   if (!loading && mushafList.length === 0) {
     return (
       <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center p-6`} edges={['top']}>
         <BookOpen size={48} color={theme.textMuted} />
-        <Text className={`mt-4 text-center font-bold ${theme.text}`}>
-          Gagal Memuat Data (404)
-        </Text>
-        <Text className={`mt-2 text-center text-sm ${theme.textMuted}`}>
-          Backend mengembalikan error 404. Pastikan route `/api/mushafs` sudah ditambahkan di backend dan sudah di-restart atau di-deploy ke Vercel.
-        </Text>
-        <Pressable 
-          onPress={loadData} 
-          className={`mt-6 px-6 py-3 rounded-full ${isDarkMode ? 'bg-emerald-600' : 'bg-emerald-700'}`}
-        >
+        <Text className={`mt-4 text-center font-bold ${theme.text}`}>Gagal Memuat Data</Text>
+        <Pressable onPress={loadData} className={`mt-6 px-6 py-3 rounded-full ${isDarkMode ? 'bg-emerald-600' : 'bg-emerald-700'}`}>
           <Text className="text-white font-bold">Coba Muat Ulang</Text>
         </Pressable>
       </SafeAreaView>
     );
   }
 
-  // 4. Tampilan Utama
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
       <View className={`flex-row items-center justify-between px-4 py-4 border-b ${theme.border}`}>
@@ -120,30 +127,33 @@ export default function QiraatScreen() {
 
         {mushafList.map((mushaf) => {
           const isActive = selectedMushafId === mushaf.id;
-          const isHafs = mushaf.name.toLowerCase().includes("hafs");
+          const isStandar = mushaf.name.toLowerCase().includes("standar") || mushaf.name.toLowerCase().includes("madinah");
 
           return (
             <Pressable
               key={mushaf.id}
               onPress={() => handleSelectMushaf(mushaf.id)}
-              className={`mb-4 p-4 rounded-2xl border-2 transition-all ${
-                isActive 
-                  ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20" 
-                  : `${theme.border} ${theme.bgCard}`
+              className={`mb-4 p-5 rounded-2xl border-2 transition-all ${
+                isActive ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20" : `${theme.border} ${theme.bgCard}`
               }`}
             >
               <View className="flex-row justify-between items-start mb-2">
                 <View className="flex-1 pr-4">
-                  <View className="flex-row items-center gap-2">
+                  <View className="flex-row items-center gap-2 flex-wrap mb-1">
                     <Text className={`text-base font-bold ${isActive ? "text-emerald-700 dark:text-emerald-400" : theme.text}`}>
                       {mushaf.name}
                     </Text>
-                    {isHafs && (
+                    {isStandar && (
                       <View className="px-2 py-0.5 rounded bg-emerald-600">
-                        <Text className="text-[10px] font-bold text-white">DEFAULT</Text>
+                        <Text className="text-[10px] font-bold text-white">POPULER</Text>
                       </View>
                     )}
                   </View>
+                  {mushaf.arabic ? (
+                    <Text className={`text-sm ${theme.textMuted} text-right`} style={{ fontFamily: "System" }}>
+                      {mushaf.arabic}
+                    </Text>
+                  ) : null}
                 </View>
 
                 <View className={`h-8 w-8 rounded-full items-center justify-center ${
@@ -153,13 +163,9 @@ export default function QiraatScreen() {
                 </View>
               </View>
 
-              <Text className={`text-2xl text-right mb-3 ${isActive ? "text-emerald-700 dark:text-emerald-400" : theme.text}`} style={{ fontFamily: "System" }}>
-                {mushaf.arabic}
-              </Text>
-
-              <Text className={`text-xs leading-5 ${theme.textMuted}`}>
-                {mushaf.description}
-              </Text>
+              <View className={`p-3 rounded-xl ${isDarkMode ? "bg-black/20" : "bg-cream-100"}`}>
+                <Text className={`text-xs leading-5 ${theme.textMuted}`}>{mushaf.description}</Text>
+              </View>
             </Pressable>
           );
         })}
