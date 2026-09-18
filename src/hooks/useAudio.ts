@@ -1,6 +1,5 @@
 import { useState } from 'react';
 
-// VERSI MOCK: Tidak mengimpor 'expo-av' agar tidak crash di Expo Go
 export const useAudio = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -9,13 +8,11 @@ export const useAudio = () => {
 
   const playAudio = async (uri: string) => {
     console.log('⚠️ [MOCK] Simulasi memutar audio:', uri);
-    console.log('💡 INFO: Audio asli memerlukan Development Build (EAS).');
-    
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
       setIsPlaying(true);
-      setDuration(180000); // Simulasi durasi 3 menit
+      setDuration(180000);
     }, 1000);
   };
 
