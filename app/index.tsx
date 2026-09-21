@@ -1,3 +1,5 @@
+import { useFocusEffect } from 'expo-router'; // Atau dari '@react-navigation/native' jika error
+import { useCallback } from 'react';
 import { View, Text, Pressable } from "react-native";
 import { Star, DoorOpen, Globe } from "lucide-react-native";
 import { router } from "expo-router";

@@ -196,10 +196,13 @@ export default function SurahDetailScreen() {
               <Text className={`text-2xl font-bold ${theme.text} mb-1`}>{surahData.info.namaLatin}</Text>
               <Text className={`text-sm ${theme.textMuted}`}>{surahData.info.arti} • {surahData.info.jumlahAyat} ayat</Text>
               
-              {/* ✅ Tampilkan mushaf aktif yang BENAR */}
+              {/* Badge Mushaf Aktif - Dengan Penjelasan Edukatif */}
               <View className="mt-2 px-3 py-1.5 rounded-lg bg-emerald-600/20 self-start">
                 <Text className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                   Mushaf: {surahData.info.mushafAktif}
+                  📜 Mushaf Terpilih: {surahData.info.mushafAktif}
+                </Text>
+                <Text className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">
+                  Teks Arab menggunakan riwayat Hafs (standar Indonesia)
                 </Text>
               </View>
             </View>
@@ -249,8 +252,18 @@ export default function SurahDetailScreen() {
                   </Pressable>
                 </View>
 
-                <View className="items-center mb-4">
-                  <Text className={`text-3xl leading-[60px] text-center ${theme.text}`} style={{ fontFamily: "System", textAlign: "right" }}>
+                <View className="items-center mb-4 px-2">
+                  <Text 
+                    className={`text-3xl text-center ${theme.text}`} 
+                    style={{ 
+                      writingDirection: 'rtl',
+                      textAlign: 'right',
+                      lineHeight: 65, 
+                      includeFontPadding: false,
+                      textAlignVertical: 'center',
+                      fontFamily: 'System', 
+                    }}
+                  >
                     {ayat.teksArab}
                   </Text>
                 </View>

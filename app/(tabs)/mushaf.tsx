@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { View, Text, ScrollView, Pressable, FlatList } from "react-native";
+import { useFocusEffect } from 'expo-router'; // ✅ Pastikan ini diimpor
+import { useCallback, useState } from "react"; // ✅ useCallback diimpor
+import { View, Text, ScrollView, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Headphones, ChevronRight, Bell } from "lucide-react-native";
@@ -27,49 +28,63 @@ export default function MushafScreen() {
   const [surahList, setSurahList] = useState<SurahItem[]>([]);
   const [lastRead, setLastRead] = useState<{ nomor: number; nama: string } | null>(null);
 
-  useEffect(() => {
-    // ✅ KUNCI: Terima data mushaf dari halaman Qiraat
-    if (selectedMushafId && selectedMushafName) {
-      setCurrentMushaf({
-        id: String(selectedMushafId),
-        name: String(selectedMushafName)
-      });
-      AsyncStorage.setItem("selected_mushaf_id", String(selectedMushafId));
-    } else {
-      // Fallback: baca dari AsyncStorage
-      AsyncStorage.getItem("selected_mushaf_id").then(id => {
-        if (id) setCurrentMushaf(prev => ({ ...prev, id }));
-      });
-    }
-
-    // Load daftar surah
-    loadSurahList();
-    loadLastRead();
-  }, [selectedMushafId, selectedMushafName]);
-
-  const loadSurahList = async () => {
+  // 1. Definisikan fungsi load di atas agar aman dari warning React
+  const loadSurahList = useCallback(async () => {
     try {
       const data = await getDaftarSurah();
       setSurahList(data);
     } catch (e) {
       console.error("Gagal memuat daftar surah:", e);
     }
-  };
+  }, []);
 
-  const loadLastRead = async () => {
+  const loadLastRead = useCallback(async () => {
     try {
       const saved = await AsyncStorage.getItem("last_read_surah");
       if (saved) setLastRead(JSON.parse(saved));
     } catch (e) {
       console.error("Gagal memuat last read:", e);
     }
-  };
+  }, []);
+
+  // 2. ✅ GANTI useEffect DENGAN useFocusEffect
+  useFocusEffect(
+    useCallback(() => {
+      const loadPreferences = async () => {
+        // Prioritas 1: Jika ada data dari halaman Qiraat
+        if (selectedMushafId && selectedMushafName) {
+          const idStr = String(selectedMushafId);
+          const nameStr = String(selectedMushafName);
+          setCurrentMushaf({ id: idStr, name: nameStr });
+          await AsyncStorage.setItem("selected_mushaf_id", idStr);
+          await AsyncStorage.setItem("selected_mushaf_name", nameStr); // Simpan nama juga
+        } else {
+          // Prioritas 2: Saat kembali (back), baca dari AsyncStorage
+          const savedId = await AsyncStorage.getItem("selected_mushaf_id");
+          const savedName = await AsyncStorage.getItem("selected_mushaf_name");
+          
+          if (savedId) {
+            setCurrentMushaf({ 
+              id: savedId, 
+              name: savedName || "Mushaf Terpilih" 
+            });
+          }
+        }
+        
+        // Load data lainnya
+        loadSurahList();
+        loadLastRead();
+      };
+
+      loadPreferences();
+    }, [selectedMushafId, selectedMushafName, loadSurahList, loadLastRead])
+  );
 
   const handleOpenSurah = (nomor: number, nama: string) => {
     // Simpan last read
     AsyncStorage.setItem("last_read_surah", JSON.stringify({ nomor, nama }));
     
-    // ✅ KUNCI: Oper mushafId ke halaman detail
+    // ✅ Oper mushafId ke halaman detail
     router.push({
       pathname: '/screen/surah/[nomor]',
       params: { 

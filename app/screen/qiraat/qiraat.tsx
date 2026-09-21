@@ -49,34 +49,38 @@ export default function QiraatScreen() {
   }, [loadData]);
 
   const handleSelectMushaf = async (id: string) => {
-    setSelectedMushafId(id);
-    try {
-      await AsyncStorage.setItem("selected_mushaf_id", id);
-      const selectedName = mushafList.find(m => m.id === id)?.name || "Mushaf";
-      
-      Alert.alert(
-        "Mushaf Terpilih", 
-        `${selectedName} berhasil dipilih.`,
-        [
-          {
-            text: "Kembali ke Mushaf Belajar",
-            onPress: () => {
-              // ✅ KUNCI: Navigasi balik dengan membawa data mushaf terpilih
-              router.replace({
-                pathname: '/(tabs)/mushaf',
-                params: { 
-                  selectedMushafId: id,
-                  selectedMushafName: selectedName
-                }
-              });
-            }
+  setSelectedMushafId(id);
+  try {
+    const selectedName = mushafList.find(m => m.id === id)?.name || "Mushaf";
+    
+    // ✅ PENGAMAN GANDA: Simpan ID dan Nama ke AsyncStorage
+    await AsyncStorage.setItem("selected_mushaf_id", id);
+    await AsyncStorage.setItem("selected_mushaf_name", selectedName);
+    
+    Alert.alert(
+      "Mushaf Terpilih", 
+      `${selectedName} berhasil dipilih.`,
+      [
+        {
+          text: "Kembali ke Mushaf Belajar",
+          onPress: () => {
+            // ✅ Navigasi balik dengan membawa data mushaf terpilih
+            router.replace({
+              pathname: '/(tabs)/mushaf',
+              params: { 
+                selectedMushafId: id,
+                selectedMushafName: selectedName,
+                refresh: Date.now().toString() // Memaksa halaman dashboard refresh
+              }
+            });
           }
-        ]
-      );
-    } catch (e) {
-      console.error("Gagal menyimpan preferensi Mushaf", e);
-    }
-  };
+        }
+      ]
+    );
+  } catch (e) {
+    console.error("Gagal menyimpan preferensi Mushaf", e);
+  }
+};
 
   if (loading) {
     return (
