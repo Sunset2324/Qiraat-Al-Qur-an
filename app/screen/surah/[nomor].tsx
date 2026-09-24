@@ -49,7 +49,9 @@ export default function SurahDetailScreen() {
   const [selectedQariId, setSelectedQariId] = useState("05");
   const [showQiraatOptions, setShowQiraatOptions] = useState(false);
   const [playingAyat, setPlayingAyat] = useState<number | null>(null);
-  const [activeMushafId, setActiveMushafId] = useState<string>("hafs");
+  
+  // ✅ PERBAIKAN 1: Default state diubah dari "hafs" menjadi "1"
+  const [activeMushafId, setActiveMushafId] = useState<string>("1");
 
   const activeQariName = QIRAAT_OPTIONS.find(q => q.qariId === selectedQariId)?.label || "Mishary Rashid Alafasy";
   const { playAudio } = useAudio();
@@ -63,8 +65,8 @@ export default function SurahDetailScreen() {
         setLoading(true);
         setError(null);
         
-        // 1. Tentukan mushafId: dari route > AsyncStorage > default "hafs"
-        let mushafIdToUse = "hafs";
+        // ✅ PERBAIKAN 2: Default value diubah menjadi "1" (ID Hafs di Quranpedia)
+        let mushafIdToUse = "1";
         
         if (routeMushafId) {
           mushafIdToUse = String(routeMushafId);
@@ -75,9 +77,9 @@ export default function SurahDetailScreen() {
         
         setActiveMushafId(mushafIdToUse);
         
-        console.log(`📖 Loading surah ${nomor} dengan mushaf: ${mushafIdToUse}`);
+        console.log(`📖 Loading surah ${nomor} dengan mushafId: ${mushafIdToUse}`);
         
-        // 2. Panggil endpoint MERGED dengan mushafId yang benar
+        // 2. Panggil endpoint MERGED dengan mushafId yang benar (sekarang pasti berupa string angka)
         const data = await getDetailSurahMerged(Number(nomor), mushafIdToUse, selectedQariId);
         
         console.log('✅ Data berhasil dimuat, mushaf aktif:', data.info.mushafAktif);
@@ -129,8 +131,8 @@ export default function SurahDetailScreen() {
   }
 
   const audioFullUrl = surahData.audioFull || (surahData.ayat[0]?.audio 
-  ? surahData.ayat[0].audio.replace(/\/\d{3}\.mp3$/, '/000.mp3')
-  : undefined);
+    ? surahData.ayat[0].audio.replace(/\/\d{3}\.mp3$/, '/000.mp3')
+    : undefined);
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
