@@ -20,6 +20,9 @@
       "eas": {
         "projectId": "e92b93e1-7f22-419c-a971-d52ddd7723da"
       }
+    },
+    "android": {
+      "package": "com.sambelcode.qiraatalquran"
     }
   }
 }
