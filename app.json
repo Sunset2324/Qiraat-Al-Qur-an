@@ -4,6 +4,7 @@
     "slug": "qiraat-al-qur-an",
     "version": "1.0.0",
     "scheme": "qiraat-al-qur-an",
+    "userInterfaceStyle": "automatic",
     "web": {
       "bundler": "metro"
     },

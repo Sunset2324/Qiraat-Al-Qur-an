@@ -6,8 +6,9 @@ module.exports = function (api) {
       ["babel-preset-expo", { jsxImportSource: "nativewind" }],
     ],
     plugins: [
-      // Plugin Reanimated WAJIB ada di sini, dan WAJIB di urutan paling bawah
-      "react-native-reanimated/plugin",
+      // Reanimated v4 memindahkan plugin babel-nya ke paket react-native-worklets.
+      // WAJIB di urutan paling bawah.
+      "react-native-worklets/plugin",
     ],
   };
 };
