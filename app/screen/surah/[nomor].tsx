@@ -5,7 +5,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { ArrowLeft, Bookmark, Headphones, Volume2 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../../src/context/ThemeContext";
-import { getDetailSurahMerged } from "../../../src/services/quranService";
+import { getDetailSurahMerged, getReciters } from "../../../src/services/quranService";
 import { useAudio } from "../../../src/hooks/useAudio";
 import AudioPlayer from "../../../src/components/AudioPlayer";
 
@@ -26,18 +26,11 @@ interface SuratDetail {
     jumlahAyat: number;
     tempatTurun: string;
     mushafAktif: string;
+    reciterAktif?: { id: number; nama: string; perAyah: boolean } | string;
   };
   audioFull?: string;
   ayat: AyatItem[];
 }
-
-const QIRAAT_OPTIONS = [
-  { id: "05", label: "Mishary Rashid Alafasy", qariId: "05" },
-  { id: "01", label: "Abdurrahman As-Sudais", qariId: "01" },
-  { id: "03", label: "Abdul Basit Abdul Samad", qariId: "03" },
-  { id: "04", label: "Sa'ad Al-Ghamdi", qariId: "04" },
-  { id: "02", label: "Maher Al-Muaiqly", qariId: "02" },
-];
 
 export default function SurahDetailScreen() {
   const { isDarkMode, theme } = useTheme();
@@ -46,54 +39,66 @@ export default function SurahDetailScreen() {
   const [surahData, setSurahData] = useState<SuratDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedQariId, setSelectedQariId] = useState("05");
+  
+  // ✅ STATE DINAMIS UNTUK RECITER
+  const [reciters, setReciters] = useState<any[]>([]);
+  const [selectedReciterId, setSelectedReciterId] = useState<string>("114"); // Default sementara
+  
   const [showQiraatOptions, setShowQiraatOptions] = useState(false);
   const [playingAyat, setPlayingAyat] = useState<number | null>(null);
-  
-  // ✅ PERBAIKAN 1: Default state diubah dari "hafs" menjadi "1"
   const [activeMushafId, setActiveMushafId] = useState<string>("1");
 
-  const activeQariName = QIRAAT_OPTIONS.find(q => q.qariId === selectedQariId)?.label || "Mishary Rashid Alafasy";
+  const activeReciterName = reciters.find(q => q.id === Number(selectedReciterId) || String(q.id) === selectedReciterId)?.namaLatin || "Memuat...";
   const { playAudio } = useAudio();
 
-  // ✅ KUNCI: Prioritaskan mushafId dari route params, fallback ke AsyncStorage
+  // ✅ LOAD DATA: Ambil Reciters DAN Surah sekaligus
   useEffect(() => {
-    const loadSurahData = async () => {
+    const loadData = async () => {
       if (!nomor) return;
       
       try {
         setLoading(true);
         setError(null);
         
-        // ✅ PERBAIKAN 2: Default value diubah menjadi "1" (ID Hafs di Quranpedia)
+        // 1. Ambil daftar reciter jika belum ada di state
+        if (reciters.length === 0) {
+          const recitersData = await getReciters();
+          setReciters(recitersData);
+          
+          // Set default ke reciter pertama yang mendukung "per ayat" (untuk fitur ikuti bacaan)
+          const defaultReciter = recitersData.find((r: any) => r.perAyah) || recitersData[0];
+          if (defaultReciter) {
+            setSelectedReciterId(String(defaultReciter.id));
+          }
+        }
+
+        // 2. Tentukan mushafId
         let mushafIdToUse = "1";
-        
         if (routeMushafId) {
           mushafIdToUse = String(routeMushafId);
         } else {
           const saved = await AsyncStorage.getItem("selected_mushaf_id");
           if (saved) mushafIdToUse = saved;
         }
-        
         setActiveMushafId(mushafIdToUse);
         
-        console.log(`📖 Loading surah ${nomor} dengan mushafId: ${mushafIdToUse}`);
+        console.log(`📖 Loading surah ${nomor} | mushaf: ${mushafIdToUse} | reciter: ${selectedReciterId}`);
         
-        // 2. Panggil endpoint MERGED dengan mushafId yang benar (sekarang pasti berupa string angka)
-        const data = await getDetailSurahMerged(Number(nomor), mushafIdToUse, selectedQariId);
+        // 3. Panggil endpoint MERGED dengan reciterId
+        const data = await getDetailSurahMerged(Number(nomor), mushafIdToUse, selectedReciterId);
         
-        console.log('✅ Data berhasil dimuat, mushaf aktif:', data.info.mushafAktif);
+        console.log('✅ Data berhasil dimuat, reciter aktif:', data.info.reciterAktif);
         setSurahData(data);
       } catch (err: any) {
-        console.error('❌ Error loading surah:', err.message);
-        setError("Gagal memuat data surat. Pastikan koneksi internet aktif.");
+        console.error('❌ Error loading data:', err.message);
+        setError("Gagal memuat data. Pastikan koneksi internet aktif.");
       } finally {
         setLoading(false);
       }
     };
 
-    loadSurahData();
-  }, [nomor, selectedQariId, routeMushafId]);
+    loadData();
+  }, [nomor, selectedReciterId, routeMushafId]);
 
   const handleBack = () => {
     router.replace('/(tabs)/mushaf');
@@ -134,6 +139,17 @@ export default function SurahDetailScreen() {
     ? surahData.ayat[0].audio.replace(/\/\d{3}\.mp3$/, '/000.mp3')
     : undefined);
 
+  // Helper untuk menampilkan nama reciter (bisa berupa object atau string dari backend)
+  const getReciterName = () => {
+    if (!surahData.info.reciterAktif) return "Unknown";
+    if (typeof surahData.info.reciterAktif === 'object') {
+      return surahData.info.reciterAktif.nama;
+    }
+    return surahData.info.reciterAktif;
+  };
+
+  const isPerAyah = typeof surahData.info.reciterAktif === 'object' ? surahData.info.reciterAktif.perAyah : false;
+
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
       <View className={`flex-row items-center justify-between px-4 py-4 border-b ${theme.border}`}>
@@ -165,26 +181,39 @@ export default function SurahDetailScreen() {
 
             <Pressable onPress={() => setShowQiraatOptions(!showQiraatOptions)} className={`flex-row items-center gap-2 px-4 py-2 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-[#f5f0e1]"}`}>
               <Headphones size={16} color={isDarkMode ? "#34d399" : "#047857"} />
-              <Text className={`text-xs font-medium ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>
-                {activeQariName}
+              <Text className={`text-xs font-medium ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`} numberOfLines={1}>
+                {activeReciterName}
               </Text>
             </Pressable>
           </View>
 
           {showQiraatOptions && (
-            <View className={`flex-row flex-wrap gap-2 mt-2 pt-3 border-t ${theme.border}`}>
-              {QIRAAT_OPTIONS.map((qiraat) => (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2 mt-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+              {reciters.map((reciter) => (
                 <Pressable
-                  key={qiraat.id}
-                  onPress={() => { setSelectedQariId(qiraat.qariId); setShowQiraatOptions(false); }}
-                  className={`px-4 py-2 rounded-full ${selectedQariId === qiraat.qariId ? "bg-emerald-600" : isDarkMode ? "bg-gray-700" : "bg-gray-200"}`}
+                  key={reciter.id}
+                  onPress={() => { 
+                    setSelectedReciterId(String(reciter.id)); 
+                    setShowQiraatOptions(false); 
+                  }}
+                  className={`px-4 py-2 rounded-full flex-row items-center gap-2 ${
+                    String(reciter.id) === selectedReciterId 
+                      ? "bg-emerald-600" 
+                      : isDarkMode ? "bg-gray-700" : "bg-gray-200"
+                  }`}
                 >
-                  <Text className={`text-xs font-medium ${selectedQariId === qiraat.qariId ? "text-white" : theme.text}`}>
-                    {qiraat.label}
+                  <Text className={`text-xs font-medium ${String(reciter.id) === selectedReciterId ? "text-white" : theme.text}`}>
+                    {reciter.namaLatin || reciter.nama}
                   </Text>
+                  {/* Badge kecil untuk menandai yang mendukung sinkronisasi per-ayat */}
+                  {reciter.perAyah && (
+                    <View className="px-1.5 py-0.5 rounded bg-white/20">
+                      <Text className="text-[10px] text-white font-bold">Ayah</Text>
+                    </View>
+                  )}
                 </Pressable>
               ))}
-            </View>
+            </ScrollView>
           )}
         </View>
 
@@ -198,13 +227,13 @@ export default function SurahDetailScreen() {
               <Text className={`text-2xl font-bold ${theme.text} mb-1`}>{surahData.info.namaLatin}</Text>
               <Text className={`text-sm ${theme.textMuted}`}>{surahData.info.arti} • {surahData.info.jumlahAyat} ayat</Text>
               
-              {/* Badge Mushaf Aktif - Dengan Penjelasan Edukatif */}
+              {/* Badge Mushaf & Qari Aktif */}
               <View className="mt-2 px-3 py-1.5 rounded-lg bg-emerald-600/20 self-start">
                 <Text className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                  📜 Mushaf Terpilih: {surahData.info.mushafAktif}
+                  📜 Mushaf: {surahData.info.mushafAktif}
                 </Text>
                 <Text className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">
-                  Teks Arab menggunakan riwayat Hafs (standar Indonesia)
+                  🎙️ Qari: {getReciterName()} {isPerAyah ? '(Sinkron per Ayat)' : '(Per Surah)'}
                 </Text>
               </View>
             </View>

@@ -40,14 +40,13 @@ export const getDaftarSurah = async () => {
 
 /**
  * 3. Ambil detail surat beserta ayat-ayatnya dari Backend (Default Hafs)
- * Endpoint: GET /surat/:nomor?qari=05
+ * Endpoint: GET /surat/:nomor?reciterId=114
  */
-export const getDetailSurah = async (nomor: number, qariId: string = '05') => {
+export const getDetailSurah = async (nomor: number, reciterId: string = '114') => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/surat/${nomor}?qari=${qariId}`);
+    const response = await axios.get(`${API_BASE_URL}/surat/${nomor}?reciterId=${reciterId}`);
     const backendData = response.data.data;
     
-    // Backend mengembalikan struktur: { info: {...}, audioFull: "...", ayat: [...] }
     const info = backendData.info || backendData; 
     
     return {
@@ -76,12 +75,12 @@ export const getDetailSurah = async (nomor: number, qariId: string = '05') => {
 };
 
 /**
- * 4. Ambil Detail Surah MERGED: Teks Arab dari Quranpedia + Terjemahan/Tafsir dari EQuran.id
- * Endpoint: GET /surat-merged/:nomor?mushafId=...&qariId=...
+ * 4. Ambil Detail Surah MERGED: Teks Arab Quranpedia + Terjemahan EQuran + Audio Quranpedia
+ * Endpoint: GET /surat-merged/:nomor?mushafId=...&reciterId=...
  */
-export const getDetailSurahMerged = async (nomor: number, mushafId: string, qariId: string = '05') => {
+export const getDetailSurahMerged = async (nomor: number, mushafId: string, reciterId: string) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/surat-merged/${nomor}?mushafId=${mushafId}&qariId=${qariId}`);
+    const response = await axios.get(`${API_BASE_URL}/surat-merged/${nomor}?mushafId=${mushafId}&reciterId=${reciterId}`);
     return response.data.data;
   } catch (error) {
     console.error(`Error fetching merged surah ${nomor}:`, error);
@@ -90,7 +89,21 @@ export const getDetailSurahMerged = async (nomor: number, mushafId: string, qari
 };
 
 /**
- * 5. Ambil daftar doa dan dzikir dari Backend
+ * 5. Ambil daftar Qari/Reciter dari Backend (sumber: Quranpedia)
+ * Endpoint: GET /reciters
+ */
+export const getReciters = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/reciters`);
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching reciters:', error);
+    throw error;
+  }
+};
+
+/**
+ * 6. Ambil daftar doa dan dzikir dari Backend
  * Endpoint: GET /doa (dengan opsional query ?grup=... atau ?tag=...)
  */
 export const getDaftarDoa = async (grup?: string, tag?: string) => {
@@ -114,7 +127,7 @@ export const getDaftarDoa = async (grup?: string, tag?: string) => {
 };
 
 /**
- * 6. Ambil detail doa spesifik berdasarkan ID
+ * 7. Ambil detail doa spesifik berdasarkan ID
  * Endpoint: GET /doa/:id
  */
 export const getDetailDoa = async (id: number) => {
