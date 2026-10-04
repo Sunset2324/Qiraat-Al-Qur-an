@@ -40,13 +40,14 @@ export const getDaftarSurah = async () => {
 
 /**
  * 3. Ambil detail surat beserta ayat-ayatnya dari Backend (Default Hafs)
- * Endpoint: GET /surat/:nomor?reciterId=114
+ * Endpoint: GET /surat/:nomor?qari=05
  */
-export const getDetailSurah = async (nomor: number, reciterId: string = '114') => {
+export const getDetailSurah = async (nomor: number, qariId: string = '05') => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/surat/${nomor}?reciterId=${reciterId}`);
+    const response = await axios.get(`${API_BASE_URL}/surat/${nomor}?qari=${qariId}`);
     const backendData = response.data.data;
     
+    // Backend mengembalikan struktur: { info: {...}, audioFull: "...", ayat: [...] }
     const info = backendData.info || backendData; 
     
     return {
@@ -75,12 +76,21 @@ export const getDetailSurah = async (nomor: number, reciterId: string = '114') =
 };
 
 /**
- * 4. Ambil Detail Surah MERGED: Teks Arab Quranpedia + Terjemahan EQuran + Audio Quranpedia
- * Endpoint: GET /surat-merged/:nomor?mushafId=...&reciterId=...
+ * 4. Ambil Detail Surah MERGED: Teks Arab dari Quranpedia + Terjemahan/Tafsir dari EQuran.id
+ * Endpoint: GET /surat-merged/:nomor?mushafId=...&qariId=...
  */
-export const getDetailSurahMerged = async (nomor: number, mushafId: string, reciterId: string) => {
+export const getDetailSurahMerged = async (
+  nomor: number,
+  mushafId: string,
+  qariId: string = '05',
+  reciterId?: number
+) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/surat-merged/${nomor}?mushafId=${mushafId}&reciterId=${reciterId}`);
+    // reciterId (opsional) = qari dari katalog Quranpedia. Kalau kosong, pakai qariId (EQuran.id).
+    const reciterParam = reciterId ? `&reciterId=${reciterId}` : '';
+    const response = await axios.get(
+      `${API_BASE_URL}/surat-merged/${nomor}?mushafId=${mushafId}&qariId=${qariId}${reciterParam}`
+    );
     return response.data.data;
   } catch (error) {
     console.error(`Error fetching merged surah ${nomor}:`, error);
@@ -88,13 +98,25 @@ export const getDetailSurahMerged = async (nomor: number, mushafId: string, reci
   }
 };
 
+/** Qari dari katalog Quranpedia (versi ringan dari backend) */
+export interface Reciter {
+  id: number;
+  reciter: string;          // nama qari (Arab)
+  name: string;
+  rawi: string | null;      // mis. "حفص"
+  recitationType: string | null; // mis. "مرتل"
+  perAyah: boolean;         // true = bisa dipakai untuk "Ikuti Bacaan" (audio per ayat)
+  surahCount: number;
+}
+
 /**
- * 5. Ambil daftar Qari/Reciter dari Backend (sumber: Quranpedia)
- * Endpoint: GET /reciters
+ * Ambil daftar qari lengkap dari Backend (sumber: Quranpedia)
+ * Endpoint: GET /reciters (opsional ?rawi=حفص)
  */
-export const getReciters = async () => {
+export const getReciters = async (rawi?: string | null): Promise<Reciter[]> => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/reciters`);
+    const params = rawi ? { rawi } : undefined;
+    const response = await axios.get(`${API_BASE_URL}/reciters`, { params });
     return response.data.data;
   } catch (error) {
     console.error('Error fetching reciters:', error);
@@ -103,7 +125,7 @@ export const getReciters = async () => {
 };
 
 /**
- * 6. Ambil daftar doa dan dzikir dari Backend
+ * 5. Ambil daftar doa dan dzikir dari Backend
  * Endpoint: GET /doa (dengan opsional query ?grup=... atau ?tag=...)
  */
 export const getDaftarDoa = async (grup?: string, tag?: string) => {
@@ -127,7 +149,7 @@ export const getDaftarDoa = async (grup?: string, tag?: string) => {
 };
 
 /**
- * 7. Ambil detail doa spesifik berdasarkan ID
+ * 6. Ambil detail doa spesifik berdasarkan ID
  * Endpoint: GET /doa/:id
  */
 export const getDetailDoa = async (id: number) => {
