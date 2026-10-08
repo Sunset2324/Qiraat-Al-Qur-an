@@ -390,35 +390,37 @@ export default function SurahDetailScreen() {
           </View>
 
           {showQiraatOptions && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              className={`flex-row gap-2 mt-2 pt-3 border-t ${theme.border}`}
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              className="flex-row gap-2 mt-2 pt-3 border-t border-gray-200 dark:border-gray-700"
             >
               {reciters.map((reciter) => {
                 const isSelected = String(reciter.id) === selectedReciterId;
+                
                 return (
                   <Pressable
-                    key={reciter.id}
-                    onPress={() => {
-                      setSelectedReciterId(String(reciter.id));
-                      setShowQiraatOptions(false);
+                    key={String(reciter.id)}
+                    onPress={() => { 
+                      setSelectedReciterId(String(reciter.id)); 
+                      setShowQiraatOptions(false); 
                     }}
-                    className={`mr-2 px-4 py-2 rounded-full flex-row items-center gap-2 ${
+                    className={`px-4 py-2 rounded-full flex-row items-center gap-2 ${
                       isSelected ? "bg-emerald-600" : isDarkMode ? "bg-gray-700" : "bg-gray-200"
                     }`}
                   >
                     <Text className={`text-xs font-medium ${isSelected ? "text-white" : theme.text}`}>
-                      {reciter.reciter || reciter.name}
+                      {reciter.namaLatin || reciter.nama}
                     </Text>
+                    
                     {reciter.perAyah && (
                       <View className="px-1.5 py-0.5 rounded bg-white/20">
                         <Text className="text-[10px] text-white font-bold">Ayah</Text>
                       </View>
                     )}
                   </Pressable>
-                );
-              })}
+                ); // <-- Pastikan kurung tutup return ada di sini
+              })} {/* <-- Pastikan kurung tutup map ada di sini */}
             </ScrollView>
           )}
         </View>
