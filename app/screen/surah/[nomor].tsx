@@ -51,6 +51,10 @@ export default function SurahDetailScreen() {
   // 🎙️ DAFTAR RECITER (dinamis dari Quranpedia lewat backend)
   // ─────────────────────────────────────────────────────────
   const [reciters, setReciters] = useState<Reciter[]>([]);
+  // Daftar qari di atas sudah difilter untuk surah nomor berapa. Pemuat surah
+  // nunggu ini cocok dengan surah yang dibuka, supaya nggak sempat minta audio
+  // ke qari yang nggak punya surah tersebut.
+  const [recitersSurah, setRecitersSurah] = useState<number | null>(null);
   // null dulu (belum ada pilihan) -> effect pemuat surah SENGAJA nunggu
   // sampai ini terisi, supaya request pertama udah pakai reciterId yang valid
   // (bukan nebak angka default yang mungkin nggak ada di katalog Quranpedia).
@@ -70,31 +74,37 @@ export default function SurahDetailScreen() {
     ? "Memuat..."
     : "Pilih qari";
 
-  // Ambil daftar reciter sekali di awal, lalu pilih qari:
-  // pakai pilihan terakhir yang tersimpan (kalau masih ada di daftar),
-  // kalau nggak ada -> qari pertama yang support per-ayat.
+  // Ambil daftar reciter (hanya yang punya surah ini), lalu pilih qari:
+  // 1) pilihan sekarang kalau masih valid, 2) pilihan terakhir yang tersimpan,
+  // 3) qari pertama yang support per-ayat.
   useEffect(() => {
     let cancelled = false;
 
     const init = async () => {
       try {
+        const surahNumber = Number(nomor);
         const [list, savedId] = await Promise.all([
-          getReciters(),
+          getReciters(null, Number.isFinite(surahNumber) ? surahNumber : null),
           AsyncStorage.getItem(RECITER_STORAGE_KEY),
         ]);
         if (cancelled) return;
 
-        setReciters(list);
-
-        const saved = savedId ? list.find((r) => String(r.id) === savedId) : undefined;
-        const fallback = list.find((r) => r.perAyah) || list[0];
-        const chosen = saved || fallback;
-        if (chosen) {
-          setSelectedReciterId(String(chosen.id));
-        } else {
-          setError("Daftar qari kosong. Coba lagi nanti.");
+        if (list.length === 0) {
+          setReciters([]);
+          setError("Belum ada qari yang tersedia untuk surah ini.");
           setLoading(false);
+          return;
         }
+
+        setReciters(list);
+        setSelectedReciterId((prev) => {
+          const valid = (id: string | null) => !!id && list.some((r) => String(r.id) === id);
+          if (valid(prev)) return prev;
+          if (valid(savedId)) return savedId;
+          const fallback = list.find((r) => r.perAyah) || list[0];
+          return String(fallback.id);
+        });
+        setRecitersSurah(surahNumber);
       } catch (err: any) {
         if (cancelled) return;
         console.error("Gagal memuat daftar reciter:", err?.message);
@@ -108,7 +118,7 @@ export default function SurahDetailScreen() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [retryKey]);
+  }, [nomor, retryKey]);
 
   const handleSelectReciter = (id: number) => {
     const idStr = String(id);
@@ -311,7 +321,7 @@ export default function SurahDetailScreen() {
   // (bukan tebakan), dan reciterAktif nggak pernah null di kondisi normal.
   // ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!nomor || !selectedReciterId) return;
+    if (!nomor || !selectedReciterId || recitersSurah !== Number(nomor)) return;
 
     const loadSurahData = async () => {
       try {
@@ -355,7 +365,7 @@ export default function SurahDetailScreen() {
 
     loadSurahData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nomor, selectedReciterId, routeMushafId, retryKey]);
+  }, [nomor, selectedReciterId, recitersSurah, routeMushafId, retryKey]);
 
   const handleBack = () => {
     // Balik ke layar asal (mis. History); kalau nggak ada riwayat navigasi, ke tab Mushaf
@@ -530,10 +540,15 @@ export default function SurahDetailScreen() {
               </View>
 
               <Text className={`text-[11px] mb-2 ${theme.textMuted}`}>
-                {filteredReciters.length} pilihan • "Ayah" = bisa Ikuti Bacaan, "Surah" = file full surah
+                {filteredReciters.length} qari tersedia untuk surah ini • "Ayah" = bisa Ikuti Bacaan, "Surah" = file full surah
               </Text>
 
               <ScrollView style={{ maxHeight: 280 }} nestedScrollEnabled showsVerticalScrollIndicator>
+                {filteredReciters.length === 0 && (
+                  <Text className={`text-xs text-center py-4 ${theme.textMuted}`}>
+                    Tidak ada qari untuk filter ini.
+                  </Text>
+                )}
                 {filteredReciters.map((reciter) => {
                   const isSelected = String(reciter.id) === selectedReciterId;
                   const detail = [reciter.rawi, reciter.recitationType].filter(Boolean).join(" • ");

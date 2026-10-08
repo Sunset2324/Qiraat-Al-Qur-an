@@ -111,11 +111,18 @@ export interface Reciter {
 
 /**
  * Ambil daftar qari lengkap dari Backend (sumber: Quranpedia)
- * Endpoint: GET /reciters (opsional ?rawi=حفص)
+ * Endpoint: GET /reciters
+ *  - rawi  (opsional) : filter rawi, mis. "حفص"
+ *  - surah (opsional) : hanya qari yang punya audio untuk surah ini (1-114)
  */
-export const getReciters = async (rawi?: string | null): Promise<Reciter[]> => {
+export const getReciters = async (
+  rawi?: string | null,
+  surah?: number | null
+): Promise<Reciter[]> => {
   try {
-    const params = rawi ? { rawi } : undefined;
+    const params: Record<string, string | number> = {};
+    if (rawi) params.rawi = rawi;
+    if (surah) params.surah = surah;
     const response = await axios.get(`${API_BASE_URL}/reciters`, { params });
     return response.data.data;
   } catch (error) {
