@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
@@ -35,6 +35,10 @@ interface SuratDetail {
   ayat: AyatItem[];
 }
 
+const RECITER_STORAGE_KEY = "selected_reciter_id";
+
+type ReciterFilter = "all" | "ayah" | "surah";
+
 export default function SurahDetailScreen() {
   const { isDarkMode, theme } = useTheme();
   const { nomor, mushafId: routeMushafId, ayat: routeAyat } = useLocalSearchParams();
@@ -52,6 +56,10 @@ export default function SurahDetailScreen() {
   // (bukan nebak angka default yang mungkin nggak ada di katalog Quranpedia).
   const [selectedReciterId, setSelectedReciterId] = useState<string | null>(null);
   const [showQiraatOptions, setShowQiraatOptions] = useState(false);
+  const [reciterFilter, setReciterFilter] = useState<ReciterFilter>("all");
+
+  // Naikkan angka ini buat memicu fetch ulang (dipakai tombol "Coba Lagi")
+  const [retryKey, setRetryKey] = useState(0);
 
   const [activeMushafId, setActiveMushafId] = useState<string>("1");
 
@@ -62,28 +70,64 @@ export default function SurahDetailScreen() {
     ? "Memuat..."
     : "Pilih qari";
 
-  // Ambil daftar reciter sekali di awal
+  // Ambil daftar reciter sekali di awal, lalu pilih qari:
+  // pakai pilihan terakhir yang tersimpan (kalau masih ada di daftar),
+  // kalau nggak ada -> qari pertama yang support per-ayat.
   useEffect(() => {
     let cancelled = false;
-    getReciters()
-      .then((list) => {
+
+    const init = async () => {
+      try {
+        const [list, savedId] = await Promise.all([
+          getReciters(),
+          AsyncStorage.getItem(RECITER_STORAGE_KEY),
+        ]);
         if (cancelled) return;
+
         setReciters(list);
-        setSelectedReciterId((prev) => {
-          if (prev) return prev; // sudah ada pilihan (mis. dari navigasi sebelumnya), jangan ditimpa
-          const defaultReciter = list.find((r) => r.perAyah) || list[0];
-          return defaultReciter ? String(defaultReciter.id) : null;
-        });
-      })
-      .catch((err) => console.error("Gagal memuat daftar reciter:", err));
+
+        const saved = savedId ? list.find((r) => String(r.id) === savedId) : undefined;
+        const fallback = list.find((r) => r.perAyah) || list[0];
+        const chosen = saved || fallback;
+        if (chosen) {
+          setSelectedReciterId(String(chosen.id));
+        } else {
+          setError("Daftar qari kosong. Coba lagi nanti.");
+          setLoading(false);
+        }
+      } catch (err: any) {
+        if (cancelled) return;
+        console.error("Gagal memuat daftar reciter:", err?.message);
+        setError("Gagal memuat daftar qari. Pastikan koneksi internet aktif.");
+        setLoading(false);
+      }
+    };
+
+    init();
     return () => {
       cancelled = true;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [retryKey]);
+
+  const handleSelectReciter = (id: number) => {
+    const idStr = String(id);
+    setSelectedReciterId(idStr);
+    setShowQiraatOptions(false);
+    AsyncStorage.setItem(RECITER_STORAGE_KEY, idStr).catch(() => {});
+  };
+
+  const filteredReciters = useMemo(
+    () =>
+      reciters.filter((r) =>
+        reciterFilter === "all" ? true : reciterFilter === "ayah" ? r.perAyah : !r.perAyah
+      ),
+    [reciters, reciterFilter]
+  );
 
   // ▶ Mode "Ikuti Bacaan": playlist audio per-ayat yang otomatis lanjut
   // ke ayat berikutnya, dipakai juga untuk tombol play per-ayat.
-  const ayahAudioUrls = surahData?.ayat.map((a) => a.audio) ?? [];
+  const ayahAudioUrls = useMemo(() => surahData?.ayat.map((a) => a.audio) ?? [], [surahData]);
   const ayahPlaylist = useAyahPlaylist(ayahAudioUrls);
   const hasPerAyahAudio = ayahPlaylist.trackCount > 0;
 
@@ -116,6 +160,9 @@ export default function SurahDetailScreen() {
 
   // Posisi scroll sekarang (buat hitung ayat mana yang lagi "di layar")
   const currentScrollY = useRef(0);
+  // Sudah ada event scroll sejak surah dibuka? (dipakai supaya progres awal
+  // nggak menimpa hasil scroll yang sebenarnya)
+  const hasScrolledRef = useRef(false);
 
   // Progres terbaru disimpan di ref (bukan state) supaya bisa dibaca
   // di cleanup function tanpa masalah stale-closure, dan nggak bikin re-render tiap scroll.
@@ -153,6 +200,7 @@ export default function SurahDetailScreen() {
   };
 
   const handleScroll = (e: any) => {
+    hasScrolledRef.current = true;
     currentScrollY.current = e.nativeEvent.contentOffset.y;
     if (!surahData) return;
     const ayatNomor = getVisibleAyahNumber();
@@ -168,15 +216,43 @@ export default function SurahDetailScreen() {
   // Ambil posisi terakhir dibaca tiap kali surah berganti, reset status auto-scroll
   useEffect(() => {
     hasAutoScrolledToLastRead.current = false;
+    hasScrolledRef.current = false;
     if (!surahData) return;
-    getLastReadAyah(surahData.info.nomor).then(setLastReadAyahNumber);
-    // Progres awal = ayat pertama, nanti ter-update begitu user scroll
+
+    const info = surahData.info;
+    const total = surahData.ayat.length;
+    const paramAyat = routeAyat ? parseInt(String(routeAyat), 10) : NaN;
+    let cancelled = false;
+
+    // Progres awal sementara = ayat pertama
     latestProgressRef.current = {
-      surahNomor: surahData.info.nomor,
-      namaLatin: surahData.info.namaLatin,
+      surahNomor: info.nomor,
+      namaLatin: info.namaLatin,
       ayatNomor: 1,
-      totalAyat: surahData.ayat.length,
+      totalAyat: total,
     };
+
+    getLastReadAyah(info.nomor).then((saved) => {
+      if (cancelled) return;
+      setLastReadAyahNumber(saved);
+
+      // Kalau user belum sempat scroll, jangan biarkan progres lama (mis. ayat 50)
+      // tertimpa ayat 1 -> pakai ayat dari link History / yang tersimpan.
+      if (!hasScrolledRef.current) {
+        const initial = Number.isFinite(paramAyat) ? paramAyat : saved ?? 1;
+        latestProgressRef.current = {
+          surahNomor: info.nomor,
+          namaLatin: info.namaLatin,
+          ayatNomor: initial,
+          totalAyat: total,
+        };
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [surahData?.info.nomor]);
 
   // Simpan progres otomatis begitu layar ini ditinggalkan (tombol back, gesture back, dll)
@@ -196,15 +272,28 @@ export default function SurahDetailScreen() {
 
     if (!surahData || targetAyah == null || hasAutoScrolledToLastRead.current) return;
 
-    const timer = setTimeout(() => {
+    // Layout ayat diukur bertahap (surah panjang bisa lama), jadi coba berkali-kali
+    // sampai posisinya ketemu (maks ~3 detik) baru scroll.
+    let attempts = 0;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const tryScroll = () => {
       const relY = ayahOffsetY.current[targetAyah as number];
       if (relY != null) {
         const targetY = Math.max(0, ayahListOffsetY.current + relY - 24);
         scrollRef.current?.scrollTo({ y: targetY, animated: true });
+        hasAutoScrolledToLastRead.current = true;
+        return;
       }
-      hasAutoScrolledToLastRead.current = true;
-    }, 400); // tunggu sebentar biar layout ayat selesai diukur
+      attempts += 1;
+      if (attempts < 12) {
+        timer = setTimeout(tryScroll, 250);
+      } else {
+        hasAutoScrolledToLastRead.current = true; // menyerah, jangan loop terus
+      }
+    };
 
+    timer = setTimeout(tryScroll, 300);
     return () => clearTimeout(timer);
   }, [surahData, lastReadAyahNumber, routeAyat]);
 
@@ -266,10 +355,15 @@ export default function SurahDetailScreen() {
 
     loadSurahData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nomor, selectedReciterId, routeMushafId]);
+  }, [nomor, selectedReciterId, routeMushafId, retryKey]);
 
   const handleBack = () => {
-    router.replace("/(tabs)/mushaf");
+    // Balik ke layar asal (mis. History); kalau nggak ada riwayat navigasi, ke tab Mushaf
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/mushaf");
+    }
   };
 
   const handlePlayAyat = (ayatNomor: number) => {
@@ -295,7 +389,11 @@ export default function SurahDetailScreen() {
     ayahPlaylist.playFrom(resumeIndex);
   };
 
-  if (loading) {
+  // Layar penuh cuma buat load pertama. Waktu ganti qari, data lama tetap tampil
+  // (posisi scroll terjaga) dan cukup ada banner kecil di atas.
+  const hasData = !!surahData && surahData.info.nomor === Number(nomor);
+
+  if (loading && !hasData) {
     return (
       <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center`} edges={["top"]}>
         <ActivityIndicator size="large" color={isDarkMode ? "#34d399" : "#047857"} />
@@ -304,7 +402,7 @@ export default function SurahDetailScreen() {
     );
   }
 
-  if (error || !surahData) {
+  if (!hasData || !surahData) {
     return (
       <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center p-6`} edges={["top"]}>
         <Text className={`text-center font-semibold mb-4 ${theme.text}`}>
@@ -314,6 +412,7 @@ export default function SurahDetailScreen() {
           onPress={() => {
             setLoading(true);
             setError(null);
+            setRetryKey((k) => k + 1);
           }}
           className={`px-6 py-3 rounded-full ${isDarkMode ? "bg-emerald-600" : "bg-emerald-700"}`}
         >
@@ -362,6 +461,21 @@ export default function SurahDetailScreen() {
         </Pressable>
       </View>
 
+      {loading && (
+        <View className={`flex-row items-center justify-center gap-2 py-2 ${isDarkMode ? "bg-emerald-900/40" : "bg-emerald-50"}`}>
+          <ActivityIndicator size="small" color={isDarkMode ? "#34d399" : "#047857"} />
+          <Text className={`text-xs ${theme.textMuted}`}>Memuat bacaan...</Text>
+        </View>
+      )}
+      {error && !loading && (
+        <Pressable
+          onPress={() => { setError(null); setRetryKey((k) => k + 1); }}
+          className="py-2 px-4 bg-red-500/10"
+        >
+          <Text className="text-xs text-center text-red-600">{error} Ketuk untuk coba lagi.</Text>
+        </Pressable>
+      )}
+
       <ScrollView
         ref={scrollRef}
         className="flex-1"
@@ -390,38 +504,89 @@ export default function SurahDetailScreen() {
           </View>
 
           {showQiraatOptions && (
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              className="flex-row gap-2 mt-2 pt-3 border-t border-gray-200 dark:border-gray-700"
-            >
-              {reciters.map((reciter) => {
-                const isSelected = String(reciter.id) === selectedReciterId;
-                
-                return (
-                  <Pressable
-                    key={String(reciter.id)}
-                    onPress={() => { 
-                      setSelectedReciterId(String(reciter.id)); 
-                      setShowQiraatOptions(false); 
-                    }}
-                    className={`px-4 py-2 rounded-full flex-row items-center gap-2 ${
-                      isSelected ? "bg-emerald-600" : isDarkMode ? "bg-gray-700" : "bg-gray-200"
-                    }`}
-                  >
-                    <Text className={`text-xs font-medium ${isSelected ? "text-white" : theme.text}`}>
-                      {reciter.namaLatin || reciter.nama}
-                    </Text>
-                    
-                    {reciter.perAyah && (
-                      <View className="px-1.5 py-0.5 rounded bg-white/20">
-                        <Text className="text-[10px] text-white font-bold">Ayah</Text>
+            <View className={`mt-2 pt-3 border-t ${theme.border}`}>
+              {/* Filter jenis audio */}
+              <View className="flex-row gap-2 mb-3">
+                {([
+                  { key: "all", label: "Semua" },
+                  { key: "ayah", label: "Per ayat" },
+                  { key: "surah", label: "Full surah" },
+                ] as { key: ReciterFilter; label: string }[]).map((f) => {
+                  const active = reciterFilter === f.key;
+                  return (
+                    <Pressable
+                      key={f.key}
+                      onPress={() => setReciterFilter(f.key)}
+                      className={`px-3 py-1.5 rounded-full ${
+                        active ? "bg-emerald-600" : isDarkMode ? "bg-gray-700" : "bg-gray-200"
+                      }`}
+                    >
+                      <Text className={`text-xs font-medium ${active ? "text-white" : theme.text}`}>
+                        {f.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text className={`text-[11px] mb-2 ${theme.textMuted}`}>
+                {filteredReciters.length} pilihan • "Ayah" = bisa Ikuti Bacaan, "Surah" = file full surah
+              </Text>
+
+              <ScrollView style={{ maxHeight: 280 }} nestedScrollEnabled showsVerticalScrollIndicator>
+                {filteredReciters.map((reciter) => {
+                  const isSelected = String(reciter.id) === selectedReciterId;
+                  const detail = [reciter.rawi, reciter.recitationType].filter(Boolean).join(" • ");
+                  return (
+                    <Pressable
+                      key={reciter.id}
+                      onPress={() => handleSelectReciter(reciter.id)}
+                      className={`flex-row items-center justify-between px-3 py-2.5 mb-1.5 rounded-xl ${
+                        isSelected ? "bg-emerald-600" : isDarkMode ? "bg-gray-800" : "bg-gray-100"
+                      }`}
+                    >
+                      <View className="flex-1 pr-3">
+                        <Text
+                          numberOfLines={1}
+                          className={`text-sm font-medium ${isSelected ? "text-white" : theme.text}`}
+                        >
+                          {reciter.reciter || reciter.name}
+                        </Text>
+                        {!!detail && (
+                          <Text
+                            numberOfLines={1}
+                            className={`text-[11px] mt-0.5 ${isSelected ? "text-emerald-100" : theme.textMuted}`}
+                          >
+                            {detail}
+                          </Text>
+                        )}
                       </View>
-                    )}
-                  </Pressable>
-                ); // <-- Pastikan kurung tutup return ada di sini
-              })} {/* <-- Pastikan kurung tutup map ada di sini */}
-            </ScrollView>
+                      <View
+                        className={`px-2 py-0.5 rounded ${
+                          isSelected
+                            ? "bg-white/25"
+                            : reciter.perAyah
+                            ? "bg-emerald-600/20"
+                            : isDarkMode ? "bg-gray-700" : "bg-gray-300"
+                        }`}
+                      >
+                        <Text
+                          className={`text-[10px] font-bold ${
+                            isSelected
+                              ? "text-white"
+                              : reciter.perAyah
+                              ? isDarkMode ? "text-emerald-300" : "text-emerald-700"
+                              : theme.textMuted
+                          }`}
+                        >
+                          {reciter.perAyah ? "Ayah" : "Surah"}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
           )}
         </View>
 
