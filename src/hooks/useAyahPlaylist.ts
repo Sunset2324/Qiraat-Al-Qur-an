@@ -26,7 +26,7 @@ export const useAyahPlaylist = (audioUrls: string[]) => {
 
     playlist.clear();
     audioUrls.forEach((url) => {
-      if (url) playlist.add(url);
+      if (url) playlist.add({ uri: url });
     });
   }, [audioUrls, playlist]);
 
