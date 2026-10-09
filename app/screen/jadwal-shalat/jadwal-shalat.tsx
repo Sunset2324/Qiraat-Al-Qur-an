@@ -2,59 +2,133 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { ArrowLeft, MapPin, Clock, Calendar, BookOpen } from "lucide-react-native";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { getJadwalShalat } from "../../../src/services/quranService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+const WAKTU = [
+  { key: "subuh", nama: "Subuh" },
+  { key: "terbit", nama: "Terbit" },
+  { key: "dzuhur", nama: "Dzuhur" },
+  { key: "ashar", nama: "Ashar" },
+  { key: "maghrib", nama: "Maghrib" },
+  { key: "isya", nama: "Isya" },
+] as const;
+
+// Backend bisa mengembalikan { jadwal: [...] } (EQuran) atau array langsung (fallback Aladhan)
+const ambilListJadwal = (data: any): any[] => {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.jadwal)) return data.jadwal;
+  return [];
+};
+
+// tanggal bisa: number (5), "2026-10-05", "05-10-2026"
+const ambilHari = (item: any): number => {
+  if (typeof item?.tanggal === "number") return item.tanggal;
+  const str = String(item?.tanggal_lengkap ?? item?.tanggal ?? item?.date ?? "");
+  const parts = str.split("-");
+  if (parts.length === 3) return parseInt(parts[0].length === 4 ? parts[2] : parts[0], 10);
+  const n = parseInt(str, 10);
+  return Number.isNaN(n) ? -1 : n;
+};
+
+const toMenit = (hhmm?: string): number | null => {
+  if (!hhmm) return null;
+  const m = /(\d{1,2}):(\d{2})/.exec(hhmm);
+  return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;
+};
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
 export default function JadwalShalatScreen() {
   const { isDarkMode, theme } = useTheme();
-  
+
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [jadwalHariIni, setJadwalHariIni] = useState<any>(null);
   const [lokasi, setLokasi] = useState({ provinsi: "DKI Jakarta", kota: "Jakarta Selatan" });
-
-  // Hitung mundur sederhana (bisa dikembangkan lebih lanjut)
-  const [countdown, setCountdown] = useState("--:--:--");
+  const [now, setNow] = useState(new Date());
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
+    let batal = false;
     const fetchJadwal = async () => {
       try {
         setLoading(true);
-        // Cek apakah ada lokasi tersimpan
-        const savedLokasi = await AsyncStorage.getItem("user_shalat_location");
-        let targetProv = lokasi.provinsi;
-        let targetKota = lokasi.kota;
+        setError(null);
 
-        if (savedLokasi) {
-          const parsed = JSON.parse(savedLokasi);
-          targetProv = parsed.provinsi;
-          targetKota = parsed.kota;
-          setLokasi(parsed);
-        }
+        let prov = "DKI Jakarta";
+        let kota = "Jakarta Selatan";
+        try {
+          const saved = await AsyncStorage.getItem("user_shalat_location");
+          if (saved) {
+            const p = JSON.parse(saved);
+            prov = p.provinsi || prov;
+            kota = p.kota || p.kabkota || kota;
+          }
+        } catch {}
+        if (batal) return;
+        setLokasi({ provinsi: prov, kota });
 
-        const now = new Date();
-        const data = await getJadwalShalat(targetProv, targetKota, now.getMonth() + 1, now.getFullYear());
-        
-        const today = now.getDate();
-        const todaySchedule = data.find((item: any) => {
-          const tanggalStr = item.tanggal || item.date;
-          if (!tanggalStr) return false;
-          const parts = tanggalStr.split('-');
-          let day = parts[0].length === 2 ? parseInt(parts[0]) : parseInt(parts[2]);
-          return day === today;
-        });
-
-        setJadwalHariIni(todaySchedule);
-      } catch (err) {
+        const t = new Date();
+        const data = await getJadwalShalat(prov, kota, t.getMonth() + 1, t.getFullYear());
+        const list = ambilListJadwal(data);
+        const hariIni = list.find((it) => ambilHari(it) === t.getDate());
+        if (batal) return;
+        if (!hariIni) throw new Error("Jadwal untuk hari ini tidak ditemukan.");
+        setJadwalHariIni(hariIni);
+      } catch (err: any) {
+        if (batal) return;
         console.error("Gagal memuat jadwal:", err);
+        const msg = err?.response?.data?.message || err?.message || "Gagal memuat data jadwal.";
+        setError(msg);
+        setJadwalHariIni(null);
       } finally {
-        setLoading(false);
+        if (!batal) setLoading(false);
       }
     };
-
     fetchJadwal();
+    return () => {
+      batal = true;
+    };
+  }, [retryKey]);
+
+  // Ticker 1 detik untuk countdown
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
   }, []);
+
+  // Cari shalat berikutnya (terbit bukan waktu shalat, dilewati)
+  const { nextKey, countdown } = useMemo(() => {
+    if (!jadwalHariIni) return { nextKey: null as string | null, countdown: "--:--:--" };
+    const detikSekarang = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+    const kandidat = WAKTU.filter((w) => w.key !== "terbit");
+    let target: { key: string; detik: number } | null = null;
+    for (const w of kandidat) {
+      const m = toMenit(jadwalHariIni[w.key]);
+      if (m === null) continue;
+      if (m * 60 > detikSekarang) {
+        target = { key: w.key, detik: m * 60 };
+        break;
+      }
+    }
+    let selisih: number;
+    if (target) {
+      selisih = target.detik - detikSekarang;
+    } else {
+      // Sudah lewat Isya -> menuju Subuh besok (pakai jam Subuh hari ini sebagai pendekatan)
+      const m = toMenit(jadwalHariIni.subuh);
+      if (m === null) return { nextKey: null, countdown: "--:--:--" };
+      selisih = 24 * 3600 - detikSekarang + m * 60;
+      target = { key: "subuh", detik: m * 60 };
+    }
+    const h = Math.floor(selisih / 3600);
+    const mnt = Math.floor((selisih % 3600) / 60);
+    const d = selisih % 60;
+    return { nextKey: target.key, countdown: `${pad(h)}:${pad(mnt)}:${pad(d)}` };
+  }, [jadwalHariIni, now]);
 
   // Helper untuk menampilkan baris waktu shalat
   const renderWaktuShalat = (nama: string, waktu: string, isNext?: boolean) => (
@@ -114,9 +188,9 @@ export default function JadwalShalatScreen() {
           <View className="flex-row items-center justify-between mb-4">
             <Text className={`text-lg font-bold ${theme.text}`}>Hari Ini</Text>
             <View className="flex-row items-center gap-1">
-              <Calendar size={16} color={theme.textMuted} />
+              <Calendar size={16} color={theme.iconColor} />
               <Text className={`text-sm ${theme.textMuted}`}>
-                {new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" })}
+                {now.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" })}
               </Text>
             </View>
           </View>
@@ -127,15 +201,15 @@ export default function JadwalShalatScreen() {
             </View>
           ) : jadwalHariIni ? (
             <View>
-              {renderWaktuShalat("Subuh", jadwalHariIni.subuh)}
-              {renderWaktuShalat("Terbit", jadwalHariIni.terbit)} {/* Opsional: bisa di-hide jika mau */}
-              {renderWaktuShalat("Dzuhur", jadwalHariIni.dzuhur)}
-              {renderWaktuShalat("Ashar", jadwalHariIni.ashar)}
-              {renderWaktuShalat("Maghrib", jadwalHariIni.maghrib)}
-              {renderWaktuShalat("Isya", jadwalHariIni.isya)}
+              {WAKTU.map((w) => renderWaktuShalat(w.nama, jadwalHariIni[w.key], w.key === nextKey))}
             </View>
           ) : (
-            <Text className={`text-center py-10 ${theme.textMuted}`}>Gagal memuat data jadwal.</Text>
+            <View className="items-center py-10">
+              <Text className={`text-center mb-4 ${theme.textMuted}`}>{error || "Gagal memuat data jadwal."}</Text>
+              <Pressable onPress={() => setRetryKey((k) => k + 1)} className="px-5 py-2 rounded-full bg-emerald-600 active:opacity-80">
+                <Text className="text-white font-semibold">Coba lagi</Text>
+              </Pressable>
+            </View>
           )}
         </View>
 
