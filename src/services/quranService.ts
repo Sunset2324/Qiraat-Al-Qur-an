@@ -168,3 +168,22 @@ export const getDetailDoa = async (id: number) => {
     throw error;
   }
 };
+
+/**
+ * 7. Ambil Jadwal Shalat dari Backend
+ * Endpoint: POST /shalat
+ */
+export const getJadwalShalat = async (provinsi: string, kabkota: string, bulan: number, tahun: number) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/shalat`, {
+      provinsi,
+      kabkota,
+      bulan,
+      tahun
+    });
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching jadwal shalat:', error);
+    throw error;
+  }
+};

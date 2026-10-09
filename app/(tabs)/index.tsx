@@ -1,134 +1,142 @@
-import { View, Text, Pressable, ScrollView } from "react-native";
+import { useState, useEffect } from "react";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { FileText, Mic, Hand, BookOpen, Heart, CloudSun, Clock } from "lucide-react-native";
-import { useState, useEffect } from "react";
+import { BookOpen, Clock, MapPin, ChevronRight, Moon, Sun } from "lucide-react-native";
 import { useTheme } from "../../src/context/ThemeContext";
+import { getJadwalShalat } from "../../src/services/quranService";
 
-export default function DashboardScreen() {
-  const { isDarkMode, theme } = useTheme();
-  
-  const [currentTime, setCurrentTime] = useState(
-    new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-  );
+export default function HomeScreen() {
+  const { isDarkMode, theme, toggleTheme } = useTheme();
+  const [jadwal, setJadwal] = useState<any>(null);
+  const [loadingJadwal, setLoadingJadwal] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchJadwal = async () => {
+    try {
+      setLoadingJadwal(true);
+      const now = new Date();
+      // Default lokasi: DKI Jakarta, Jakarta Selatan
+      const data = await getJadwalShalat('DKI Jakarta', 'Jakarta Selatan', now.getMonth() + 1, now.getFullYear());
+      
+      const today = now.getDate();
+      const todaySchedule = data.find((item: any) => parseInt(item.tanggal.split('-')[2]) === today);
+      setJadwal(todaySchedule);
+    } catch (err) {
+      console.error("Gagal memuat jadwal shalat:", err);
+    } finally {
+      setLoadingJadwal(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(
-        new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-      );
-    }, 1000);
-    return () => clearInterval(timer);
+    fetchJadwal();
   }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchJadwal();
+  };
+
+  const waktuShalat = jadwal ? [
+    { nama: 'Subuh', waktu: jadwal.subuh },
+    { nama: 'Dzuhur', waktu: jadwal.dzuhur },
+    { nama: 'Ashar', waktu: jadwal.ashar },
+    { nama: 'Maghrib', waktu: jadwal.maghrib },
+    { nama: 'Isya', waktu: jadwal.isya },
+  ] : [];
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
       <ScrollView 
         className="flex-1" 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.iconColor} />}
+        contentContainerStyle={{ paddingBottom: 40 }}
       >
-        
-        {/* 1. HEADER: Jam & Adzan */}
-        <View className={`h-[30vh] min-h-[220px] ${theme.bgHeader} rounded-b-[40px] px-6 pt-6 relative overflow-hidden`}>
-          <View className={`absolute -right-10 -top-10 h-40 w-40 ${isDarkMode ? "bg-emerald-900" : "bg-emerald-700"} rounded-full opacity-50`} />
-          
-          <View className="flex-row justify-between items-start mb-4">
-            <View>
-              <Text className={`text-sm font-medium ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>
-                Jakarta, ID
-              </Text>
-              <Text className={`text-4xl font-bold mt-1 tracking-tight ${isDarkMode ? "text-white" : "text-white"}`}>
-                {currentTime}
-              </Text>
-            </View>
-            <View className={`${isDarkMode ? "bg-emerald-800" : "bg-emerald-700/50"} p-3 rounded-2xl`}>
-              <CloudSun size={24} color="#fbbf24" />
-            </View>
+        {/* HEADER */}
+        <View className={`px-6 pt-4 pb-6 flex-row items-center justify-between`}>
+          <View>
+            <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>ASSALAMU'ALAIKUM</Text>
+            <Text className={`text-2xl font-bold ${theme.text} mt-1`}>Qiraat Al-Qur'an</Text>
           </View>
+          <Pressable onPress={toggleTheme} className={`p-3 rounded-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+            {isDarkMode ? <Moon size={20} color={theme.iconColor} /> : <Sun size={20} color={theme.iconColor} />}
+          </Pressable>
+        </View>
 
-          <View className={`${isDarkMode ? "bg-emerald-900/60" : "bg-emerald-700/40"} p-4 rounded-2xl border ${isDarkMode ? "border-emerald-700" : "border-emerald-600/50"} mt-2`}>
-            <Text className={`text-xs font-medium mb-1 ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>Adzan Terdekat</Text>
-            <View className="flex-row items-center justify-between">
-              <Text className={`text-lg font-bold ${isDarkMode ? "text-white" : "text-white"}`}>Ashar</Text>
-              <Text className={`text-sm ${isDarkMode ? "text-emerald-300" : "text-emerald-200"}`}>15:12 WIB</Text>
+        {/* WIDGET JADWAL SHALAT */}
+        <View className="px-6 mb-6">
+          <View className={`p-5 rounded-2xl border ${theme.border} ${theme.bgCard} shadow-sm`}>
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="flex-row items-center gap-2">
+                <Clock size={20} color={isDarkMode ? '#34d399' : '#047857'} />
+                <Text className={`text-base font-bold ${theme.text}`}>Jadwal Shalat Hari Ini</Text>
+              </View>
+              <View className="flex-row items-center gap-1">
+                <MapPin size={14} color={theme.textMuted} />
+                <Text className={`text-xs ${theme.textMuted}`}>Jakarta Selatan</Text>
+              </View>
             </View>
+
+            {loadingJadwal ? (
+              <View className="items-center py-4">
+                <ActivityIndicator size="small" color={theme.iconColor} />
+                <Text className={`mt-2 text-xs ${theme.textMuted}`}>Memuat jadwal...</Text>
+              </View>
+            ) : jadwal ? (
+              <View className="space-y-3">
+                {waktuShalat.map((shalat, index) => (
+                  <View key={shalat.nama} className="flex-row justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                    <Text className={`text-sm font-medium ${theme.text}`}>{shalat.nama}</Text>
+                    <Text className={`text-sm font-bold ${isDarkMode ? 'text-emerald-400' : 'text-emerald-700'}`}>
+                      {shalat.waktu}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text className={`text-sm text-center py-4 ${theme.textMuted}`}>Gagal memuat jadwal shalat.</Text>
+            )}
           </View>
         </View>
 
-        {/* 2. MAIN CONTENT */}
-        <View className="flex-1 px-6 -mt-16">
+        {/* MENU CEPAT */}
+        <View className="px-6">
+          <Text className={`text-base font-bold mb-4 ${theme.text}`}>Menu Utama</Text>
           
-          {/* Tombol Jurnal Kesehatan */}
-          <Pressable
-            onPress={() => router.push("/journal")}
-            className={`${theme.bgCard} rounded-3xl border ${theme.border} py-8 flex-row items-center justify-center gap-3 mb-8 shadow-sm active:opacity-90`}
+          <Pressable 
+            onPress={() => router.push('/screen/surah/1')} // Contoh: langsung ke Al-Fatihah atau daftar surah
+            className={`flex-row items-center justify-between p-4 rounded-2xl border ${theme.border} ${theme.bgCard} mb-4 active:opacity-80`}
           >
-            <FileText size={28} color={theme.iconColor} />
-            <Text className={`font-bold text-lg ${isDarkMode ? "text-gray-100" : "text-[#7a6132]"}`}>
-              Jurnal Kesehatan
-            </Text>
+            <View className="flex-row items-center gap-4">
+              <View className={`p-3 rounded-xl ${isDarkMode ? 'bg-emerald-900/50' : 'bg-emerald-100'}`}>
+                <BookOpen size={24} color={isDarkMode ? '#34d399' : '#047857'} />
+              </View>
+              <View>
+                <Text className={`text-base font-bold ${theme.text}`}>Mulai Membaca</Text>
+                <Text className={`text-xs ${theme.textMuted} mt-1`}>Lanjutkan dari Al-Fatihah</Text>
+              </View>
+            </View>
+            <ChevronRight size={20} color={theme.textMuted} />
           </Pressable>
 
-          {/* Grid Fitur */}
-          <Text className={`font-bold text-lg mb-4 ${theme.text}`}>Eksplorasi Fitur</Text>
-          <View className="flex-row flex-wrap justify-between mb-8">
-            
-            {/* Qiraat - RUTE DIPERBAIKI */}
-            <Pressable 
-              onPress={() => router.push("/screen/qiraat/qiraat")}
-              className={`w-[48%] ${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center mb-4 shadow-sm active:opacity-90`}
-            >
-              <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
-                <Mic size={28} color={theme.iconColor} />
+          <Pressable 
+            onPress={() => router.push('/screen/dzikir-doa')} 
+            className={`flex-row items-center justify-between p-4 rounded-2xl border ${theme.border} ${theme.bgCard} active:opacity-80`}
+          >
+            <View className="flex-row items-center gap-4">
+              <View className={`p-3 rounded-xl ${isDarkMode ? 'bg-blue-900/50' : 'bg-blue-100'}`}>
+                <Clock size={24} color={isDarkMode ? '#60a5fa' : '#2563eb'} />
               </View>
-              <Text className={`font-bold text-sm ${theme.text}`}>Qiraat</Text>
-            </Pressable>
-
-            {/* Dzikir & Doa */}
-            <Pressable 
-              onPress={() => router.push("/screen/dzikir-doa/dzikir-doa")}
-              className={`w-[48%] ${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center mb-4 shadow-sm active:opacity-90`}
-            >
-              <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
-                <Hand size={28} color={theme.iconColor} />
+              <View>
+                <Text className={`text-base font-bold ${theme.text}`}>Doa & Dzikir</Text>
+                <Text className={`text-xs ${theme.textMuted} mt-1`}>Kumpulan doa harian</Text>
               </View>
-              <Text className={`font-bold text-sm text-center ${theme.text}`}>Dzikir & Doa</Text>
-            </Pressable>
-
-            {/* Jadwal Shalat - FITUR BARU (Backend Sudah Siap) */}
-            <Pressable 
-              onPress={() => router.push("/screen/jadwal-shalat/jadwal-shalat")}
-              className={`w-[48%] ${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center mb-4 shadow-sm active:opacity-90`}
-            >
-              <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
-                <Clock size={28} color={theme.iconColor} />
-              </View>
-              <Text className={`font-bold text-sm text-center ${theme.text}`}>Jadwal Shalat</Text>
-            </Pressable>
-
-            {/* Tajweed */}
-            <Pressable 
-              onPress={() => router.push("/screen/tajweed/tajweed")}
-              className={`w-[48%] ${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center shadow-sm active:opacity-90`}
-            >
-              <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
-                <BookOpen size={28} color={theme.iconColor} />
-              </View>
-              <Text className={`font-bold text-sm ${theme.text}`}>Tajweed</Text>
-            </Pressable>
-
-            {/* Thibbun Nabawi */}
-            <Pressable 
-              onPress={() => router.push("/screen/thibbun-nabawi/thibbun-nabawi")}
-              className={`w-[48%] ${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center shadow-sm active:opacity-90`}
-            >
-              <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
-                <Heart size={28} color={theme.iconColor} />
-              </View>
-              <Text className={`font-bold text-sm text-center ${theme.text}`}>Thibbun Nabawi</Text>
-            </Pressable>
-          </View>
+            </View>
+            <ChevronRight size={20} color={theme.textMuted} />
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
