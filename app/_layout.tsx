@@ -5,7 +5,7 @@ import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { useEffect } from "react";
-import { Audio } from "expo-av"; // <-- Tambahan untuk Background Audio
+import { Audio } from "expo-av";
 import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
 
