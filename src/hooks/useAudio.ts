@@ -30,13 +30,16 @@ export const useAudio = () => {
   // Mode audio global (background, silent mode) diatur sekali di app/_layout.tsx
 
   const playAudio = useCallback(
-    (url: string) => {
+    (url: string, meta?: { title?: string; artist?: string }) => {
       hasSourceRef.current = true;
       player.replace(url);
       player.play();
       // Kontrol media di notifikasi & lock screen
       try {
-        player.setActiveForLockScreen(true, { title: "Qiraat Al-Qur'an" });
+        player.setActiveForLockScreen(true, {
+          title: meta?.title ?? "Qiraat Al-Qur'an",
+          artist: meta?.artist ?? "Qiraat Al-Qur'an",
+        });
       } catch {}
     },
     [player]

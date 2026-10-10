@@ -30,7 +30,7 @@ export default function AudioPlayer({ audioUrl, title = 'Murottal' }: AudioPlaye
   
   const handlePlay = async () => {
     if (!isPlaying && !isLoading) {
-      await playAudio(audioUrl);
+      await playAudio(audioUrl, { title });
     }
   };
 

@@ -138,7 +138,14 @@ export default function SurahDetailScreen() {
   // ▶ Mode "Ikuti Bacaan": playlist audio per-ayat yang otomatis lanjut
   // ke ayat berikutnya, dipakai juga untuk tombol play per-ayat.
   const ayahAudioUrls = useMemo(() => surahData?.ayat.map((a) => a.audio) ?? [], [surahData]);
-  const ayahPlaylist = useAyahPlaylist(ayahAudioUrls);
+  const namaQariAktif =
+    typeof surahData?.info.reciterAktif === "string"
+      ? surahData.info.reciterAktif
+      : surahData?.info.reciterAktif?.nama;
+  const ayahPlaylist = useAyahPlaylist(ayahAudioUrls, {
+    title: surahData?.info.namaLatin,
+    artist: namaQariAktif,
+  });
   const hasPerAyahAudio = ayahPlaylist.trackCount > 0;
 
   // true setelah "Ikuti Bacaan" / tombol play salah satu ayat pernah ditekan,

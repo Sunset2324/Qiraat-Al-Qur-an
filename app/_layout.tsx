@@ -3,7 +3,7 @@ import "../src/globals.css";
 
 import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View } from "react-native";
+import { View, Platform, PermissionsAndroid } from "react-native";
 import { useEffect } from "react";
 import { setAudioModeAsync } from "expo-audio";
 import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
@@ -34,7 +34,19 @@ function RootLayoutContent() {
       }
     };
 
+    // Android 13+: notifikasi media butuh izin POST_NOTIFICATIONS
+    const requestNotifPermission = async () => {
+      if (Platform.OS === "android" && Number(Platform.Version) >= 33) {
+        try {
+          await PermissionsAndroid.request("android.permission.POST_NOTIFICATIONS" as any);
+        } catch (error) {
+          console.warn("Gagal meminta izin notifikasi:", error);
+        }
+      }
+    };
+
     setupAudio();
+    requestNotifPermission();
   }, []);
 
   return (
