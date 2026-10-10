@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef } from "react";
-import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from "expo-audio";
+import { useCallback, useRef } from "react";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 
 // Format waktu dari detik ke "mm:ss"
 // (expo-audio pakai satuan detik, beda dengan expo-av yang pakai milidetik)
@@ -27,21 +27,17 @@ export const useAudio = () => {
   // supaya "isLoading" tidak nyala terus sebelum user pernah menekan play.
   const hasSourceRef = useRef(false);
 
-  // Konfigurasi mode audio global sekali di awal
-  // (pengganti Audio.setAudioModeAsync milik expo-av)
-  useEffect(() => {
-    setAudioModeAsync({
-      playsInSilentMode: true,
-      shouldPlayInBackground: false, // ubah ke true kalau nanti butuh audio jalan di background
-      interruptionMode: "duckOthers",
-    }).catch((error) => console.error("Gagal mengatur mode audio:", error));
-  }, []);
+  // Mode audio global (background, silent mode) diatur sekali di app/_layout.tsx
 
   const playAudio = useCallback(
     (url: string) => {
       hasSourceRef.current = true;
       player.replace(url);
       player.play();
+      // Kontrol media di notifikasi & lock screen
+      try {
+        player.setActiveForLockScreen(true, { title: "Qiraat Al-Qur'an" });
+      } catch {}
     },
     [player]
   );

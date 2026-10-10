@@ -5,7 +5,7 @@ import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { useEffect } from "react";
-import { Audio } from "expo-av";
+import { setAudioModeAsync } from "expo-audio";
 import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
 
@@ -24,11 +24,10 @@ function RootLayoutContent() {
   useEffect(() => {
     const setupAudio = async () => {
       try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true, // Tetap bunyi meski HP mode silent (iOS)
-          staysActiveInBackground: true, // Tetap aktif saat aplikasi di-minimize
-          shouldDuckAndroid: true, // Mengecilkan volume aplikasi lain saat audio kita diputar
-          playThroughEarpieceAndroid: false, // Gunakan speaker utama, bukan earpiece telepon
+        await setAudioModeAsync({
+          playsInSilentMode: true, // tetap bunyi meski HP mode silent (iOS)
+          shouldPlayInBackground: true, // tetap jalan saat app di-minimize
+          interruptionMode: "doNotMix", // wajib doNotMix agar kontrol lock screen/notifikasi aktif
         });
       } catch (error) {
         console.error("Gagal mengatur mode audio:", error);
