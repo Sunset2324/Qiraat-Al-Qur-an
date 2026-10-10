@@ -14,7 +14,13 @@
     "jsEngine": "hermes",
     "plugins": [
       "expo-router",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone" 
+        }
+      ]
     ],
     "extra": {
       "router": {},
@@ -23,7 +29,12 @@
       }
     },
     "android": {
-      "package": "com.sambelcode.qiraatalquran"
+      "package": "com.sambelcode.qiraatalquran",
+      "permissions":[
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     }
   }
 }
