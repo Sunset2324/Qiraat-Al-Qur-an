@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { View, Text, FlatList, Pressable, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
@@ -12,8 +12,8 @@ export default function HistoryScreen() {
   const [historyList, setHistoryList] = useState<ReadingProgress[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fungsi untuk memuat riwayat
-  const loadHistory = async () => {
+  // Fungsi untuk memuat riwayat dibungkus useCallback agar stabil di dalam useFocusEffect
+  const loadHistory = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getHistoryList();
@@ -23,13 +23,13 @@ export default function HistoryScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Muat ulang setiap kali tab History difokuskan
+  // PERBAIKAN: Gunakan useFocusEffect dengan useCallback, BUKAN useEffect
   useFocusEffect(
-    useEffect(() => {
+    useCallback(() => {
       loadHistory();
-    }, [])
+    }, [loadHistory])
   );
 
   // Format tanggal yang ramah pengguna
@@ -87,7 +87,7 @@ export default function HistoryScreen() {
           {item.namaLatin} <Text className={`text-sm font-normal ${theme.textMuted}`}>(Ayat {item.ayatNomor})</Text>
         </Text>
         <Text className={`text-xs ${theme.textMuted} mt-1`}>
-          📜 {item.mushafName || `Mushaf ${item.mushafId}`}
+           {item.mushafName || `Mushaf ${item.mushafId}`}
         </Text>
         <View className="flex-row items-center mt-1">
           <Clock size={10} color={theme.textMuted} />
