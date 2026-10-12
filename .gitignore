@@ -44,3 +44,6 @@ coverage/
 # Temporary files
 *.orig.*
 web-report/
+
+# Sumber data berhak cipta, jangan di-push
+data-source/

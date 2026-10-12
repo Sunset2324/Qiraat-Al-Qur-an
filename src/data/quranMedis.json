@@ -1,0 +1,85 @@
+{
+  "metadata": {
+    "judul_buku": "Al-Qur'an dan Kesehatan",
+    "total_kategori": 4,
+    "total_tema": 602,
+    "sumber_api": "https://equran.id/api/v2"
+  },
+  "kategori": {
+    "I_RUHANI": {
+      "id": "RUHANI",
+      "nama_lengkap": "I. RUHANI",
+      "deskripsi": "Tema seputar kesehatan jiwa, hati, akhlak, dan spiritual",
+      "jumlah_tema": 243,
+      "tema": [
+        {"no": 1, "tema": "Al-Fatihah Bisa Menjadi Ruqyah", "halaman": 1, "surah_nomor": 1, "ayat_nomor": 1},
+        {"no": 2, "tema": "Obat Penyakit Ragu", "halaman": 2, "surah_nomor": 2, "ayat_nomor": 2},
+        {"no": 3, "tema": "Dampak Buruk Kebohongan bagi Kesehatan", "halaman": 3, "surah_nomor": 2, "ayat_nomor": 9},
+        {"no": 4, "tema": "Sombong Adalah Perilaku Setan", "halaman": 6, "surah_nomor": 2, "ayat_nomor": 34},
+        {"no": 5, "tema": "Hati yang Keras Adalah Sumber Penyakit", "halaman": 11, "surah_nomor": 2, "ayat_nomor": 74},
+        {"no": 17, "tema": "Aktivitas Zikir Menghidupkan Hati", "halaman": 32, "surah_nomor": 2, "ayat_nomor": 203},
+        {"no": 33, "tema": "Bertobat Menghasilkan Kesehatan Ruhani", "halaman": 80, "surah_nomor": 4, "ayat_nomor": 18},
+        {"no": 45, "tema": "Larangan Meremehkan Orang Lain", "halaman": 111, "surah_nomor": 5, "ayat_nomor": 18},
+        {"no": 117, "tema": "Healing dengan Membaca Al-Qur'an sebagai Penawar Kegundahan", "halaman": 290, "surah_nomor": 17, "ayat_nomor": 82},
+        {"no": 161, "tema": "Merawat Keimanan yang Islami Melalui Kemaslahatan", "halaman": 394, "surah_nomor": 28, "ayat_nomor": 77},
+        {"no": 243, "tema": "Allah Mengangkat Semua Petaka", "halaman": 604, "surah_nomor": 113, "ayat_nomor": 2}
+      ]
+    },
+    "II_RAGAWI": {
+      "id": "RAGAWI",
+      "nama_lengkap": "II. RAGAWI",
+      "deskripsi": "Tema seputar kesehatan fisik, makanan, minuman, dan tubuh",
+      "jumlah_tema": 179,
+      "tema": [
+        {"no": 1, "tema": "Doa Terhindar dari Penyakit yang Buruk", "halaman": 4, "surah_nomor": 2, "ayat_nomor": 18},
+        {"no": 2, "tema": "Khasiat Buah dan Tanaman yang Baik", "halaman": 5, "surah_nomor": 2, "ayat_nomor": 25},
+        {"no": 3, "tema": "Khasiat dari Buah Manna", "halaman": 8, "surah_nomor": 2, "ayat_nomor": 57},
+        {"no": 4, "tema": "Khasiat Bawang Putih bagi Kesehatan", "halaman": 9, "surah_nomor": 2, "ayat_nomor": 61},
+        {"no": 10, "tema": "Rasulullah Berbuka Puasa dengan Kurma atau Air Putih", "halaman": 28, "surah_nomor": 2, "ayat_nomor": 183},
+        {"no": 35, "tema": "Babi Haram Dikonsumsi", "halaman": 107, "surah_nomor": 5, "ayat_nomor": 3},
+        {"no": 39, "tema": "Kelinci Adalah Makanan Halal", "halaman": 122, "surah_nomor": 5, "ayat_nomor": 88},
+        {"no": 44, "tema": "Air Zamzam Adalah Minuman Sekaligus Makanan Terbaik", "halaman": 128, "surah_nomor": 6, "ayat_nomor": 2},
+        {"no": 71, "tema": "Khasiat Air Kencing Unta sebagai Obat", "halaman": 230, "surah_nomor": 11, "ayat_nomor": 77},
+        {"no": 102, "tema": "Lalat Memiliki Racun dan Obat", "halaman": 341, "surah_nomor": 22, "ayat_nomor": 73},
+        {"no": 141, "tema": "Obat Sakit Perut", "halaman": 448, "surah_nomor": 37, "ayat_nomor": 66},
+        {"no": 179, "tema": "Selektif Memilih Makanan Selepas Sakit", "halaman": 602, "surah_nomor": 106, "ayat_nomor": 4}
+      ]
+    },
+    "III_HIKMAH_IBADAH": {
+      "id": "HIKMAH_IBADAH",
+      "nama_lengkap": "III. HIKMAH IBADAH",
+      "deskripsi": "Tema seputar hikmah ibadah, salat, zakat, dan hubungan dengan Allah",
+      "jumlah_tema": 84,
+      "tema": [
+        {"no": 1, "tema": "Dampak Salat bagi Kesehatan", "halaman": 7, "surah_nomor": 2, "ayat_nomor": 45},
+        {"no": 2, "tema": "Rahasia Penyembelihan Sesuai Sunah", "halaman": 10, "surah_nomor": 2, "ayat_nomor": 67},
+        {"no": 5, "tema": "Dengan Salat, Jiwa dan Raga Menjadi Bersih", "halaman": 39, "surah_nomor": 2, "ayat_nomor": 238},
+        {"no": 6, "tema": "Bersegeralah dalam Bersedekah", "halaman": 42, "surah_nomor": 2, "ayat_nomor": 254},
+        {"no": 18, "tema": "Wudu Menghapus Dosa", "halaman": 108, "surah_nomor": 5, "ayat_nomor": 6},
+        {"no": 31, "tema": "Ibadah Haji Mendatangkan Kesejahteraan dan Kesucian Jiwa", "halaman": 187, "surah_nomor": 9, "ayat_nomor": 3},
+        {"no": 47, "tema": "Ganjaran Menyempurnakan Wudu", "halaman": 289, "surah_nomor": 17, "ayat_nomor": 71},
+        {"no": 61, "tema": "Dada Menjadi Sumber Hafalan Al-Qur'an", "halaman": 415, "surah_nomor": 32, "ayat_nomor": 9},
+        {"no": 75, "tema": "Pahala Berinfak Setara Mujahid", "halaman": 538, "surah_nomor": 57, "ayat_nomor": 10},
+        {"no": 84, "tema": "Konsekuensi Kebaikan dan Kejelekan", "halaman": 599, "surah_nomor": 99, "ayat_nomor": 7}
+      ]
+    },
+    "IV_ALA_NABI": {
+      "id": "ALA_NABI",
+      "nama_lengkap": "IV. ALA NABI",
+      "deskripsi": "Tema seputar sunah dan kebiasaan Rasulullah ﷺ",
+      "jumlah_tema": 96,
+      "tema": [
+        {"no": 1, "tema": "Bacaan ketika Lupa Tidak Berdoa sebelum Makan", "halaman": 25, "surah_nomor": 2, "ayat_nomor": 168},
+        {"no": 2, "tema": "Menyebut Nama Allah ketika Makan", "halaman": 33, "surah_nomor": 2, "ayat_nomor": 212},
+        {"no": 3, "tema": "Cara Menghibur Orang Bersedih Hati", "halaman": 44, "surah_nomor": 2, "ayat_nomor": 263},
+        {"no": 7, "tema": "Cara Mengantisipasi Wabah", "halaman": 64, "surah_nomor": 3, "ayat_nomor": 112},
+        {"no": 13, "tema": "Jagalah Diri dengan Pola Hidup yang Seimbang", "halaman": 125, "surah_nomor": 5, "ayat_nomor": 105},
+        {"no": 16, "tema": "Tata Cara Penyembelihan dalam Islam", "halaman": 142, "surah_nomor": 6, "ayat_nomor": 118},
+        {"no": 40, "tema": "Kebiasaan Salat Malam Rasulullah", "halaman": 295, "surah_nomor": 18, "ayat_nomor": 18},
+        {"no": 66, "tema": "Sunah Menyembelih Kambing", "halaman": 460, "surah_nomor": 39, "ayat_nomor": 21},
+        {"no": 81, "tema": "Makan dan Minum sambil Berdiri Tidaklah Sehat", "halaman": 496, "surah_nomor": 44, "ayat_nomor": 5},
+        {"no": 96, "tema": "Cara Bangun Pagi yang Sehat", "halaman": 593, "surah_nomor": 89, "ayat_nomor": 1}
+      ]
+    }
+  }
+}
