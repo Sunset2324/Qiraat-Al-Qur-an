@@ -104,6 +104,23 @@ export default function DoaDetailScreen() {
           </View>
         </View>
 
+        {/* DALIL & KEUTAMAAN (field "tentang" dari EQuran.id: referensi hadis/penjelasan) */}
+        {!!doa.tentang && String(doa.tentang).trim().length > 0 && (
+          <View className="px-6 mb-6">
+            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-3 uppercase tracking-wider`}>
+              Dalil & Keutamaan
+            </Text>
+            <View className={`p-5 rounded-2xl ${isDarkMode ? "bg-amber-900/20" : "bg-amber-50"} border ${isDarkMode ? "border-amber-800" : "border-amber-200"}`}>
+              <Text className={`text-base leading-7 ${theme.text}`} style={{ textAlign: "left" }}>
+                {String(doa.tentang).trim()}
+              </Text>
+              <Text className={`text-[11px] mt-3 ${theme.textMuted}`}>
+                Sumber: EQuran.id. Periksa kembali derajat dan rujukan hadis pada kitab aslinya.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* TAGS (Opsional) */}
         {doa.tags && doa.tags.length > 0 && (
           <View className="px-6">

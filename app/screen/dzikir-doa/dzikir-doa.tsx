@@ -1,10 +1,11 @@
 import { View, Text, Pressable, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, Search, BookOpen, AlertCircle } from "lucide-react-native";
 import { useState, useEffect } from "react";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { getDaftarDoa } from "../../../src/services/quranService";
+import { isBakdaShalat } from "../../../src/data/bakdaShalat";
 
 interface DoaItem {
   id: number;
@@ -20,6 +21,7 @@ const FILTERS = [
   { key: "all", label: "Semua" },
   { key: "pagi", label: "Pagi" },
   { key: "petang", label: "Petang" },
+  { key: "bakda", label: "Ba'da Shalat" },
   { key: "sholat", label: "Sholat" },
   { key: "doa", label: "Harian" },
 ];
@@ -37,7 +39,8 @@ const getIconForDoa = (item: DoaItem) => {
 
 export default function DzikirDoaScreen() {
   const { isDarkMode, theme } = useTheme();
-  const [activeFilter, setActiveFilter] = useState("all");
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
+  const [activeFilter, setActiveFilter] = useState(tab === "bakda" ? "bakda" : "all");
   const [searchQuery, setSearchQuery] = useState("");
   
   const [doaList, setDoaList] = useState<DoaItem[]>([]);
@@ -47,6 +50,11 @@ export default function DzikirDoaScreen() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Dibuka dari kartu "Dzikir Ba'da Shalat" di Jadwal Shalat
+  useEffect(() => {
+    if (tab === "bakda") setActiveFilter("bakda");
+  }, [tab]);
 
   const fetchData = async () => {
     try {
@@ -61,17 +69,22 @@ export default function DzikirDoaScreen() {
     }
   };
 
-  // Filter berdasarkan Kategori DAN Search Query
-  const filteredData = doaList.filter((item) => {
-    const matchFilter = activeFilter === "all" || (item.grup?.toLowerCase().includes(activeFilter));
-    const query = searchQuery.toLowerCase();
-    const matchSearch = 
-      item.judul.toLowerCase().includes(query) || 
-      item.arti.toLowerCase().includes(query) ||
-      (item.latin && item.latin.toLowerCase().includes(query));
-    
-    return matchFilter && matchSearch;
-  });
+  // Dzikir ba'da shalat HANYA tampil di tab "Ba'da Shalat", tidak bercampur ke tab lain
+  const filteredData = doaList
+    .filter((item) => {
+      const bakda = isBakdaShalat(item);
+      const matchFilter =
+        activeFilter === "bakda"
+          ? bakda
+          : !bakda && (activeFilter === "all" || !!item.grup?.toLowerCase().includes(activeFilter));
+      const query = searchQuery.toLowerCase();
+      const matchSearch =
+        item.judul.toLowerCase().includes(query) ||
+        item.arti.toLowerCase().includes(query) ||
+        (!!item.latin && item.latin.toLowerCase().includes(query));
+      return matchFilter && matchSearch;
+    })
+    .sort((a, b) => (activeFilter === "bakda" ? a.id - b.id : 0));
 
   if (loading) {
     return (
@@ -166,6 +179,15 @@ export default function DzikirDoaScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
       >
+        {activeFilter === "bakda" && (
+          <View className={`mb-4 p-4 rounded-2xl border ${isDarkMode ? "bg-emerald-900/30 border-emerald-800" : "bg-emerald-50 border-emerald-200"}`}>
+            <Text className={`text-sm font-bold mb-1 ${theme.text}`}>Dzikir Ba'da Shalat</Text>
+            <Text className={`text-xs leading-5 ${theme.textMuted}`}>
+              Dibaca setelah salam. Buka tiap dzikir untuk melihat dalil dan keutamaannya.
+            </Text>
+          </View>
+        )}
+
         <View className="flex-row flex-wrap justify-between">
           {filteredData.map((item) => (
             <Pressable
@@ -198,7 +220,11 @@ export default function DzikirDoaScreen() {
           <View className="py-12 items-center">
             <BookOpen size={48} color={isDarkMode ? "#4B5563" : "#9CA3AF"} />
             <Text className={`mt-4 text-center ${theme.textMuted}`}>
-              {searchQuery ? "Tidak ada hasil untuk pencarian ini" : "Tidak ada doa yang ditemukan"}
+              {searchQuery
+                ? "Tidak ada hasil untuk pencarian ini"
+                : activeFilter === "bakda"
+                ? "Belum ada dzikir ba'da shalat pada data."
+                : "Tidak ada doa yang ditemukan"}
             </Text>
           </View>
         )}

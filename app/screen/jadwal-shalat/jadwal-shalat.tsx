@@ -6,6 +6,9 @@ import { useState, useEffect, useMemo } from "react";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { getJadwalShalat } from "../../../src/services/quranService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import LokasiShalatPicker, { LokasiShalat } from "../../../src/components/LokasiShalatPicker";
+
+const LOKASI_KEY = "user_shalat_location";
 
 const WAKTU = [
   { key: "subuh", nama: "Subuh" },
@@ -47,32 +50,44 @@ export default function JadwalShalatScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [jadwalHariIni, setJadwalHariIni] = useState<any>(null);
-  const [lokasi, setLokasi] = useState({ provinsi: "DKI Jakarta", kota: "Jakarta Selatan" });
+  // null = belum pernah memilih lokasi (nama kab/kota harus persis dari daftar EQuran.id, jadi tidak ada default tebakan)
+  const [lokasi, setLokasi] = useState<LokasiShalat | null>(null);
+  const [lokasiSiap, setLokasiSiap] = useState(false);
+  const [pickerBuka, setPickerBuka] = useState(false);
   const [now, setNow] = useState(new Date());
   const [retryKey, setRetryKey] = useState(0);
 
+  // 1) Baca lokasi tersimpan sekali saat layar dibuka
   useEffect(() => {
+    (async () => {
+      try {
+        const saved = await AsyncStorage.getItem(LOKASI_KEY);
+        const p = saved ? JSON.parse(saved) : null;
+        const provinsi = p?.provinsi;
+        const kota = p?.kota || p?.kabkota;
+        if (provinsi && kota) setLokasi({ provinsi, kota });
+        else setPickerBuka(true); // pertama kali: langsung minta pilih lokasi
+      } catch {
+        setPickerBuka(true);
+      }
+      setLokasiSiap(true);
+    })();
+  }, []);
+
+  // 2) Ambil jadwal setiap lokasi berubah (atau user menekan "Coba lagi")
+  useEffect(() => {
+    if (!lokasiSiap) return;
+    if (!lokasi) {
+      setLoading(false);
+      return;
+    }
     let batal = false;
     const fetchJadwal = async () => {
       try {
         setLoading(true);
         setError(null);
-
-        let prov = "DKI Jakarta";
-        let kota = "Jakarta Selatan";
-        try {
-          const saved = await AsyncStorage.getItem("user_shalat_location");
-          if (saved) {
-            const p = JSON.parse(saved);
-            prov = p.provinsi || prov;
-            kota = p.kota || p.kabkota || kota;
-          }
-        } catch {}
-        if (batal) return;
-        setLokasi({ provinsi: prov, kota });
-
         const t = new Date();
-        const data = await getJadwalShalat(prov, kota, t.getMonth() + 1, t.getFullYear());
+        const data = await getJadwalShalat(lokasi.provinsi, lokasi.kota, t.getMonth() + 1, t.getFullYear());
         const list = ambilListJadwal(data);
         const hariIni = list.find((it) => ambilHari(it) === t.getDate());
         if (batal) return;
@@ -92,7 +107,15 @@ export default function JadwalShalatScreen() {
     return () => {
       batal = true;
     };
-  }, [retryKey]);
+  }, [lokasiSiap, lokasi?.provinsi, lokasi?.kota, retryKey]);
+
+  const pilihLokasi = async (baru: LokasiShalat) => {
+    setPickerBuka(false);
+    setLokasi(baru);
+    try {
+      await AsyncStorage.setItem(LOKASI_KEY, JSON.stringify(baru));
+    } catch {}
+  };
 
   // Ticker 1 detik untuk countdown
   useEffect(() => {
@@ -167,12 +190,23 @@ export default function JadwalShalatScreen() {
         {/* 1. KARTU LOKASI & COUNTDOWN */}
         <View className="px-6 pt-6">
           <View className={`${isDarkMode ? "bg-emerald-900/40" : "bg-emerald-50"} p-5 rounded-2xl border ${theme.border}`}>
-            <View className="flex-row items-center gap-2 mb-4">
-              <MapPin size={18} color={isDarkMode ? "#34d399" : "#047857"} />
-              <Text className={`text-sm font-medium ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>
-                {lokasi.kota}, {lokasi.provinsi}
+            <Pressable
+              onPress={() => setPickerBuka(true)}
+              className="flex-row items-center justify-between mb-4 active:opacity-70"
+            >
+              <View className="flex-row items-center gap-2 flex-1">
+                <MapPin size={18} color={isDarkMode ? "#34d399" : "#047857"} />
+                <Text
+                  className={`text-sm font-medium flex-shrink ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}
+                  numberOfLines={1}
+                >
+                  {lokasi ? `${lokasi.kota}, ${lokasi.provinsi}` : "Pilih lokasi"}
+                </Text>
+              </View>
+              <Text className={`text-xs font-bold ml-3 ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>
+                UBAH
               </Text>
-            </View>
+            </Pressable>
             
             <Text className={`text-xs uppercase tracking-wider mb-1 ${theme.textMuted}`}>
               Menuju Shalat Berikutnya
@@ -205,9 +239,11 @@ export default function JadwalShalatScreen() {
             </View>
           ) : (
             <View className="items-center py-10">
-              <Text className={`text-center mb-4 ${theme.textMuted}`}>{error || "Gagal memuat data jadwal."}</Text>
-              <Pressable onPress={() => setRetryKey((k) => k + 1)} className="px-5 py-2 rounded-full bg-emerald-600 active:opacity-80">
-                <Text className="text-white font-semibold">Coba lagi</Text>
+              <Text className={`text-center mb-4 ${theme.textMuted}`}>
+                {lokasi ? error || "Gagal memuat data jadwal." : "Pilih kota agar jadwal shalat sesuai lokasimu."}
+              </Text>
+              <Pressable onPress={() => (lokasi ? setRetryKey((k) => k + 1) : setPickerBuka(true))} className="px-5 py-2 rounded-full bg-emerald-600 active:opacity-80">
+                <Text className="text-white font-semibold">{lokasi ? "Coba lagi" : "Pilih lokasi"}</Text>
               </Pressable>
             </View>
           )}
@@ -216,7 +252,7 @@ export default function JadwalShalatScreen() {
         {/* 3. KARTU DZIKIR BA'DA SHALAT (Nilai Tambah) */}
         <View className="px-6 mt-4">
           <Pressable 
-            onPress={() => router.push("/screen/dzikir-doa/dzikir-doa")} // Sesuaikan route jika perlu
+            onPress={() => router.push({ pathname: "/screen/dzikir-doa/dzikir-doa", params: { tab: "bakda" } })}
             className={`flex-row items-center justify-between p-4 rounded-2xl border ${theme.border} ${theme.bgCard} active:opacity-80`}
           >
             <View className="flex-row items-center gap-3">
@@ -233,6 +269,13 @@ export default function JadwalShalatScreen() {
         </View>
 
       </ScrollView>
+
+      <LokasiShalatPicker
+        visible={pickerBuka}
+        current={lokasi ?? { provinsi: "", kota: "" }}
+        onClose={() => setPickerBuka(false)}
+        onSelect={pilihLokasi}
+      />
     </SafeAreaView>
   );
 }
