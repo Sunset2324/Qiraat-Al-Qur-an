@@ -28,8 +28,6 @@ interface SuratDetail {
     jumlahAyat: number;
     tempatTurun: string;
     mushafAktif: string;
-    // Backend ngirim null kalau reciterId yang diminta nggak ketemu,
-    // atau string/object kalau ketemu (object = reciter dari Quranpedia).
     reciterAktif?: { id: number; nama: string; perAyah: boolean } | string | null;
   };
   audioFull?: string;
@@ -48,24 +46,13 @@ export default function SurahDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ─────────────────────────────────────────────────────────
-  // 🎙️ DAFTAR RECITER (dinamis dari Quranpedia lewat backend)
-  // ─────────────────────────────────────────────────────────
   const [reciters, setReciters] = useState<Reciter[]>([]);
-  // Daftar qari di atas sudah difilter untuk surah nomor berapa. Pemuat surah
-  // nunggu ini cocok dengan surah yang dibuka, supaya nggak sempat minta audio
-  // ke qari yang nggak punya surah tersebut.
   const [recitersSurah, setRecitersSurah] = useState<number | null>(null);
-  // null dulu (belum ada pilihan) -> effect pemuat surah SENGAJA nunggu
-  // sampai ini terisi, supaya request pertama udah pakai reciterId yang valid
-  // (bukan nebak angka default yang mungkin nggak ada di katalog Quranpedia).
   const [selectedReciterId, setSelectedReciterId] = useState<string | null>(null);
   const [showQiraatOptions, setShowQiraatOptions] = useState(false);
   const [reciterFilter, setReciterFilter] = useState<ReciterFilter>("all");
 
-  // Naikkan angka ini buat memicu fetch ulang (dipakai tombol "Coba Lagi")
   const [retryKey, setRetryKey] = useState(0);
-
   const [activeMushafId, setActiveMushafId] = useState<string>("1");
 
   const activeReciter = reciters.find((r) => String(r.id) === selectedReciterId);
@@ -75,9 +62,6 @@ export default function SurahDetailScreen() {
     ? "Memuat..."
     : "Pilih qari";
 
-  // Ambil daftar reciter (hanya yang punya surah ini), lalu pilih qari:
-  // 1) pilihan sekarang kalau masih valid, 2) pilihan terakhir yang tersimpan,
-  // 3) qari pertama yang support per-ayat.
   useEffect(() => {
     let cancelled = false;
 
@@ -118,7 +102,6 @@ export default function SurahDetailScreen() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nomor, retryKey]);
 
   const handleSelectReciter = (id: number) => {
@@ -136,8 +119,6 @@ export default function SurahDetailScreen() {
     [reciters, reciterFilter]
   );
 
-  // ▶ Mode "Ikuti Bacaan": playlist audio per-ayat yang otomatis lanjut
-  // ke ayat berikutnya, dipakai juga untuk tombol play per-ayat.
   const ayahAudioUrls = useMemo(() => surahData?.ayat.map((a) => a.audio) ?? [], [surahData]);
   const namaQariAktif =
     typeof surahData?.info.reciterAktif === "string"
@@ -149,16 +130,11 @@ export default function SurahDetailScreen() {
   });
   const hasPerAyahAudio = ayahPlaylist.trackCount > 0;
 
-  // true setelah "Ikuti Bacaan" / tombol play salah satu ayat pernah ditekan,
-  // dipakai supaya highlight ayat aktif nggak nongol sebelum user memutar apa-apa.
   const [followStarted, setFollowStarted] = useState(false);
-
   const activeAyahNumber = followStarted
     ? surahData?.ayat[ayahPlaylist.currentIndex]?.nomor ?? null
     : null;
 
-  // Posisi Y tiap ayat di dalam ScrollView, dipakai untuk auto-scroll
-  // mengikuti ayat yang lagi dibaca.
   const scrollRef = useRef<ScrollView>(null);
   const ayahListOffsetY = useRef(0);
   const ayahOffsetY = useRef<Record<number, number>>({});
@@ -172,18 +148,9 @@ export default function SurahDetailScreen() {
     scrollRef.current?.scrollTo({ y: targetY, animated: true });
   }, [activeAyahNumber, followStarted]);
 
-  // ─────────────────────────────────────────────────────────
-  // 📍 PROGRES BACAAN: ayat mana yang terakhir dibaca di surah ini
-  // ─────────────────────────────────────────────────────────
-
-  // Posisi scroll sekarang (buat hitung ayat mana yang lagi "di layar")
   const currentScrollY = useRef(0);
-  // Sudah ada event scroll sejak surah dibuka? (dipakai supaya progres awal
-  // nggak menimpa hasil scroll yang sebenarnya)
   const hasScrolledRef = useRef(false);
 
-  // Progres terbaru disimpan di ref (bukan state) supaya bisa dibaca
-  // di cleanup function tanpa masalah stale-closure, dan nggak bikin re-render tiap scroll.
   const latestProgressRef = useRef<{
     surahNomor: number;
     namaLatin: string;
@@ -191,15 +158,10 @@ export default function SurahDetailScreen() {
     totalAyat: number;
   } | null>(null);
 
-  // Nomor ayat terakhir dibaca yang tersimpan dari kunjungan sebelumnya ke surah ini
-  // (buat kasih penanda 📍 di list + auto-scroll pas pertama buka).
   const [lastReadAyahNumber, setLastReadAyahNumber] = useState<number | null>(null);
   const hasAutoScrolledToLastRead = useRef(false);
-
-  // Umpan balik singkat pas tombol bookmark ditekan
   const [justSaved, setJustSaved] = useState(false);
 
-  // Hitung ayat yang posisinya paling atas & masih di atas "garis baca" (dekat header)
   const getVisibleAyahNumber = (): number | null => {
     if (!surahData) return null;
     const anchor = currentScrollY.current + 120;
@@ -231,7 +193,6 @@ export default function SurahDetailScreen() {
     };
   };
 
-  // Ambil posisi terakhir dibaca tiap kali surah berganti, reset status auto-scroll
   useEffect(() => {
     hasAutoScrolledToLastRead.current = false;
     hasScrolledRef.current = false;
@@ -242,7 +203,6 @@ export default function SurahDetailScreen() {
     const paramAyat = routeAyat ? parseInt(String(routeAyat), 10) : NaN;
     let cancelled = false;
 
-    // Progres awal sementara = ayat pertama
     latestProgressRef.current = {
       surahNomor: info.nomor,
       namaLatin: info.namaLatin,
@@ -254,8 +214,6 @@ export default function SurahDetailScreen() {
       if (cancelled) return;
       setLastReadAyahNumber(saved);
 
-      // Kalau user belum sempat scroll, jangan biarkan progres lama (mis. ayat 50)
-      // tertimpa ayat 1 -> pakai ayat dari link History / yang tersimpan.
       if (!hasScrolledRef.current) {
         const initial = Number.isFinite(paramAyat) ? paramAyat : saved ?? 1;
         latestProgressRef.current = {
@@ -270,10 +228,8 @@ export default function SurahDetailScreen() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [surahData?.info.nomor]);
 
-  // Simpan progres otomatis begitu layar ini ditinggalkan (tombol back, gesture back, dll)
   useEffect(() => {
     return () => {
       if (latestProgressRef.current) {
@@ -282,40 +238,6 @@ export default function SurahDetailScreen() {
     };
   }, []);
 
-  // Auto-scroll sekali ke: ayat dari parameter ?ayat= (deep-link dari History),
-  // atau kalau nggak ada, ke ayat terakhir dibaca tersimpan.
-  useEffect(() => {
-    const paramAyat = routeAyat ? parseInt(String(routeAyat), 10) : null;
-    const targetAyah = Number.isFinite(paramAyat as number) ? paramAyat : lastReadAyahNumber;
-
-    if (!surahData || targetAyah == null || hasAutoScrolledToLastRead.current) return;
-
-    // Layout ayat diukur bertahap (surah panjang bisa lama), jadi coba berkali-kali
-    // sampai posisinya ketemu (maks ~3 detik) baru scroll.
-    let attempts = 0;
-    let timer: ReturnType<typeof setTimeout>;
-
-    const tryScroll = () => {
-      const relY = ayahOffsetY.current[targetAyah as number];
-      if (relY != null) {
-        const targetY = Math.max(0, ayahListOffsetY.current + relY - 24);
-        scrollRef.current?.scrollTo({ y: targetY, animated: true });
-        hasAutoScrolledToLastRead.current = true;
-        return;
-      }
-      attempts += 1;
-      if (attempts < 12) {
-        timer = setTimeout(tryScroll, 250);
-      } else {
-        hasAutoScrolledToLastRead.current = true; // menyerah, jangan loop terus
-      }
-    };
-
-    timer = setTimeout(tryScroll, 300);
-    return () => clearTimeout(timer);
-  }, [surahData, lastReadAyahNumber, routeAyat]);
-
-  // Tombol bookmark di header: simpan progres saat ini secara eksplisit
   const handleBookmarkPress = async () => {
     if (!latestProgressRef.current) return;
     await saveLastRead(latestProgressRef.current);
@@ -323,11 +245,6 @@ export default function SurahDetailScreen() {
     setTimeout(() => setJustSaved(false), 1500);
   };
 
-  // ─────────────────────────────────────────────────────────
-  // 📖 MUAT DATA SURAH — nunggu selectedReciterId terisi dulu,
-  // supaya request pertama ke backend udah pakai reciterId yang valid
-  // (bukan tebakan), dan reciterAktif nggak pernah null di kondisi normal.
-  // ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!nomor || !selectedReciterId || recitersSurah !== Number(nomor)) return;
 
@@ -347,13 +264,6 @@ export default function SurahDetailScreen() {
         }
         setActiveMushafId(mushafIdToUse);
 
-        console.log(
-          `📖 Loading surah ${nomor} | mushaf: ${mushafIdToUse} | reciterId: ${selectedReciterId}`
-        );
-
-        // qariId ("05") dikirim cuma sebagai fallback EQuran.id kalau-kalau
-        // reciter Quranpedia-nya gagal di-resolve backend; reciterId yang
-        // sebenarnya menentukan audio adalah argumen ke-4.
         const data = await getDetailSurahMerged(
           Number(nomor),
           mushafIdToUse,
@@ -361,7 +271,6 @@ export default function SurahDetailScreen() {
           Number(selectedReciterId)
         );
 
-        console.log("✅ Data berhasil dimuat, reciter aktif:", data.info.reciterAktif);
         setSurahData(data);
       } catch (err: any) {
         console.error("❌ Error loading surah:", err.message);
@@ -372,11 +281,9 @@ export default function SurahDetailScreen() {
     };
 
     loadSurahData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nomor, selectedReciterId, recitersSurah, routeMushafId, retryKey]);
 
   const handleBack = () => {
-    // Balik ke layar asal (mis. History); kalau nggak ada riwayat navigasi, ke tab Mushaf
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -393,8 +300,6 @@ export default function SurahDetailScreen() {
     ayahPlaylist.playFrom(index);
   };
 
-  // Toggle tombol "Ikuti Bacaan": mulai dari ayat 1, atau resume/pause
-  // dari posisi terakhir kalau sudah pernah jalan.
   const handleToggleFollowMode = () => {
     if (!hasPerAyahAudio) return;
     if (ayahPlaylist.isPlaying) {
@@ -407,8 +312,6 @@ export default function SurahDetailScreen() {
     ayahPlaylist.playFrom(resumeIndex);
   };
 
-  // Layar penuh cuma buat load pertama. Waktu ganti qari, data lama tetap tampil
-  // (posisi scroll terjaga) dan cukup ada banner kecil di atas.
   const hasData = !!surahData && surahData.info.nomor === Number(nomor);
 
   if (loading && !hasData) {
@@ -441,9 +344,6 @@ export default function SurahDetailScreen() {
   }
 
   const audioFullUrl = surahData.audioFull || undefined;
-
-  // Null-safe: typeof null === "object" di JS, jadi WAJIB cek truthy dulu
-  // sebelum cek typeof, kalau nggak bisa crash waktu reciterAktif = null.
   const reciterAktif = surahData.info.reciterAktif;
   const reciterAktifName =
     reciterAktif && typeof reciterAktif === "object"
@@ -502,8 +402,6 @@ export default function SurahDetailScreen() {
         onScroll={handleScroll}
         scrollEventThrottle={200}
       >
-
-        {/* 1. CARD BACAAN PILIHAN */}
         <View className={`mx-6 mt-6 p-4 ${theme.bgCard} border ${theme.border} rounded-2xl`}>
           <Text className={`text-xs font-medium ${theme.textSecondary} mb-3`}>Bacaan pilihan</Text>
 
@@ -523,7 +421,6 @@ export default function SurahDetailScreen() {
 
           {showQiraatOptions && (
             <View className={`mt-2 pt-3 border-t ${theme.border}`}>
-              {/* Filter jenis audio */}
               <View className="flex-row gap-2 mb-3">
                 {([
                   { key: "all", label: "Semua" },
@@ -613,7 +510,6 @@ export default function SurahDetailScreen() {
           )}
         </View>
 
-        {/* 2. INFORMASI SURAT */}
         <View className="px-6 mt-6 mb-4">
           <View className="flex-row items-start justify-between">
             <View className="flex-1">
@@ -623,7 +519,6 @@ export default function SurahDetailScreen() {
               <Text className={`text-2xl font-bold ${theme.text} mb-1`}>{surahData.info.namaLatin}</Text>
               <Text className={`text-sm ${theme.textMuted}`}>{surahData.info.arti} • {surahData.info.jumlahAyat} ayat</Text>
 
-              {/* Badge Mushaf & Qari Aktif */}
               <View className="mt-2 px-3 py-1.5 rounded-lg bg-emerald-600/20 self-start">
                 <Text className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
                   📜 Mushaf: {surahData.info.mushafAktif}
@@ -640,7 +535,6 @@ export default function SurahDetailScreen() {
           </View>
         </View>
 
-        {/* 3. AUDIO PLAYER FULL SURAH */}
         {audioFullUrl ? (
           <View className="px-6 mb-4">
             <AudioPlayer
@@ -658,7 +552,6 @@ export default function SurahDetailScreen() {
           </View>
         )}
 
-        {/* 3b. TOMBOL IKUTI BACAAN (audio per-ayat, otomatis lanjut + highlight) */}
         <View className="px-6 mb-4">
           <Pressable
             onPress={handleToggleFollowMode}
@@ -696,7 +589,7 @@ export default function SurahDetailScreen() {
           </Pressable>
         </View>
 
-        {/* 4. AYAT-AYAT */}
+        {/* 4. AYAT-AYAT (DIPERBAIKI: Pressable agar bisa diklik untuk tandai terakhir baca) */}
         <View
           className="px-6"
           onLayout={(e) => { ayahListOffsetY.current = e.nativeEvent.layout.y; }}
@@ -707,10 +600,29 @@ export default function SurahDetailScreen() {
             const isLastRead = !isActive && lastReadAyahNumber === ayat.nomor;
 
             return (
-              <View
+              <Pressable
                 key={ayat.nomor}
                 onLayout={(e) => { ayahOffsetY.current[ayat.nomor] = e.nativeEvent.layout.y; }}
-                className={`mb-8 rounded-2xl ${isActive ? (isDarkMode ? "bg-emerald-900/20" : "bg-emerald-50") : isLastRead ? (isDarkMode ? "bg-amber-900/10" : "bg-amber-50") : ""} p-3 -mx-3`}
+                onPress={async () => {
+                  // Logika baru: User secara eksplisit menandai ayat ini sebagai terakhir dibaca
+                  const progress = {
+                    surahNomor: surahData.info.nomor,
+                    namaLatin: surahData.info.namaLatin,
+                    ayatNomor: ayat.nomor,
+                    totalAyat: surahData.info.jumlahAyat,
+                  };
+                  await saveLastRead(progress);
+                  setLastReadAyahNumber(ayat.nomor); // Update state agar UI langsung berubah (highlight amber)
+                  setJustSaved(true);
+                  setTimeout(() => setJustSaved(false), 1500);
+                }}
+                className={`mb-8 rounded-2xl ${
+                  isActive 
+                    ? (isDarkMode ? "bg-emerald-900/20" : "bg-emerald-50") 
+                    : isLastRead 
+                    ? (isDarkMode ? "bg-amber-900/10" : "bg-amber-50") 
+                    : ""
+                } p-3 -mx-3 active:opacity-80`}
               >
                 {isLastRead && (
                   <View className="flex-row items-center gap-1 mb-2 -mt-1">
@@ -761,7 +673,7 @@ export default function SurahDetailScreen() {
                 {ayat.nomor < surahData.info.jumlahAyat && (
                   <View className={`h-px w-full my-6 ${isDarkMode ? "bg-gray-700" : "bg-gray-200"}`} />
                 )}
-              </View>
+              </Pressable>
             );
           })}
         </View>
