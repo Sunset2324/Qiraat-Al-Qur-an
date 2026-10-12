@@ -89,89 +89,7 @@ export default function MushafScreen() {
     );
   }, [surahList, searchQuery]);
 
-  // 4. Komponen Header yang akan di-scroll BERSAMA konten (opsional, tapi UX lebih baik)
-  // Jika Anda ingin header "Assalamu'alaikum" benar-benar STICKY (tidak ikut scroll), 
-  // pindahkan View tersebut ke OUTSIDE FlatList di bagian return.
-  const renderHeader = () => (
-    <View className="mb-6">
-      {/* Card Qira'at Terpilih */}
-      <View className="mb-6">
-        <Pressable 
-          onPress={() => router.push('/screen/qiraat/qiraat')}
-          className={`p-4 rounded-2xl border ${theme.border} ${theme.bgCard} flex-row items-center justify-between active:opacity-90`}
-        >
-          <View className="flex-row items-center gap-3">
-            <View className={`p-3 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"}`}>
-              <Headphones size={20} color={isDarkMode ? "#34d399" : "#047857"} />
-            </View>
-            <View>
-              <Text className={`text-xs ${theme.textSecondary}`}>Qira'at terpilih</Text>
-              <Text className={`text-base font-bold ${theme.text}`}>{currentMushaf.name}</Text>
-            </View>
-          </View>
-          <ChevronRight size={20} color={theme.iconColor} />
-        </Pressable>
-      </View>
-
-      {/* Card Lanjutkan Belajar */}
-      {lastRead && (
-        <View className="mb-6">
-          <View className={`p-6 rounded-3xl ${isDarkMode ? "bg-emerald-900" : "bg-emerald-700"}`}>
-            <Text className={`text-xs font-bold tracking-[2px] ${isDarkMode ? "text-emerald-300" : "text-emerald-100"} mb-2`}>
-              LANJUTKAN BELAJAR
-            </Text>
-            <View className="flex-row items-center justify-between mb-2">
-              <View className="flex-1">
-                <Text className="text-2xl font-bold text-white mb-1">{lastRead.nama}</Text>
-                <Text className={`text-xs ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>
-                  Surah #{lastRead.nomor}
-                </Text>
-              </View>
-              <View className={`h-14 w-14 rounded-full border-2 ${isDarkMode ? "border-emerald-600" : "border-emerald-500"} items-center justify-center`}>
-                <Text className={`text-xl font-bold ${isDarkMode ? "text-emerald-300" : "text-white"}`}>
-                  {lastRead.nomor}
-                </Text>
-              </View>
-            </View>
-            <Pressable 
-              onPress={() => handleOpenSurah(lastRead.nomor, lastRead.nama)}
-              className={`py-3 rounded-xl ${isDarkMode ? "bg-emerald-700" : "bg-white"} items-center mt-2`}
-            >
-              <Text className={`text-sm font-bold ${isDarkMode ? "text-white" : "text-emerald-700"}`}>
-                Buka Mushaf ›
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
-
-      {/* Search Bar (Sangat direkomendasikan untuk 114 Surah) */}
-      <View className={`flex-row items-center px-4 py-3 rounded-2xl border ${theme.border} ${theme.bgCard} mb-6`}>
-        <Search size={20} color={theme.textMuted} />
-        <TextInput
-          placeholder="Cari nama surah, arti, atau nomor..."
-          placeholderTextColor={theme.textMuted}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          className={`flex-1 ml-3 text-base ${theme.text}`}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        {searchQuery.length > 0 && (
-          <Pressable onPress={() => setSearchQuery("")}>
-            <Text className={`text-sm ${theme.textMuted}`}>✕</Text>
-          </Pressable>
-        )}
-      </View>
-
-      <View className="flex-row items-center justify-between mb-4">
-        <Text className={`text-lg font-bold ${theme.text}`}>Daftar Surah</Text>
-        <Text className={`text-sm ${theme.textSecondary}`}>{filteredSurahList.length} / 114</Text>
-      </View>
-    </View>
-  );
-
-  // 5. Render Item Surah
+  // 4. Render Item Surah
   const renderSurahItem = ({ item }: { item: SurahItem }) => (
     <Pressable
       onPress={() => handleOpenSurah(item.nomor, item.namaLatin)}
@@ -217,10 +135,87 @@ export default function MushafScreen() {
         data={filteredSurahList}
         keyExtractor={(item) => String(item.nomor)}
         renderItem={renderSurahItem}
-        ListHeaderComponent={renderHeader}
+        /* ✅ PERBAIKAN: Inline JSX mencegah remounting yang menyebabkan kehilangan fokus */
+        ListHeaderComponent={
+          <View className="mb-6">
+            {/* Card Qira'at Terpilih */}
+            <View className="mb-6">
+              <Pressable 
+                onPress={() => router.push('/screen/qiraat/qiraat')}
+                className={`p-4 rounded-2xl border ${theme.border} ${theme.bgCard} flex-row items-center justify-between active:opacity-90`}
+              >
+                <View className="flex-row items-center gap-3">
+                  <View className={`p-3 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"}`}>
+                    <Headphones size={20} color={isDarkMode ? "#34d399" : "#047857"} />
+                  </View>
+                  <View>
+                    <Text className={`text-xs ${theme.textSecondary}`}>Qira'at terpilih</Text>
+                    <Text className={`text-base font-bold ${theme.text}`}>{currentMushaf.name}</Text>
+                  </View>
+                </View>
+                <ChevronRight size={20} color={theme.iconColor} />
+              </Pressable>
+            </View>
+
+            {/* Card Lanjutkan Belajar */}
+            {lastRead && (
+              <View className="mb-6">
+                <View className={`p-6 rounded-3xl ${isDarkMode ? "bg-emerald-900" : "bg-emerald-700"}`}>
+                  <Text className={`text-xs font-bold tracking-[2px] ${isDarkMode ? "text-emerald-300" : "text-emerald-100"} mb-2`}>
+                    LANJUTKAN BELAJAR
+                  </Text>
+                  <View className="flex-row items-center justify-between mb-2">
+                    <View className="flex-1">
+                      <Text className="text-2xl font-bold text-white mb-1">{lastRead.nama}</Text>
+                      <Text className={`text-xs ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>
+                        Surah #{lastRead.nomor}
+                      </Text>
+                    </View>
+                    <View className={`h-14 w-14 rounded-full border-2 ${isDarkMode ? "border-emerald-600" : "border-emerald-500"} items-center justify-center`}>
+                      <Text className={`text-xl font-bold ${isDarkMode ? "text-emerald-300" : "text-white"}`}>
+                        {lastRead.nomor}
+                      </Text>
+                    </View>
+                  </View>
+                  <Pressable 
+                    onPress={() => handleOpenSurah(lastRead.nomor, lastRead.nama)}
+                    className={`py-3 rounded-xl ${isDarkMode ? "bg-emerald-700" : "bg-white"} items-center mt-2`}
+                  >
+                    <Text className={`text-sm font-bold ${isDarkMode ? "text-white" : "text-emerald-700"}`}>
+                      Buka Mushaf ›
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
+            {/* Search Bar (DIPERBAIKI: Inline agar tidak kehilangan fokus) */}
+            <View className={`flex-row items-center px-4 py-3 rounded-2xl border ${theme.border} ${theme.bgCard} mb-6`}>
+              <Search size={20} color={theme.textMuted} />
+              <TextInput
+                placeholder="Cari nama surah, arti, atau nomor..."
+                placeholderTextColor={theme.textMuted}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                className={`flex-1 ml-3 text-base ${theme.text}`}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {searchQuery.length > 0 && (
+                <Pressable onPress={() => setSearchQuery("")}>
+                  <Text className={`text-sm ${theme.textMuted}`}>✕</Text>
+                </Pressable>
+              )}
+            </View>
+
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className={`text-lg font-bold ${theme.text}`}>Daftar Surah</Text>
+              <Text className={`text-sm ${theme.textSecondary}`}>{filteredSurahList.length} / 114</Text>
+            </View>
+          </View>
+        }
         contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
-        // Optimasi performa untuk list panjang
         initialNumToRender={15}
         maxToRenderPerBatch={10}
         windowSize={10}
