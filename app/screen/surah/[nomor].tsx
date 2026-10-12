@@ -9,6 +9,7 @@ import { getDetailSurahMerged, getReciters, type Reciter } from "../../../src/se
 import { useAyahPlaylist } from "../../../src/hooks/useAyahPlaylist";
 import AudioPlayer from "../../../src/components/AudioPlayer";
 import { saveLastRead, getLastReadAyah } from "../../../src/utils/readingHistory";
+import { ARABIC_FONT } from "../../../src/constants/fonts";
 
 interface AyatItem {
   nomor: number;
@@ -744,7 +745,7 @@ export default function SurahDetailScreen() {
                       lineHeight: 65,
                       includeFontPadding: false,
                       textAlignVertical: "center",
-                      fontFamily: "System",
+                      fontFamily: ARABIC_FONT,
                     }}
                   >
                     {ayat.teksArab}

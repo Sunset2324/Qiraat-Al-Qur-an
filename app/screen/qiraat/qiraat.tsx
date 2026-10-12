@@ -6,6 +6,7 @@ import { ArrowLeft, Check, BookOpen } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { getMushafList } from "../../../src/services/quranService";
+import { ARABIC_FONT } from "../../../src/constants/fonts";
 
 interface MushafItem {
   id: string;
@@ -154,7 +155,7 @@ export default function QiraatScreen() {
                     )}
                   </View>
                   {mushaf.arabic ? (
-                    <Text className={`text-sm ${theme.textMuted} text-right`} style={{ fontFamily: "System" }}>
+                    <Text className={`text-sm ${theme.textMuted} text-right`} style={{ fontFamily: ARABIC_FONT }}>
                       {mushaf.arabic}
                     </Text>
                   ) : null}

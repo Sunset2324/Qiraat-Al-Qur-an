@@ -6,6 +6,7 @@ import { Headphones, ChevronRight, Bell, Search } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../src/context/ThemeContext";
 import { getDaftarSurah } from "../../src/services/quranService";
+import { ARABIC_FONT } from "../../src/constants/fonts";
 
 interface SurahItem {
   nomor: number;
@@ -189,7 +190,7 @@ export default function MushafScreen() {
         </Text>
       </View>
 
-      <Text className={`text-xl ${theme.text} mr-3`} style={{ fontFamily: "System" }}>
+      <Text className={`text-xl ${theme.text} mr-3`} style={{ fontFamily: ARABIC_FONT }}>
         {item.namaArab}
       </Text>
       

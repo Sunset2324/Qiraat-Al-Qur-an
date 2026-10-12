@@ -5,6 +5,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { ArrowLeft, Copy, Share2 } from "lucide-react-native";
 import { useTheme } from "../../../../src/context/ThemeContext";
 import { getDetailDoa } from "../../../../src/services/quranService";
+import { ARABIC_FONT } from "../../../../src/constants/fonts";
 
 export default function DoaDetailScreen() {
   const { isDarkMode, theme } = useTheme();
@@ -72,7 +73,7 @@ export default function DoaDetailScreen() {
           <View className={`p-6 rounded-3xl ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fffcf5]"} border ${theme.border} items-center`}>
             <Text 
               className={`text-3xl leading-[50px] text-center ${theme.text}`}
-              style={{ fontFamily: "System", textAlign: "right" }}
+              style={{ fontFamily: ARABIC_FONT, textAlign: "right" }}
             >
               {doa.doa}
             </Text>

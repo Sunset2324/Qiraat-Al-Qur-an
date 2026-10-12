@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { ArrowLeft, Search, BookOpen, Volume2, ChevronRight, X } from "lucide-react-native";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { TAJWEED_DATA, KATEGORI_TAJWEED } from "../../../src/data/tajweed";
+import { ARABIC_FONT } from "../../../src/constants/fonts";
 
 export default function TajweedScreen() {
   const { isDarkMode, theme } = useTheme();
@@ -123,13 +124,13 @@ export default function TajweedScreen() {
                 </Text>
                 <View className="flex-row items-center justify-between mb-2">
                   <Text className={`text-base font-bold flex-1 ${theme.text}`}>{item.judul}</Text>
-                  <Text className={`text-base ${theme.text}`} style={{ fontFamily: "System" }}>
+                  <Text className={`text-base ${theme.text}`} style={{ fontFamily: ARABIC_FONT }}>
                     {item.arab}
                   </Text>
                 </View>
                 {item.huruf ? (
                   <Text className={`text-xs mb-2 ${theme.textSecondary}`}>
-                    Huruf: <Text style={{ fontFamily: "System" }}>{item.huruf}</Text>
+                    Huruf: <Text style={{ fontFamily: ARABIC_FONT }}>{item.huruf}</Text>
                   </Text>
                 ) : null}
                 <Text className={`text-xs leading-5 ${theme.textMuted}`}>{item.ringkas}</Text>

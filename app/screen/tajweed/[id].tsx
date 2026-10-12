@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, ChevronLeft, ChevronRight, Timer, Type } from "lucide-react-native";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { TAJWEED_DATA, getTajweedById } from "../../../src/data/tajweed";
+import { ARABIC_FONT } from "../../../src/constants/fonts";
 
 export default function TajweedDetailScreen() {
   const { isDarkMode, theme } = useTheme();
@@ -50,7 +51,7 @@ export default function TajweedDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingBottom: 60 }}>
         {/* Judul Arab */}
         <View className={`items-center p-6 rounded-2xl border ${theme.border} ${theme.bgCard} mb-5`}>
-          <Text className={`text-3xl mb-2 ${theme.text}`} style={{ fontFamily: "System", textAlign: "center" }}>
+          <Text className={`text-3xl mb-2 ${theme.text}`} style={{ fontFamily: ARABIC_FONT, textAlign: "center" }}>
             {rule.arab}
           </Text>
           <Text className={`text-sm ${theme.textMuted} text-center`}>{rule.ringkas}</Text>
@@ -65,7 +66,7 @@ export default function TajweedDetailScreen() {
                   <Type size={16} color={accent} />
                   <Text className={`text-xs font-bold ${theme.textSecondary}`}>HURUF</Text>
                 </View>
-                <Text className={`text-lg ${theme.text}`} style={{ fontFamily: "System" }}>
+                <Text className={`text-lg ${theme.text}`} style={{ fontFamily: ARABIC_FONT }}>
                   {rule.huruf}
                 </Text>
               </View>
@@ -90,7 +91,7 @@ export default function TajweedDetailScreen() {
         <Text className={`text-sm font-bold mb-3 ${theme.text}`}>Contoh</Text>
         {rule.contoh.map((c, i) => (
           <View key={i} className={`p-4 rounded-2xl border ${theme.border} ${theme.bgCard} mb-3`}>
-            <Text className={`text-2xl ${theme.text}`} style={{ fontFamily: "System", textAlign: "right", lineHeight: 44 }}>
+            <Text className={`text-2xl ${theme.text}`} style={{ fontFamily: ARABIC_FONT, textAlign: "right", lineHeight: 44 }}>
               {c.arab}
             </Text>
             {c.ket ? <Text className={`text-xs mt-1 ${theme.textMuted}`}>{c.ket}</Text> : null}

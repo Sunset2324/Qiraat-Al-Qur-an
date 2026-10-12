@@ -8,9 +8,6 @@
     "web": {
       "bundler": "metro"
     },
-    "fonts": {
-      "asset": "./assets/fonts/KFGQPC-Uthman-Taha-Naskh-Regular.ttf"
-    },
     "jsEngine": "hermes",
     "plugins": [
       "expo-router",
