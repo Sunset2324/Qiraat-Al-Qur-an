@@ -1,12 +1,22 @@
-import { useFocusEffect } from 'expo-router'; // Atau dari '@react-navigation/native' jika error
-import { useCallback } from 'react';
-import { View, Text, Pressable } from "react-native";
-import { Star, DoorOpen, Globe } from "lucide-react-native";
+import { useCallback, useState, useEffect } from 'react';
+import { View, Text, Pressable, Image, Animated } from "react-native";
+import { DoorOpen, Globe } from "lucide-react-native";
 import { router } from "expo-router";
 import { useTheme } from "../src/context/ThemeContext";
 
 export default function BismillahScreen() {
   const { isDarkMode, theme } = useTheme();
+  
+  // Animasi masuk yang halus (fade-in + slide up dari bawah)
+  const [fadeAnim] = useState(new Animated.Value(0));
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   return (
     <View className={`flex-1 ${theme.bg} px-7 pt-12`}>
@@ -30,15 +40,21 @@ export default function BismillahScreen() {
       </View>
       <View className={`mt-4 h-px w-11 self-center ${isDarkMode ? "bg-emerald-600" : "bg-emerald-800"}`} />
 
-      {/* Konten Tengah */}
-      <View className="flex-1 items-center justify-center gap-5 px-2">
-        <View className={`h-24 w-24 rotate-45 items-center justify-center rounded-[32px] border-2 border-dashed ${isDarkMode ? "border-emerald-500" : "border-emerald-700"} ${theme.bgCard}`}>
-          <Star
-            size={30}
-            color={theme.iconColor}
-            style={{ transform: [{ rotate: "-45deg" }] }}
-          />
-        </View>
+      {/* Konten Tengah dengan Animasi */}
+      <Animated.View 
+        className="flex-1 items-center justify-center gap-5 px-2"
+        style={{ 
+          opacity: fadeAnim, 
+          transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }] 
+        }}
+      >
+        {/* LOGO BARU: Pastikan path sesuai dengan lokasi file Anda */}
+        <Image 
+          source={require('../assets/images/logo.png')} 
+          className="h-36 w-36 mb-2" 
+          resizeMode="contain"
+        />
+        
         <Text className={`text-center text-xs font-medium tracking-[2px] ${theme.text}`}>
           MULAI DENGAN NAMA ALLAH
         </Text>
@@ -49,13 +65,14 @@ export default function BismillahScreen() {
           Temukan ketenangan dalam setiap ayat, pelajari tajwid dengan penuh perhatian.
         </Text>
 
+        {/* Tombol Masuk */}
         <Pressable
           onPress={() => router.replace("/(tabs)")}
           className={`mt-6 items-center justify-center rounded-full ${isDarkMode ? "bg-emerald-600" : "bg-emerald-700"} p-4 shadow-lg active:opacity-80`}
         >
           <DoorOpen size={36} color="#ffffff" />
         </Pressable>
-      </View>
+      </Animated.View>
     </View>
   );
 }

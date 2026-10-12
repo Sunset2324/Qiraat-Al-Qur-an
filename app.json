@@ -1,40 +1,36 @@
 {
   "expo": {
-    "name": "Qiraat-Al-Qur-an",
-    "slug": "qiraat-al-qur-an",
+    "name": "Qiraat Al-Qur'an",
+    "slug": "qiraat-al-quran",
     "version": "1.0.0",
-    "scheme": "qiraat-al-qur-an",
-    "userInterfaceStyle": "automatic",
-    "web": {
-      "bundler": "metro"
+    "orientation": "portrait",
+    "icon": "./assets/images/logo.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#fbf8ef"
     },
-    "jsEngine": "hermes",
-    "plugins": [
-      "expo-router",
-      "expo-status-bar",
-      [
-        "expo-audio",
-        {
-          "microphonePermission": false,
-          "recordAudioAndroid": false,
-          "enableBackgroundPlayback": true
-        }
-      ]
+    "assetBundlePatterns": [
+      "**/*"
     ],
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "e92b93e1-7f22-419c-a971-d52ddd7723da"
-      }
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.qiraat.alquran"
     },
     "android": {
-      "package": "com.sambelcode.qiraatalquran",
-      "permissions": [
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.WAKE_LOCK",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.POST_NOTIFICATIONS"
-      ]
-    }
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo.png",
+        "backgroundColor": "#fbf8ef"
+      },
+      "package": "com.qiraat.alquran"
+    },
+    "web": {
+      "favicon": "./assets/images/logo.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ]
   }
 }
