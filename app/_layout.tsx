@@ -6,6 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import { View, Platform, PermissionsAndroid } from "react-native";
 import { useEffect } from "react";
 import { setAudioModeAsync } from "expo-audio";
+import { useFonts, AmiriQuran_400Regular } from "@expo-google-fonts/amiri-quran";
 import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
 
@@ -58,6 +59,13 @@ function RootLayoutContent() {
 }
 
 export default function RootLayout() {
+  // Muat font Arab sebelum menampilkan app. Kalau gagal dimuat, app tetap jalan
+  // dengan font sistem (error dianggap sudah selesai).
+  const [fontsLoaded, fontError] = useFonts({ AmiriQuran_400Regular });
+  if (!fontsLoaded && !fontError) {
+    return <View style={{ flex: 1, backgroundColor: "#fbf8ef" }} />;
+  }
+
   return (
     <ThemeProvider>
       <RootLayoutContent />

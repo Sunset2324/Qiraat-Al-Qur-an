@@ -7,6 +7,7 @@ import {
   Clock, Bell, MapPin, Info, Phone, Camera, RotateCcw
 } from "lucide-react-native";
 import { useTheme } from "../../src/context/ThemeContext";
+import { clearApiCache } from "../../src/utils/apiCache";
 
 export default function SettingsScreen() {
   const { isDarkMode, toggleTheme, theme } = useTheme();
@@ -138,7 +139,8 @@ export default function SettingsScreen() {
                 setAutoPlay(false);
                 setBackgroundPlay(true);
                 setAdhanNotification(true);
-                Alert.alert("Berhasil", "Pengaturan telah direset ke default.");
+                clearApiCache(); // hapus data tersimpan (surah, doa, jadwal) agar dimuat ulang
+                Alert.alert("Berhasil", "Pengaturan dan data tersimpan telah direset.");
               }}
             />
           </View>

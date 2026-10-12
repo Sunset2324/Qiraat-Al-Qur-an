@@ -1,5 +1,28 @@
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
+import { cachedRequest, DAY, HOUR } from '../utils/apiCache';
+
+// Satu instance axios dengan timeout, supaya app tidak menggantung kalau
+// server (Vercel cold start) atau jaringan lambat.
+const http = axios.create({ baseURL: API_BASE_URL, timeout: 20000 });
+
+// Ubah pesan error teknis jadi pesan yang bisa langsung ditampilkan ke pengguna.
+http.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    if (axios.isAxiosError(error)) {
+      if (error.code === 'ECONNABORTED') {
+        error.message = 'Server terlalu lama merespons. Coba lagi sebentar lagi.';
+      } else if (!error.response) {
+        error.message = 'Tidak ada koneksi internet. Periksa jaringan lalu coba lagi.';
+      } else {
+        const msg = (error.response.data as any)?.message;
+        if (msg) error.message = msg;
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 /**
  * 1. Ambil daftar Mushaf/Qiraat dari Backend (sumber: Quranpedia)
@@ -7,8 +30,11 @@ import { API_BASE_URL } from '../config';
  */
 export const getMushafList = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/mushafs`);
-    return response.data.data;
+    return await cachedRequest(
+      'mushafs',
+      async () => (await http.get('/mushafs')).data.data,
+      { ttlMs: 7 * DAY }
+    );
   } catch (error) {
     console.error('Error fetching mushaf list:', error);
     throw error;
@@ -21,17 +47,22 @@ export const getMushafList = async () => {
  */
 export const getDaftarSurah = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/surat`);
-    const surahList = response.data.data;
-    
-    return surahList.map((item: any) => ({
-      nomor: item.nomor,
-      namaLatin: item.namaLatin,
-      namaArab: item.nama,
-      arti: item.arti,
-      jumlahAyat: item.jumlahAyat,
-      tempatTurun: item.tempatTurun || 'Mekah',
-    }));
+    return await cachedRequest(
+      'surat-list',
+      async () => {
+        const response = await http.get('/surat');
+        const surahList = response.data.data;
+        return surahList.map((item: any) => ({
+          nomor: item.nomor,
+          namaLatin: item.namaLatin,
+          namaArab: item.nama,
+          arti: item.arti,
+          jumlahAyat: item.jumlahAyat,
+          tempatTurun: item.tempatTurun || 'Mekah',
+        }));
+      },
+      { ttlMs: 30 * DAY } // daftar 114 surah praktis tidak pernah berubah
+    );
   } catch (error) {
     console.error('Error fetching surah list:', error);
     throw error;
@@ -44,7 +75,7 @@ export const getDaftarSurah = async () => {
  */
 export const getDetailSurah = async (nomor: number, qariId: string = '05') => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/surat/${nomor}?qari=${qariId}`);
+    const response = await http.get(`/surat/${nomor}?qari=${qariId}`);
     const backendData = response.data.data;
     
     // Backend mengembalikan struktur: { info: {...}, audioFull: "...", ayat: [...] }
@@ -88,10 +119,16 @@ export const getDetailSurahMerged = async (
   try {
     // reciterId (opsional) = qari dari katalog Quranpedia. Kalau kosong, pakai qariId (EQuran.id).
     const reciterParam = reciterId ? `&reciterId=${reciterId}` : '';
-    const response = await axios.get(
-      `${API_BASE_URL}/surat-merged/${nomor}?mushafId=${mushafId}&qariId=${qariId}${reciterParam}`
+    return await cachedRequest(
+      `merged:${nomor}:${mushafId}:${qariId}:${reciterId ?? ''}`,
+      async () =>
+        (
+          await http.get(
+            `/surat-merged/${nomor}?mushafId=${mushafId}&qariId=${qariId}${reciterParam}`
+          )
+        ).data.data,
+      { ttlMs: 7 * DAY, group: 'surah', maxEntries: 20 }
     );
-    return response.data.data;
   } catch (error) {
     console.error(`Error fetching merged surah ${nomor}:`, error);
     throw error;
@@ -123,8 +160,11 @@ export const getReciters = async (
     const params: Record<string, string | number> = {};
     if (rawi) params.rawi = rawi;
     if (surah) params.surah = surah;
-    const response = await axios.get(`${API_BASE_URL}/reciters`, { params });
-    return response.data.data;
+    return await cachedRequest<Reciter[]>(
+      `reciters:${rawi ?? ''}:${surah ?? ''}`,
+      async () => (await http.get('/reciters', { params })).data.data,
+      { ttlMs: DAY, group: 'reciters', maxEntries: 40 }
+    );
   } catch (error) {
     console.error('Error fetching reciters:', error);
     throw error;
@@ -137,7 +177,7 @@ export const getReciters = async (
  */
 export const getDaftarDoa = async (grup?: string, tag?: string) => {
   try {
-    let url = `${API_BASE_URL}/doa`;
+    let url = '/doa';
     const params = new URLSearchParams();
     
     if (grup) params.append('grup', grup);
@@ -147,8 +187,11 @@ export const getDaftarDoa = async (grup?: string, tag?: string) => {
       url += `?${params.toString()}`;
     }
 
-    const response = await axios.get(url);
-    return response.data.data;
+    return await cachedRequest(
+      `doa:${grup ?? ''}:${tag ?? ''}`,
+      async () => (await http.get(url)).data.data,
+      { ttlMs: 7 * DAY }
+    );
   } catch (error) {
     console.error('Error fetching doa list:', error);
     throw error;
@@ -161,8 +204,11 @@ export const getDaftarDoa = async (grup?: string, tag?: string) => {
  */
 export const getDetailDoa = async (id: number) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/doa/${id}`);
-    return response.data.data;
+    return await cachedRequest(
+      `doa-detail:${id}`,
+      async () => (await http.get(`/doa/${id}`)).data.data,
+      { ttlMs: 7 * DAY, group: 'doa-detail', maxEntries: 60 }
+    );
   } catch (error) {
     console.error(`Error fetching doa detail for ID ${id}:`, error);
     throw error;
@@ -175,15 +221,68 @@ export const getDetailDoa = async (id: number) => {
  */
 export const getJadwalShalat = async (provinsi: string, kabkota: string, bulan: number, tahun: number) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/shalat`, {
-      provinsi,
-      kabkota,
-      bulan,
-      tahun
-    });
-    return response.data.data;
+    return await cachedRequest(
+      `shalat:${provinsi}:${kabkota}:${bulan}:${tahun}`,
+      async () =>
+        (await http.post('/shalat', { provinsi, kabkota, bulan, tahun })).data.data,
+      { ttlMs: 6 * HOUR, group: 'shalat', maxEntries: 6 }
+    );
   } catch (error) {
     console.error('Error fetching jadwal shalat:', error);
+    throw error;
+  }
+};
+
+/** Satu ayat versi ringan (tanpa audio) untuk ditampilkan sebagai kutipan. */
+export interface AyatTeks {
+  nomor: number;
+  teksArab: string;
+  teksLatin?: string;
+  teksIndonesia?: string;
+}
+
+/** Teks satu surah versi ringan, aman disimpan di cache. */
+export interface SurahTeks {
+  nomor: number;
+  namaLatin: string;
+  namaArab: string;
+  arti?: string;
+  jumlahAyat: number;
+  ayat: AyatTeks[];
+}
+
+/**
+ * Ambil teks (Arab + latin + terjemahan) satu surah dari backend (sumber: EQuran.id),
+ * tanpa data audio supaya ringan. Di-cache 90 hari: satu fetch per surah sudah
+ * mencakup semua tema yang merujuk ke surah itu.
+ * Endpoint: GET /surat/:nomor
+ */
+export const getTeksSurah = async (nomor: number): Promise<SurahTeks> => {
+  try {
+    return await cachedRequest<SurahTeks>(
+      `teks:${nomor}`,
+      async () => {
+        const response = await http.get(`/surat/${nomor}?qari=05`);
+        const data = response.data.data;
+        const info = data.info || data;
+        return {
+          nomor: info.nomor ?? nomor,
+          namaLatin: info.namaLatin,
+          namaArab: info.nama,
+          arti: info.arti,
+          jumlahAyat: info.jumlahAyat,
+          ayat: (data.ayat || []).map((a: any) => ({
+            nomor: a.nomor,
+            teksArab: a.teksArab,
+            teksLatin: a.teksLatin,
+            teksIndonesia: a.teksIndonesia || a.artiIndonesia,
+          })),
+        };
+      },
+      { ttlMs: 90 * DAY, group: 'teks', maxEntries: 40 }
+    );
+  } catch (error) {
+    console.error(`Error fetching teks surah ${nomor}:`, error);
     throw error;
   }
 };
