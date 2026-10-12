@@ -3,8 +3,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-  ArrowLeft, Moon, Sun, Globe, Headphones, Volume2, Play, 
-  Clock, Bell, MapPin, Info, Phone, Camera, RotateCcw, X, Check
+  ArrowLeft, Moon, Sun, Globe, Headphones, Play, 
+  Bell, MapPin, Info, Phone, RotateCcw, X, Check
 } from "lucide-react-native";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useLanguage } from "../../src/context/LanguageContext";
@@ -18,8 +18,6 @@ export default function SettingsScreen() {
   const [autoPlay, setAutoPlay] = useState(false);
   const [backgroundPlay, setBackgroundPlay] = useState(true);
   const [lokasiShalat, setLokasiShalat] = useState("DKI Jakarta, Jakarta Selatan");
-  
-  // State untuk Modal Bahasa
   const [showLanguageModal, setShowLanguageModal] = useState(false);
 
   const SettingItem = ({ icon: Icon, label, value, onPress, rightElement }: any) => (
@@ -29,7 +27,12 @@ export default function SettingsScreen() {
     >
       <View className="flex-row items-center gap-3 flex-1">
         <Icon size={20} color={theme.iconColor} />
-        <Text className={`text-sm flex-1 ${theme.text}`}>{label}</Text>
+        <Text 
+          className={`text-sm flex-1 ${theme.text}`}
+          style={{ writingDirection: language === 'ar' ? 'rtl' : 'ltr' }}
+        >
+          {label}
+        </Text>
       </View>
       {rightElement || (value ? <Text className={`text-sm ${theme.textMuted}`}>{value}</Text> : null)}
     </Pressable>
