@@ -7,6 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../src/context/ThemeContext";
 import { getDaftarSurah } from "../../src/services/quranService";
 import { ARABIC_FONT } from "../../src/constants/fonts";
+import { getLastReadAyah } from "../../src/utils/readingHistory"; // Import utility baru
 
 interface SurahItem {
   nomor: number;
@@ -23,10 +24,9 @@ export default function MushafScreen() {
   
   const [currentMushaf, setCurrentMushaf] = useState({ id: "1", name: "Hafs 'an 'Asim" });
   const [surahList, setSurahList] = useState<SurahItem[]>([]);
-  const [lastRead, setLastRead] = useState<{ nomor: number; nama: string } | null>(null);
+  const [lastRead, setLastRead] = useState<{ nomor: number; nama: string; ayat: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 1. Fungsi load data
   const loadSurahList = useCallback(async () => {
     try {
       const data = await getDaftarSurah();
@@ -36,16 +36,31 @@ export default function MushafScreen() {
     }
   }, []);
 
+  // LOGIKA BARU: Load last read spesifik untuk Mushaf (Qiraat) yang aktif
   const loadLastRead = useCallback(async () => {
     try {
-      const saved = await AsyncStorage.getItem("last_read_surah");
-      if (saved) setLastRead(JSON.parse(saved));
+      // Kita cek surah yang paling umum dibaca atau bisa diiterasi. 
+      // Untuk simplicity di card ini, kita cek surah 1 (Al-Fatihah) atau bisa disimpan global last active surah.
+      // Disini saya asumsikan kita menyimpan 'last_active_surah_nomor' secara global per mushaf
+      const lastActiveSurahStr = await AsyncStorage.getItem(`last_active_surah_mushaf_${currentMushaf.id}`);
+      const surahNomor = lastActiveSurahStr ? parseInt(lastActiveSurahStr) : 1;
+      
+      const ayatNomor = await getLastReadAyah(surahNomor, currentMushaf.id);
+      
+      if (ayatNomor) {
+        // Cari nama surah dari list
+        const surah = surahList.find(s => s.nomor === surahNomor);
+        if (surah) {
+          setLastRead({ nomor: surahNomor, nama: surah.namaLatin, ayat: ayatNomor });
+        }
+      } else {
+        setLastRead(null);
+      }
     } catch (e) {
       console.error("Gagal memuat last read:", e);
     }
-  }, []);
+  }, [currentMushaf.id, surahList]);
 
-  // 2. useFocusEffect untuk memuat data saat layar aktif
   useFocusEffect(
     useCallback(() => {
       const loadPreferences = async () => {
@@ -63,21 +78,29 @@ export default function MushafScreen() {
           }
         }
         loadSurahList();
-        loadLastRead();
+        // Load last read setelah mushaf ditentukan
+        setTimeout(() => loadLastRead(), 500); 
       };
       loadPreferences();
     }, [selectedMushafId, selectedMushafName, loadSurahList, loadLastRead])
   );
 
+  // LOGIKA BARU: Jika ada lastRead, lempar ke ayat tersebut. Jika tidak, ke ayat 1.
   const handleOpenSurah = (nomor: number, nama: string) => {
-    AsyncStorage.setItem("last_read_surah", JSON.stringify({ nomor, nama }));
+    // Simpan surah aktif untuk mushaf ini
+    AsyncStorage.setItem(`last_active_surah_mushaf_${currentMushaf.id}`, String(nomor));
+    
+    const params: any = { nomor: String(nomor), mushafId: currentMushaf.id };
+    if (lastRead && lastRead.nomor === nomor) {
+      params.ayat = String(lastRead.ayat);
+    }
+
     router.push({
       pathname: '/screen/surah/[nomor]',
-      params: { nomor: String(nomor), mushafId: currentMushaf.id }
+      params
     });
   };
 
-  // 3. Filter surah berdasarkan pencarian (Real-time)
   const filteredSurahList = useMemo(() => {
     if (!searchQuery.trim()) return surahList;
     const q = searchQuery.toLowerCase();
@@ -89,7 +112,6 @@ export default function MushafScreen() {
     );
   }, [surahList, searchQuery]);
 
-  // 4. Render Item Surah
   const renderSurahItem = ({ item }: { item: SurahItem }) => (
     <Pressable
       onPress={() => handleOpenSurah(item.nomor, item.namaLatin)}
@@ -118,8 +140,6 @@ export default function MushafScreen() {
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
-      
-      {/* ✅ HEADER STICKY (TIDAK IKUT SCROLL) */}
       <View className={`px-6 pt-6 pb-4 border-b ${theme.border}`}>
         <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>ASSALAMU'ALAIKUM</Text>
         <View className="flex-row items-center justify-between mt-1">
@@ -130,15 +150,12 @@ export default function MushafScreen() {
         </View>
       </View>
 
-      {/* ✅ AREA SCROLLABLE (Menggunakan FlatList untuk performa 114 item) */}
       <FlatList
         data={filteredSurahList}
         keyExtractor={(item) => String(item.nomor)}
         renderItem={renderSurahItem}
-        /* ✅ PERBAIKAN: Inline JSX mencegah remounting yang menyebabkan kehilangan fokus */
         ListHeaderComponent={
           <View className="mb-6">
-            {/* Card Qira'at Terpilih */}
             <View className="mb-6">
               <Pressable 
                 onPress={() => router.push('/screen/qiraat/qiraat')}
@@ -157,8 +174,8 @@ export default function MushafScreen() {
               </Pressable>
             </View>
 
-            {/* Card Lanjutkan Belajar */}
-            {lastRead && (
+            {/* Card Lanjutkan Belajar (LOGIKA IF) */}
+            {lastRead ? (
               <View className="mb-6">
                 <View className={`p-6 rounded-3xl ${isDarkMode ? "bg-emerald-900" : "bg-emerald-700"}`}>
                   <Text className={`text-xs font-bold tracking-[2px] ${isDarkMode ? "text-emerald-300" : "text-emerald-100"} mb-2`}>
@@ -168,7 +185,7 @@ export default function MushafScreen() {
                     <View className="flex-1">
                       <Text className="text-2xl font-bold text-white mb-1">{lastRead.nama}</Text>
                       <Text className={`text-xs ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>
-                        Surah #{lastRead.nomor}
+                        Surah #{lastRead.nomor} • Ayat {lastRead.ayat}
                       </Text>
                     </View>
                     <View className={`h-14 w-14 rounded-full border-2 ${isDarkMode ? "border-emerald-600" : "border-emerald-500"} items-center justify-center`}>
@@ -182,14 +199,24 @@ export default function MushafScreen() {
                     className={`py-3 rounded-xl ${isDarkMode ? "bg-emerald-700" : "bg-white"} items-center mt-2`}
                   >
                     <Text className={`text-sm font-bold ${isDarkMode ? "text-white" : "text-emerald-700"}`}>
-                      Buka Mushaf ›
+                      Lanjut ke Ayat {lastRead.ayat} ›
                     </Text>
                   </Pressable>
                 </View>
               </View>
+            ) : (
+              <View className="mb-6">
+                <View className={`p-6 rounded-3xl border-2 border-dashed ${theme.border} items-center justify-center`}>
+                  <Text className={`text-sm font-medium ${theme.textMuted}`}>
+                    Belum ada tanda baca untuk {currentMushaf.name}
+                  </Text>
+                  <Text className={`text-xs ${theme.textMuted} mt-1`}>
+                    Klik ayat di dalam surah untuk menandai
+                  </Text>
+                </View>
+              </View>
             )}
 
-            {/* Search Bar (DIPERBAIKI: Inline agar tidak kehilangan fokus) */}
             <View className={`flex-row items-center px-4 py-3 rounded-2xl border ${theme.border} ${theme.bgCard} mb-6`}>
               <Search size={20} color={theme.textMuted} />
               <TextInput

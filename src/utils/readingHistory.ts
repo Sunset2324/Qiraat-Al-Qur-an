@@ -1,72 +1,67 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const STORAGE_KEY = "reading_history_v1";
-const MAX_ENTRIES = 50;
-
-export interface ReadingHistoryEntry {
+export interface ReadingProgress {
   surahNomor: number;
   namaLatin: string;
   ayatNomor: number;
   totalAyat: number;
-  timestamp: number; // Date.now()
+  mushafId: string;
+  mushafName?: string;
+  timestamp?: number;
 }
 
-const readAll = async (): Promise<ReadingHistoryEntry[]> => {
+const HISTORY_LIST_KEY = "reading_history_list_v2"; // Versi baru untuk menghindari konflik data lama
+
+// Simpan progres spesifik untuk kombinasi Surah + Mushaf (Qiraat)
+export const saveLastRead = async (progress: ReadingProgress) => {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error("Gagal membaca riwayat bacaan:", error);
+    // Key unik: last_read_surah_[nomor]_mushaf_[id]
+    const key = `last_read_surah_${progress.surahNomor}_mushaf_${progress.mushafId}`;
+    const dataToSave = { ...progress, timestamp: Date.now() };
+    await AsyncStorage.setItem(key, JSON.stringify(dataToSave));
+
+    // Update Daftar History (untuk Tab History)
+    const historyListStr = await AsyncStorage.getItem(HISTORY_LIST_KEY);
+    let historyList: ReadingProgress[] = historyListStr ? JSON.parse(historyListStr) : [];
+    
+    // Hapus entri lama untuk surah+mushaf yang sama agar tidak duplikat
+    historyList = historyList.filter(
+      (item) => !(item.surahNomor === progress.surahNomor && item.mushafId === progress.mushafId)
+    );
+    
+    // Tambahkan yang baru di paling atas
+    historyList.unshift(dataToSave);
+    
+    // Batasi hanya 50 riwayat terakhir
+    if (historyList.length > 50) historyList = historyList.slice(0, 50);
+    
+    await AsyncStorage.setItem(HISTORY_LIST_KEY, JSON.stringify(historyList));
+  } catch (e) {
+    console.error("Gagal menyimpan progres bacaan:", e);
+  }
+};
+
+// Ambil nomor ayat terakhir dibaca untuk Surah + Mushaf tertentu
+export const getLastReadAyah = async (surahNomor: number, mushafId: string): Promise<number | null> => {
+  try {
+    const key = `last_read_surah_${surahNomor}_mushaf_${mushafId}`;
+    const saved = await AsyncStorage.getItem(key);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return parsed.ayatNomor;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Ambil seluruh daftar history
+export const getHistoryList = async (): Promise<ReadingProgress[]> => {
+  try {
+    const saved = await AsyncStorage.getItem(HISTORY_LIST_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
     return [];
   }
-};
-
-const writeAll = async (entries: ReadingHistoryEntry[]): Promise<void> => {
-  try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-  } catch (error) {
-    console.error("Gagal menyimpan riwayat bacaan:", error);
-  }
-};
-
-/**
- * Simpan/perbarui posisi terakhir dibaca untuk satu surah.
- * Kalau surah ini sudah ada di riwayat, entri lama diganti & dipindah ke paling atas
- * (jadi 1 surah = 1 entri, bukan numpuk tiap kali dibuka).
- */
-export const saveLastRead = async (
-  entry: Omit<ReadingHistoryEntry, "timestamp">
-): Promise<void> => {
-  const current = await readAll();
-  const filtered = current.filter((e) => e.surahNomor !== entry.surahNomor);
-  const next: ReadingHistoryEntry[] = [{ ...entry, timestamp: Date.now() }, ...filtered].slice(
-    0,
-    MAX_ENTRIES
-  );
-  await writeAll(next);
-};
-
-/** Ambil seluruh riwayat, yang paling baru dibaca di paling atas. */
-export const getHistory = async (): Promise<ReadingHistoryEntry[]> => {
-  return readAll();
-};
-
-/** Ambil nomor ayat terakhir dibaca untuk satu surah (null kalau surah ini belum pernah dibuka). */
-export const getLastReadAyah = async (surahNomor: number): Promise<number | null> => {
-  const all = await readAll();
-  const found = all.find((e) => e.surahNomor === surahNomor);
-  return found ? found.ayatNomor : null;
-};
-
-/** Hapus satu entri riwayat (satu surah). */
-export const removeHistoryEntry = async (surahNomor: number): Promise<void> => {
-  const current = await readAll();
-  await writeAll(current.filter((e) => e.surahNomor !== surahNomor));
-};
-
-/** Hapus semua riwayat bacaan. */
-export const clearHistory = async (): Promise<void> => {
-  await writeAll([]);
 };
