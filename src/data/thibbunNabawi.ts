@@ -9,7 +9,8 @@ interface RawTema {
   tema: string;
   halaman?: number;
   surah_nomor: number;
-  ayat_nomor: number;
+  ayat_nomor: number | null; // null = ayat belum dipastikan (perlu_cek), tema dilewati di aplikasi
+  perlu_cek?: boolean;
 }
 interface RawKategori {
   id: string;
@@ -54,9 +55,10 @@ Object.values(data.kategori).forEach((k) => {
     id: k.id,
     nama: k.nama_lengkap,
     deskripsi: k.deskripsi ?? "",
-    jumlah: k.tema.length,
+    jumlah: k.tema.filter((t) => t.ayat_nomor != null).length,
   });
   k.tema.forEach((t, i) => {
+    if (t.ayat_nomor == null) return; // belum diverifikasi, jangan tampilkan ayat yang salah
     let id = `${k.id}-${t.no}`;
     if (dipakai.has(id)) id = `${id}-${i}`; // jaga-jaga kalau ada nomor ganda
     dipakai.add(id);

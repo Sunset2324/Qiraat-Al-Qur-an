@@ -44,7 +44,9 @@ function validate(data, jumlahAyat) {
         return;
       }
       const maks = jumlahAyat[s];
-      if (!Number.isInteger(a) || a < 1) {
+      if (a === null && t.perlu_cek) {
+        warnings.push(`${lokasi}: ayat belum diketahui (perlu dicek ke buku) - "${t.tema}"`);
+      } else if (!Number.isInteger(a) || a < 1) {
         errors.push(`${lokasi}: ayat_nomor tidak valid (${a})`);
       } else if (maks && a > maks) {
         errors.push(`${lokasi}: QS ${s}:${a} melebihi jumlah ayat surah (${maks}) - "${t.tema}"`);

@@ -5,7 +5,7 @@ Konversi data-source/quran_medis.docx -> src/data/quranMedis.json
 Pakai (dari folder mana pun):
     python scripts/parse_quran_medis.py
     python scripts/parse_quran_medis.py "path/ke/file.docx" "path/keluaran.json"
-    python scripts/parse_quran_medis.py --boleh-sebagian   # tidak gagal walau jumlah belum 602
+    python scripts/parse_quran_medis.py --boleh-sebagian   # tidak gagal walau jumlah belum sesuai target
 
 Laporan baris yang tidak terbaca ditulis ke data-source/parse_report.txt
 (folder itu di-.gitignore).
@@ -26,7 +26,7 @@ KELUARAN_DEFAULT = ROOT / "src" / "data" / "quranMedis.json"
 LAPORAN = ROOT / "data-source" / "parse_report.txt"
 
 # Jumlah tema menurut buku. Dipakai untuk mendeteksi tema yang terlewat saat parsing.
-TARGET = {"I_RUHANI": 243, "II_RAGAWI": 179, "III_HIKMAH_IBADAH": 84, "IV_ALA_NABI": 96}
+TARGET = {"I_RUHANI": 243, "II_RAGAWI": 179, "III_HIKMAH_IBADAH": 84, "IV_ALA_NABI": 98}
 
 SURAH_MAPPING = {
     "Al-Fatihah": 1, "Al-Baqarah": 2, "Ali 'Imran": 3, "An-Nisa'": 4, "Al-Ma'idah": 5,
