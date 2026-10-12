@@ -233,6 +233,28 @@ export const getJadwalShalat = async (provinsi: string, kabkota: string, bulan: 
   }
 };
 
+/**
+ * Daftar provinsi untuk jadwal shalat
+ * Endpoint: GET /shalat/provinsi
+ */
+export const getProvinsiShalat = async (): Promise<string[]> =>
+  cachedRequest<string[]>(
+    'shalat-provinsi',
+    async () => (await http.get('/shalat/provinsi')).data.data,
+    { ttlMs: 30 * DAY }
+  );
+
+/**
+ * Daftar kab/kota dalam satu provinsi
+ * Endpoint: POST /shalat/kabkota
+ */
+export const getKabKotaShalat = async (provinsi: string): Promise<string[]> =>
+  cachedRequest<string[]>(
+    `shalat-kabkota:${provinsi}`,
+    async () => (await http.post('/shalat/kabkota', { provinsi })).data.data,
+    { ttlMs: 30 * DAY, group: 'shalat-kabkota', maxEntries: 40 }
+  );
+
 /** Satu ayat versi ringan (tanpa audio) untuk ditampilkan sebagai kutipan. */
 export interface AyatTeks {
   nomor: number;
