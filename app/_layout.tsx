@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { setAudioModeAsync } from "expo-audio";
 import { useFonts, AmiriQuran_400Regular } from "@expo-google-fonts/amiri-quran";
 import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
+import { LanguageProvider } from "../src/context/LanguageContext"; // <-- TAMBAHAN: Import LanguageProvider
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
 
 // Nonaktifkan strict mode warning di development
@@ -68,7 +69,9 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <RootLayoutContent />
+      <LanguageProvider> {/* <-- TAMBAHAN: Bungkus RootLayoutContent dengan LanguageProvider */}
+        <RootLayoutContent />
+      </LanguageProvider>
     </ThemeProvider>
   );
 }
