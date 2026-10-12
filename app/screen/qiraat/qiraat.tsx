@@ -95,7 +95,7 @@ export default function QiraatScreen() {
   if (!loading && mushafList.length === 0) {
     return (
       <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center p-6`} edges={['top']}>
-        <BookOpen size={48} color={theme.textMuted} />
+        <BookOpen size={48} color={theme.mutedColor} />
         <Text className={`mt-4 text-center font-bold ${theme.text}`}>Gagal Memuat Data</Text>
         <Pressable onPress={loadData} className={`mt-6 px-6 py-3 rounded-full ${isDarkMode ? 'bg-emerald-600' : 'bg-emerald-700'}`}>
           <Text className="text-white font-bold">Coba Muat Ulang</Text>
@@ -139,13 +139,13 @@ export default function QiraatScreen() {
               key={mushaf.id}
               onPress={() => handleSelectMushaf(mushaf.id)}
               className={`mb-4 p-5 rounded-2xl border-2 transition-all ${
-                isActive ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20" : `${theme.border} ${theme.bgCard}`
+                isActive ? `border-emerald-600 ${isDarkMode ? "bg-emerald-900/20" : "bg-emerald-50"}`: `${theme.border} ${theme.bgCard}`
               }`}
             >
               <View className="flex-row justify-between items-start mb-2">
                 <View className="flex-1 pr-4">
                   <View className="flex-row items-center gap-2 flex-wrap mb-1">
-                    <Text className={`text-base font-bold ${isActive ? "text-emerald-700 dark:text-emerald-400" : theme.text}`}>
+                    <Text className={`text-base font-bold ${isActive ? (isDarkMode ? "text-emerald-400" : "text-emerald-700") : theme.text}`}>
                       {mushaf.name}
                     </Text>
                     {isStandar && (
@@ -164,7 +164,7 @@ export default function QiraatScreen() {
                 <View className={`h-8 w-8 rounded-full items-center justify-center ${
                   isActive ? "bg-emerald-600" : isDarkMode ? "bg-gray-700" : "bg-gray-200"
                 }`}>
-                  <Check size={16} color={isActive ? "#fff" : theme.textMuted} />
+                  <Check size={16} color={isActive ? "#fff" : theme.mutedColor} />
                 </View>
               </View>
 

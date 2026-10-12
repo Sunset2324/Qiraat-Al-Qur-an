@@ -3,6 +3,7 @@
     "name": "Qiraat Al-Qur'an",
     "slug": "qiraat-al-quran",
     "version": "1.0.0",
+    "scheme": "qiraat-al-qur-an",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
     "userInterfaceStyle": "light",

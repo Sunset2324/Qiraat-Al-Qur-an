@@ -206,7 +206,7 @@ export default function DzikirDoaScreen() {
               </Text>
               
               {/* Label Grup Kecil */}
-              {item.grup && (
+              {!!item.grup && (
                 <Text className={`text-[10px] ${theme.textMuted} text-center mt-1 uppercase tracking-wider`}>
                   {item.grup}
                 </Text>

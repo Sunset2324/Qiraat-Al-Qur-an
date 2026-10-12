@@ -193,7 +193,7 @@ export default function SettingsScreen() {
             <View className="flex-row justify-between items-center mb-4">
               <Text className={`text-lg font-bold ${theme.text}`}>{t('selectLanguage')}</Text>
               <Pressable onPress={() => setShowLanguageModal(false)}>
-                <X size={24} color={theme.textMuted} />
+                <X size={24} color={theme.mutedColor} />
               </Pressable>
             </View>
             

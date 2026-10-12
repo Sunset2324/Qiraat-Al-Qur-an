@@ -90,7 +90,7 @@ export default function HistoryScreen() {
            {item.mushafName || `Mushaf ${item.mushafId}`}
         </Text>
         <View className="flex-row items-center mt-1">
-          <Clock size={10} color={theme.textMuted} />
+          <Clock size={10} color={theme.mutedColor} />
           <Text className={`text-[10px] ml-1 ${theme.textMuted}`}>
             {formatDate(item.timestamp)}
           </Text>

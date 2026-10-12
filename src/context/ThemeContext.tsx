@@ -18,6 +18,7 @@ interface ThemeContextType {
     border: string;
     footerBg: string;
     iconColor: string;
+    mutedColor: string; // hex untuk prop color (ikon); textMuted adalah class Tailwind
     cardBg: string;
     inputBg: string;
   };
@@ -30,10 +31,11 @@ const lightTheme = {
   bgHeader: "bg-emerald-800",
   text: "text-emerald-950",
   textSecondary: "text-emerald-800/70",
-  textMuted: "text-[#6b6558]",
+  textMuted: "text-ink-muted",
   border: "border-[#dccb9c]",
   footerBg: "bg-emerald-800",
   iconColor: "#047857",
+  mutedColor: "#6B6558",
   cardBg: "#fffcf5",
   inputBg: "#fbf8ef",
 };
@@ -48,6 +50,7 @@ const darkTheme = {
   border: "border-gray-700",
   footerBg: "bg-[#0f0f0f]",
   iconColor: "#fff",
+  mutedColor: "#6b7280",
   cardBg: "#242424",
   inputBg: "#1a1a1a",
 };

@@ -81,7 +81,7 @@ export default function DoaDetailScreen() {
         </View>
 
         {/* TEKS LATIN (Opsional, jika ada di backend) */}
-        {doa.latin && (
+        {!!doa.latin && (
           <View className="px-6 mb-6">
             <Text className={`text-sm font-semibold ${theme.textSecondary} mb-2 uppercase tracking-wider`}>
               Cara Baca

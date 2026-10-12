@@ -145,7 +145,7 @@ export default function MushafScreen() {
         <View className="flex-row items-center justify-between mt-1">
           <Text className={`text-2xl font-bold ${theme.text}`}>Mushaf Belajar</Text>
           <Pressable className={`p-2 rounded-full border ${theme.border}`}>
-            <Bell size={20} color={theme.iconColor} />
+            <Search size={20} color={theme.mutedColor} />
           </Pressable>
         </View>
       </View>
@@ -218,10 +218,10 @@ export default function MushafScreen() {
             )}
 
             <View className={`flex-row items-center px-4 py-3 rounded-2xl border ${theme.border} ${theme.bgCard} mb-6`}>
-              <Search size={20} color={theme.textMuted} />
+              <Search size={20} color={theme.mutedColor} />
               <TextInput
                 placeholder="Cari nama surah, arti, atau nomor..."
-                placeholderTextColor={theme.textMuted}
+                	placeholderTextColor={theme.mutedColor}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 className={`flex-1 ml-3 text-base ${theme.text}`}

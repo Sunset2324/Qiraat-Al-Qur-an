@@ -69,7 +69,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <LanguageProvider> {/* <-- HANYA WRAPPER INI YANG DITAMBAHKAN */}
+      <LanguageProvider>
         <RootLayoutContent />
       </LanguageProvider>
     </ThemeProvider>
