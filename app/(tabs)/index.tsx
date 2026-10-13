@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { FileText, CloudSun } from "lucide-react-native";
 import { useState, useEffect } from "react";
 import { useTheme } from "../../src/context/ThemeContext";
+import { findTodaySchedule } from "../../src/utils/jadwalShalat";
 import { getJadwalShalat } from "../../src/services/quranService";
 
 export default function DashboardScreen() {
@@ -61,7 +62,8 @@ export default function DashboardScreen() {
         const data = await getJadwalShalat('DKI Jakarta', 'Jakarta Selatan', now.getMonth() + 1, now.getFullYear());
         
         const today = now.getDate();
-        const todaySchedule = data.find((item: any) => {
+        const todaySchedule = findTodaySchedule(data, now);
+        ((item: any) => {
           const tanggalStr = item.tanggal || item.date;
           if (!tanggalStr) return false;
           const parts = tanggalStr.split('-');

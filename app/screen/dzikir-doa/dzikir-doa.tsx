@@ -205,7 +205,7 @@ export default function DzikirDoaScreen() {
               {/* Tampilkan 1 tagar pertama jika ada, sebagai preview */}
               {item.tags && item.tags.length > 0 && (
                 <View className="flex-row items-center justify-center gap-1 mt-2">
-                  <Tag size={10} color={theme.textMuted} />
+                  <Tag size={10} color={theme.mutedColor} />
                   <Text className={`text-[10px] ${theme.textMuted}`}>#{item.tags[0]}</Text>
                 </View>
               )}
