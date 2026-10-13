@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
-import { ArrowLeft, Copy, Share2 } from "lucide-react-native";
+import { ArrowLeft, Copy, Share2, Tag } from "lucide-react-native";
 import { useTheme } from "../../../../src/context/ThemeContext";
 import { getDetailDoa } from "../../../../src/services/quranService";
 import { ARABIC_FONT } from "../../../../src/constants/fonts";
@@ -40,21 +40,18 @@ export default function DoaDetailScreen() {
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
-      {/* HEADER */}
       <View className={`flex-row items-center justify-between px-6 py-4 border-b ${theme.border}`}>
-        <Pressable onPress={() => router.back()} className="p-1">
+        <Pressable onPress={() => router.back()} className="p-1 active:opacity-70">
           <ArrowLeft size={24} color={theme.iconColor} />
         </Pressable>
         <Text className={`text-base font-bold ${theme.text}`}>Detail Doa</Text>
         <View className="flex-row gap-4">
-          <Pressable className="p-1"><Copy size={22} color={theme.iconColor} /></Pressable>
-          <Pressable className="p-1"><Share2 size={22} color={theme.iconColor} /></Pressable>
+          <Pressable className="p-1 active:opacity-70"><Copy size={22} color={theme.iconColor} /></Pressable>
+          <Pressable className="p-1 active:opacity-70"><Share2 size={22} color={theme.iconColor} /></Pressable>
         </View>
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-        
-        {/* JUDUL & KATEGORI */}
         <View className="px-6 pt-6 pb-4">
           <View className="flex-row items-center gap-2 mb-2">
             <View className={`px-3 py-1 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"}`}>
@@ -68,7 +65,6 @@ export default function DoaDetailScreen() {
           </Text>
         </View>
 
-        {/* TEKS ARAB */}
         <View className="px-6 mb-6">
           <View className={`p-6 rounded-3xl ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fffcf5]"} border ${theme.border} items-center`}>
             <Text 
@@ -80,23 +76,15 @@ export default function DoaDetailScreen() {
           </View>
         </View>
 
-        {/* TEKS LATIN (Opsional, jika ada di backend) */}
         {!!doa.latin && (
           <View className="px-6 mb-6">
-            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-2 uppercase tracking-wider`}>
-              Cara Baca
-            </Text>
-            <Text className={`text-base italic leading-6 ${theme.textMuted}`}>
-              "{doa.latin}"
-            </Text>
+            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-2 uppercase tracking-wider`}>Cara Baca</Text>
+            <Text className={`text-base italic leading-6 ${theme.textMuted}`}>"{doa.latin}"</Text>
           </View>
         )}
 
-        {/* ARTI / TERJEMAHAN */}
         <View className="px-6 mb-6">
-          <Text className={`text-sm font-semibold ${theme.textSecondary} mb-3 uppercase tracking-wider`}>
-            Arti / Terjemahan
-          </Text>
+          <Text className={`text-sm font-semibold ${theme.textSecondary} mb-3 uppercase tracking-wider`}>Arti / Terjemahan</Text>
           <View className={`p-5 rounded-2xl ${isDarkMode ? "bg-emerald-900/30" : "bg-emerald-50"} border ${isDarkMode ? "border-emerald-800" : "border-emerald-200"}`}>
             <Text className={`text-base leading-7 ${theme.text}`} style={{ textAlign: "left" }}>
               {doa.arti}
@@ -104,12 +92,9 @@ export default function DoaDetailScreen() {
           </View>
         </View>
 
-        {/* DALIL & KEUTAMAAN (field "tentang" dari EQuran.id: referensi hadis/penjelasan) */}
         {!!doa.tentang && String(doa.tentang).trim().length > 0 && (
           <View className="px-6 mb-6">
-            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-3 uppercase tracking-wider`}>
-              Dalil & Keutamaan
-            </Text>
+            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-3 uppercase tracking-wider`}>Dalil & Keutamaan</Text>
             <View className={`p-5 rounded-2xl ${isDarkMode ? "bg-amber-900/20" : "bg-amber-50"} border ${isDarkMode ? "border-amber-800" : "border-amber-200"}`}>
               <Text className={`text-base leading-7 ${theme.text}`} style={{ textAlign: "left" }}>
                 {String(doa.tentang).trim()}
@@ -121,22 +106,23 @@ export default function DoaDetailScreen() {
           </View>
         )}
 
-        {/* TAGS (Opsional) */}
+        {/* PERBAIKAN TAMPILAN TAGAR DENGAN IKON REACT */}
         {doa.tags && doa.tags.length > 0 && (
-          <View className="px-6">
-            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-3 uppercase tracking-wider`}>
-              Terkait
-            </Text>
+          <View className="px-6 mb-6">
+            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-3 uppercase tracking-wider`}>Terkait</Text>
             <View className="flex-row flex-wrap gap-2">
               {doa.tags.map((tag: string, index: number) => (
-                <View key={index} className={`px-4 py-2 rounded-lg ${isDarkMode ? "bg-gray-800" : "bg-gray-200"}`}>
+                <View 
+                  key={index} 
+                  className={`flex-row items-center gap-1.5 px-3 py-2 rounded-lg ${isDarkMode ? "bg-gray-800" : "bg-gray-200"}`}
+                >
+                  <Tag size={12} color={isDarkMode ? "#9CA3AF" : "#6B7280"} />
                   <Text className={`text-xs font-medium ${theme.text}`}>#{tag}</Text>
                 </View>
               ))}
             </View>
           </View>
         )}
-
       </ScrollView>
     </SafeAreaView>
   );
