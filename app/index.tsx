@@ -48,7 +48,7 @@ export default function BismillahScreen() {
           transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }] 
         }}
       >
-        {/* LOGO BARU: Pastikan path sesuai dengan lokasi file Anda */}
+        {/* LOGO */}
         <Image 
           source={require('../assets/images/logo.png')} 
           className="h-36 w-36 mb-2" 
