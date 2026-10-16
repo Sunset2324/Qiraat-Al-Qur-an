@@ -5,6 +5,7 @@ import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Headphones, ChevronRight, Bell, Search } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../src/context/ThemeContext";
+import { useLanguage } from "../../src/context/LanguageContext";
 import { getDaftarSurah } from "../../src/services/quranService";
 import { ARABIC_FONT } from "../../src/constants/fonts";
 import { getLastReadAyah } from "../../src/utils/readingHistory"; // Import utility baru
@@ -20,6 +21,7 @@ interface SurahItem {
 
 export default function MushafScreen() {
   const { isDarkMode, theme } = useTheme();
+  const { t, flip } = useLanguage();
   const { selectedMushafId, selectedMushafName } = useLocalSearchParams();
   
   const [currentMushaf, setCurrentMushaf] = useState({ id: "1", name: "Hafs 'an 'Asim" });
@@ -74,7 +76,7 @@ export default function MushafScreen() {
           const savedId = await AsyncStorage.getItem("selected_mushaf_id");
           const savedName = await AsyncStorage.getItem("selected_mushaf_name");
           if (savedId) {
-            setCurrentMushaf({ id: savedId, name: savedName || "Mushaf Terpilih" });
+            setCurrentMushaf({ id: savedId, name: savedName || t("mushafSelected") });
           }
         }
         loadSurahList();
@@ -126,7 +128,7 @@ export default function MushafScreen() {
       <View className="flex-1">
         <Text className={`text-base font-bold ${theme.text}`}>{item.namaLatin}</Text>
         <Text className={`text-xs ${theme.textMuted}`}>
-          {item.arti} • {item.jumlahAyat} Ayat • {item.tempatTurun === 'Mekah' ? 'Makkiyah' : 'Madaniyah'}
+          {item.arti} • {t("versesCount", { n: item.jumlahAyat })} • {item.tempatTurun === 'Mekah' ? t("makkiyah") : t("madaniyah")}
         </Text>
       </View>
 
@@ -134,16 +136,16 @@ export default function MushafScreen() {
         {item.namaArab}
       </Text>
       
-      <ChevronRight size={20} color={theme.iconColor} />
+      <ChevronRight size={20} color={theme.iconColor} style={flip} />
     </Pressable>
   );
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
       <View className={`px-6 pt-6 pb-4 border-b ${theme.border}`}>
-        <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>ASSALAMU'ALAIKUM</Text>
+        <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>{t("greeting")}</Text>
         <View className="flex-row items-center justify-between mt-1">
-          <Text className={`text-2xl font-bold ${theme.text}`}>Mushaf Belajar</Text>
+          <Text className={`text-2xl font-bold ${theme.text}`}>{t("mushafLearn")}</Text>
           <Pressable className={`p-2 rounded-full border ${theme.border}`}>
             <Search size={20} color={theme.mutedColor} />
           </Pressable>
@@ -166,11 +168,11 @@ export default function MushafScreen() {
                     <Headphones size={20} color={isDarkMode ? "#34d399" : "#047857"} />
                   </View>
                   <View>
-                    <Text className={`text-xs ${theme.textSecondary}`}>Qira'at terpilih</Text>
+                    <Text className={`text-xs ${theme.textSecondary}`}>{t("selectedQiraat")}</Text>
                     <Text className={`text-base font-bold ${theme.text}`}>{currentMushaf.name}</Text>
                   </View>
                 </View>
-                <ChevronRight size={20} color={theme.iconColor} />
+                <ChevronRight size={20} color={theme.iconColor} style={flip} />
               </Pressable>
             </View>
 
@@ -179,13 +181,13 @@ export default function MushafScreen() {
               <View className="mb-6">
                 <View className={`p-6 rounded-3xl ${isDarkMode ? "bg-emerald-900" : "bg-emerald-700"}`}>
                   <Text className={`text-xs font-bold tracking-[2px] ${isDarkMode ? "text-emerald-300" : "text-emerald-100"} mb-2`}>
-                    LANJUTKAN BELAJAR
+                    {t("continueLearning")}
                   </Text>
                   <View className="flex-row items-center justify-between mb-2">
                     <View className="flex-1">
                       <Text className="text-2xl font-bold text-white mb-1">{lastRead.nama}</Text>
                       <Text className={`text-xs ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>
-                        Surah #{lastRead.nomor} • Ayat {lastRead.ayat}
+                        {t("surahAyahLine", { n: lastRead.nomor, a: lastRead.ayat })}
                       </Text>
                     </View>
                     <View className={`h-14 w-14 rounded-full border-2 ${isDarkMode ? "border-emerald-600" : "border-emerald-500"} items-center justify-center`}>
@@ -199,7 +201,7 @@ export default function MushafScreen() {
                     className={`py-3 rounded-xl ${isDarkMode ? "bg-emerald-700" : "bg-white"} items-center mt-2`}
                   >
                     <Text className={`text-sm font-bold ${isDarkMode ? "text-white" : "text-emerald-700"}`}>
-                      Lanjut ke Ayat {lastRead.ayat} ›
+                      {t("continueToAyah", { a: lastRead.ayat })}
                     </Text>
                   </Pressable>
                 </View>
@@ -208,10 +210,10 @@ export default function MushafScreen() {
               <View className="mb-6">
                 <View className={`p-6 rounded-3xl border-2 border-dashed ${theme.border} items-center justify-center`}>
                   <Text className={`text-sm font-medium ${theme.textMuted}`}>
-                    Belum ada tanda baca untuk {currentMushaf.name}
+                    {t("noBookmark", { name: currentMushaf.name })}
                   </Text>
                   <Text className={`text-xs ${theme.textMuted} mt-1`}>
-                    Klik ayat di dalam surah untuk menandai
+                    {t("tapToBookmark")}
                   </Text>
                 </View>
               </View>
@@ -220,8 +222,8 @@ export default function MushafScreen() {
             <View className={`flex-row items-center px-4 py-3 rounded-2xl border ${theme.border} ${theme.bgCard} mb-6`}>
               <Search size={20} color={theme.mutedColor} />
               <TextInput
-                placeholder="Cari nama surah, arti, atau nomor..."
-                	placeholderTextColor={theme.mutedColor}
+                placeholder={t("searchSurah")}
+                placeholderTextColor={theme.mutedColor}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 className={`flex-1 ml-3 text-base ${theme.text}`}
@@ -236,7 +238,7 @@ export default function MushafScreen() {
             </View>
 
             <View className="flex-row items-center justify-between mb-4">
-              <Text className={`text-lg font-bold ${theme.text}`}>Daftar Surah</Text>
+              <Text className={`text-lg font-bold ${theme.text}`}>{t("surahList")}</Text>
               <Text className={`text-sm ${theme.textSecondary}`}>{filteredSurahList.length} / 114</Text>
             </View>
           </View>

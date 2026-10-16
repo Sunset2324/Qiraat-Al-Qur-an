@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getTeksSurah, AyatTeks, SurahTeks } from "../services/quranService";
 
+import { useLanguage } from "../context/LanguageContext";
 // Dedupe request dalam satu sesi: beberapa tema dari surah yang sama
 // memakai satu promise yang sama.
 const memo = new Map<number, Promise<SurahTeks>>();
@@ -24,12 +25,13 @@ type State =
 
 /** Ambil teks satu ayat (dari cache lokal dulu, lalu API) untuk sebuah referensi surah:ayat. */
 export const useAyatTema = (surah: number | null, ayat: number | null) => {
+  const { t } = useLanguage();
   const [state, setState] = useState<State>({ status: "loading" });
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!surah || !ayat) {
-      setState({ status: "error", message: "Referensi ayat tidak valid." });
+      setState({ status: "error", message: t("ayahRefInvalid") });
       return;
     }
     let batal = false;
@@ -41,7 +43,7 @@ export const useAyatTema = (surah: number | null, ayat: number | null) => {
         if (!a) {
           setState({
             status: "error",
-            message: `Ayat ${ayat} tidak ditemukan di surah ${s.namaLatin ?? surah}.`,
+            message: t("ayahNotInSurah", { a: ayat, name: s.namaLatin ?? surah }),
           });
         } else {
           setState({ status: "ready", ayat: a, surah: s });
@@ -51,13 +53,13 @@ export const useAyatTema = (surah: number | null, ayat: number | null) => {
         if (batal) return;
         setState({
           status: "error",
-          message: e?.message || "Gagal memuat ayat. Periksa koneksi internet.",
+          message: e?.message || t("ayahLoadFailed"),
         });
       });
     return () => {
       batal = true;
     };
-  }, [surah, ayat, retryKey]);
+  }, [surah, ayat, retryKey, t]);
 
   const retry = useCallback(() => setRetryKey((k) => k + 1), []);
   return { ...state, retry };

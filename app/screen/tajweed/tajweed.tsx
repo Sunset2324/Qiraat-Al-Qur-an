@@ -4,11 +4,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { ArrowLeft, Search, BookOpen, Volume2, ChevronRight, X } from "lucide-react-native";
 import { useTheme } from "../../../src/context/ThemeContext";
+import { useLanguage } from "../../../src/context/LanguageContext";
+import { TAJWEED_CAT_KEY } from "../../../src/i18n/translations";
 import { TAJWEED_DATA, KATEGORI_TAJWEED } from "../../../src/data/tajweed";
 import { ARABIC_FONT } from "../../../src/constants/fonts";
 
 export default function TajweedScreen() {
   const { isDarkMode, theme } = useTheme();
+  const { t, flip } = useLanguage();
+  const catLabel = (k: string) => (TAJWEED_CAT_KEY[k] ? t(TAJWEED_CAT_KEY[k]) : k);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -34,11 +38,11 @@ export default function TajweedScreen() {
       {/* HEADER */}
       <View className={`flex-row items-center justify-between px-4 py-4 border-b ${theme.border}`}>
         <Pressable onPress={() => router.back()} className="h-11 w-11 items-center justify-center rounded-full active:opacity-70">
-          <ArrowLeft size={24} color={theme.iconColor} />
+          <ArrowLeft size={24} color={theme.iconColor} style={flip} />
         </Pressable>
         <View className="items-center flex-1">
-          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>PELAJARAN</Text>
-          <Text className={`text-base font-bold ${theme.text}`}>Tajweed</Text>
+          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>{t("lessonTag")}</Text>
+          <Text className={`text-base font-bold ${theme.text}`}>{t("featTajweed")}</Text>
         </View>
         <View className="w-11" />
       </View>
@@ -53,7 +57,7 @@ export default function TajweedScreen() {
         <View className={`flex-row items-center px-4 py-3 rounded-2xl border ${theme.border} ${theme.bgCard} mb-6`}>
           <Search size={20} color={mutedColor} />
           <TextInput
-            placeholder="Cari hukum tajweed..."
+            placeholder={t("searchTajweed")}
             placeholderTextColor={mutedColor}
             className={`flex-1 ml-3 ${theme.text}`}
             value={searchQuery}
@@ -71,11 +75,10 @@ export default function TajweedScreen() {
         <View className={`p-5 rounded-2xl border ${theme.border} ${theme.bgCard} mb-6`}>
           <View className="flex-row items-center gap-3 mb-2">
             <BookOpen size={20} color={accent} />
-            <Text className={`text-sm font-bold ${theme.text}`}>Tentang Tajweed</Text>
+            <Text className={`text-sm font-bold ${theme.text}`}>{t("aboutTajweed")}</Text>
           </View>
           <Text className={`text-xs leading-5 ${theme.textMuted}`}>
-            Tajweed adalah ilmu tentang cara mengucapkan huruf-huruf Al-Qur'an dengan benar sesuai makhraj dan sifatnya.
-            Ketuk salah satu hukum untuk melihat huruf, cara baca, dan contoh ayatnya.
+            {t("aboutTajweedBody")}
           </Text>
         </View>
 
@@ -92,7 +95,7 @@ export default function TajweedScreen() {
                 }`}
               >
                 <Text className={`text-xs font-medium ${aktif ? "text-white" : theme.text}`}>
-                  {cat ?? "Semua"}
+                  {cat ? catLabel(cat) : t("all")}
                 </Text>
               </Pressable>
             );
@@ -100,7 +103,7 @@ export default function TajweedScreen() {
         </ScrollView>
 
         <Text className={`text-lg font-bold ${theme.text} mb-4`}>
-          Hukum Bacaan <Text className={`text-sm font-normal ${theme.textMuted}`}>({filteredData.length})</Text>
+          {t("rulesHeading")} <Text className={`text-sm font-normal ${theme.textMuted}`}>({filteredData.length})</Text>
         </Text>
 
         {/* List */}
@@ -120,7 +123,7 @@ export default function TajweedScreen() {
               </View>
               <View className="flex-1">
                 <Text className={`text-xs font-medium mb-1 ${isDarkMode ? "text-emerald-400" : "text-emerald-600"}`}>
-                  {item.kategori}
+                  {catLabel(item.kategori)}
                 </Text>
                 <View className="flex-row items-center justify-between mb-2">
                   <Text className={`text-base font-bold flex-1 ${theme.text}`}>{item.judul}</Text>
@@ -130,13 +133,13 @@ export default function TajweedScreen() {
                 </View>
                 {item.huruf ? (
                   <Text className={`text-xs mb-2 ${theme.textSecondary}`}>
-                    Huruf: <Text style={{ fontFamily: ARABIC_FONT }}>{item.huruf}</Text>
+                    {t("lettersLabel")} <Text style={{ fontFamily: ARABIC_FONT }}>{item.huruf}</Text>
                   </Text>
                 ) : null}
                 <Text className={`text-xs leading-5 ${theme.textMuted}`}>{item.ringkas}</Text>
               </View>
               <View className="self-center">
-                <ChevronRight size={18} color={mutedColor} />
+                <ChevronRight size={18} color={mutedColor} style={flip} />
               </View>
             </View>
           </Pressable>
@@ -145,7 +148,7 @@ export default function TajweedScreen() {
         {filteredData.length === 0 && (
           <View className="items-center justify-center py-12">
             <Search size={48} color={mutedColor} />
-            <Text className={`mt-4 text-center ${theme.textMuted}`}>Tidak ada hasil pencarian</Text>
+            <Text className={`mt-4 text-center ${theme.textMuted}`}>{t("noResults")}</Text>
           </View>
         )}
       </ScrollView>

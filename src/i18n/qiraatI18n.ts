@@ -1,88 +1,6 @@
-import { useLanguage } from "../context/LanguageContext";
+import type { Language } from "./translations";
 
-export type Lang = "id" | "en";
-
-/** Ambil bahasa aktif dari LanguageContext → "id" | "en" (default id). */
-export function useLang(): Lang {
-  const ctx: any = useLanguage();
-  const raw = String(ctx?.language ?? ctx?.lang ?? "id").toLowerCase();
-  return raw.startsWith("en") ? "en" : "id";
-}
-
-const STR = {
-  id: {
-    loadingMushaf: "Memuat daftar mushaf...",
-    loadFailed: "Gagal Memuat Data",
-    retry: "Coba Muat Ulang",
-    topTag: "ILMU AL-QUR'AN",
-    title: "Pilihan Mushaf",
-    aboutTitle: "Tentang Mushaf",
-    aboutBody:
-      "Aplikasi ini mendukung berbagai riwayat Mushaf Al-Qur'an yang valid. Pilih mushaf yang ingin Anda gunakan sebagai tampilan default.",
-    listTitle: "Daftar Mushaf Tersedia",
-    popular: "POPULER",
-    selectedTitle: "Mushaf Terpilih",
-    selectedBody: (n: string) => `${n} berhasil dipilih.`,
-    backToMushaf: "Kembali ke Mushaf Belajar",
-    // qari
-    pickReciter: "Pilih Qari",
-    pickReciterShort: "Pilih qari",
-    loadingShort: "Memuat...",
-    all: "Semua",
-    perAyah: "Per ayat",
-    fullSurah: "Full surah",
-    reciterCount: (n: number) =>
-      `${n} qari tersedia untuk surah ini • "Ayah" = bisa Ikuti Bacaan, "Surah" = file full surah`,
-    noReciterFilter: "Tidak ada qari untuk filter ini.",
-    noReciterSurah: "Belum ada qari yang tersedia untuk surah ini.",
-    reciterLoadFailed: "Gagal memuat daftar qari. Pastikan koneksi internet aktif.",
-    badgeAyah: "Ayah",
-    badgeSurah: "Surah",
-    syncAyah: "(Sinkron per Ayat)",
-    perSurah: "(Per Surah)",
-    reciterLabel: "Qari",
-    onlyPerAyah: "🎵 Qari ini cuma punya audio per-ayat, nggak ada file full-surah",
-    noPerAyah: "Qari ini nggak punya audio per-ayat",
-  },
-  en: {
-    loadingMushaf: "Loading mushaf list...",
-    loadFailed: "Failed to Load Data",
-    retry: "Try Again",
-    topTag: "QUR'AN SCIENCES",
-    title: "Mushaf Selection",
-    aboutTitle: "About Mushaf",
-    aboutBody:
-      "This app supports several valid Qur'an Mushaf transmissions. Choose the mushaf you want to use as your default view.",
-    listTitle: "Available Mushafs",
-    popular: "POPULAR",
-    selectedTitle: "Mushaf Selected",
-    selectedBody: (n: string) => `${n} has been selected.`,
-    backToMushaf: "Back to Study Mushaf",
-    pickReciter: "Choose Reciter",
-    pickReciterShort: "Choose reciter",
-    loadingShort: "Loading...",
-    all: "All",
-    perAyah: "Per verse",
-    fullSurah: "Full surah",
-    reciterCount: (n: number) =>
-      `${n} reciters available for this surah • "Verse" = supports Follow Along, "Surah" = full-surah file`,
-    noReciterFilter: "No reciters for this filter.",
-    noReciterSurah: "No reciters are available for this surah yet.",
-    reciterLoadFailed: "Failed to load reciters. Please check your internet connection.",
-    badgeAyah: "Verse",
-    badgeSurah: "Surah",
-    syncAyah: "(Verse-synced)",
-    perSurah: "(Full surah)",
-    reciterLabel: "Reciter",
-    onlyPerAyah: "🎵 This reciter only has per-verse audio, no full-surah file",
-    noPerAyah: "This reciter has no per-verse audio",
-  },
-} as const;
-
-export function useQiraatT() {
-  const lang = useLang();
-  return { lang, s: STR[lang] };
-}
+type Lang = Language;
 
 // ---------- Label metadata Quranpedia (Arab → id/en) ----------
 
@@ -143,6 +61,7 @@ const strip = (s: string) => s.replace(/[ً-ٰٟ]/g, "").trim(); // buang haraka
 function lookup(map: Record<string, { id: string; en: string }>, ar: string | null | undefined, lang: Lang) {
   if (!ar) return "";
   const key = strip(ar);
+  if (lang === "ar") return ar; // data Quranpedia sudah berbahasa Arab
   const hit = map[ar] || map[key] || Object.entries(map).find(([k]) => strip(k) === key)?.[1];
   return hit ? hit[lang] : ar;
 }
@@ -155,6 +74,7 @@ export const classificationLabel = (ar: string | null | undefined, lang: Lang) =
 /** Nama qari: id/en → transliterasi Latin bila dikenal; fallback nama Arab. */
 export function reciterName(ar: string | null | undefined, lang: Lang): string {
   if (!ar) return "";
+  if (lang === "ar") return ar;
   const key = strip(ar);
   for (const [k, v] of Object.entries(QARI)) {
     if (key.includes(strip(k))) return v;
@@ -175,12 +95,13 @@ export function mushafDescription(
 ): string {
   if (lang === "id") return m.description;
   const n = m.name.toLowerCase();
+  const ar = lang === "ar";
   const hit = Object.entries(RAWI).find(([ar]) => m.name.includes(ar));
   if (n.includes("hafs") || n.includes("hafsh") || hit?.[0] === "حفص")
-    return "The most widely used transmission worldwide (Hafs from 'Asim), also the standard of the Madinah Mushaf.";
+    return ar ? "الرواية الأكثر انتشارًا في العالم (حفص عن عاصم) وهي رواية مصحف المدينة." : "The most widely used transmission worldwide (Hafs from 'Asim), also the standard of the Madinah Mushaf.";
   if (n.includes("warsh") || n.includes("warasy"))
-    return "Transmission of Warsh from Nafi', widely used in North and West Africa.";
+    return ar ? "رواية ورش عن نافع، منتشرة في شمال أفريقيا وغربها." : "Transmission of Warsh from Nafi', widely used in North and West Africa.";
   if (n.includes("qalun") || n.includes("qaloon"))
-    return "Transmission of Qalun from Nafi', used in Libya, Tunisia and parts of Africa.";
+    return ar ? "رواية قالون عن نافع، تُستعمل في ليبيا وتونس وأجزاء من أفريقيا." : "Transmission of Qalun from Nafi', used in Libya, Tunisia and parts of Africa.";
   return m.description; // fallback: teks asli dari server
 }

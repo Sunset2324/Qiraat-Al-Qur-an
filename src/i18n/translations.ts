@@ -1,0 +1,331 @@
+/**
+ * Kamus terpusat. Format: kunci: [Indonesia, English, العربية]
+ * Placeholder: {n}, {a}, {name} dst. -> t("key", { n: 5 })
+ * Kunci yang belum punya terjemahan akan jatuh ke Inggris, lalu Indonesia.
+ */
+export type Language = "id" | "en" | "ar";
+export const LANG_INDEX: Record<Language, 0 | 1 | 2> = { id: 0, en: 1, ar: 2 };
+
+type Row = [string, string, string];
+
+/** Kategori tajweed (string Indonesia dari data) -> kunci terjemahan */
+export const TAJWEED_CAT_KEY: Record<string, string> = {
+  "Nun Mati & Tanwin": "cat_nun",
+  "Mim Mati": "cat_mim",
+  "Ghunnah & Qalqalah": "cat_ghunnah",
+  "Tafkhim & Tarqiq": "cat_tafkhim",
+  Mad: "cat_mad",
+};
+
+export const DICT: Record<string, Row> = {
+  // ---- Umum ----
+  back: ["Kembali", "Back", "رجوع"],
+  retry: ["Coba lagi", "Try again", "حاول مرة أخرى"],
+  loading: ["Memuat...", "Loading...", "جارٍ التحميل..."],
+  all: ["Semua", "All", "الكل"],
+  notFound: ["Tidak ditemukan.", "Not found.", "لم يتم العثور عليه."],
+  noResults: ["Tidak ada hasil pencarian", "No search results", "لا توجد نتائج بحث"],
+  info: ["Info", "Info", "معلومة"],
+  ayahWord: ["Ayat", "Verse", "آية"],
+  surahWord: ["Surah", "Surah", "سورة"],
+  ayahN: ["Ayat {n}", "Verse {n}", "الآية {n}"],
+  makkiyah: ["Makkiyah", "Meccan", "مكية"],
+  madaniyah: ["Madaniyah", "Medinan", "مدنية"],
+  versesCount: ["{n} Ayat", "{n} Verses", "{n} آية"],
+  today: ["Hari ini", "Today", "اليوم"],
+
+  // ---- Tab bawah ----
+  tabHome: ["Beranda", "Home", "الرئيسية"],
+  tabMushaf: ["Mushaf", "Mushaf", "المصحف"],
+  tabHistory: ["Riwayat", "History", "السجل"],
+  tabSettings: ["Pengaturan", "Settings", "الإعدادات"],
+
+  // ---- Splash / Bismillah ----
+  startWithAllah: ["MULAI DENGAN NAMA ALLAH", "BEGIN IN THE NAME OF ALLAH", "ابدأ باسم الله"],
+  splashTagline: [
+    "Temukan ketenangan dalam setiap ayat, pelajari tajwid dengan penuh perhatian.",
+    "Find peace in every verse and learn tajweed with care.",
+    "اعثر على السكينة في كل آية، وتعلّم التجويد بإتقان.",
+  ],
+
+  // ---- Dashboard ----
+  nextAdhan: ["Adzan Terdekat", "Next Prayer", "الصلاة القادمة"],
+  loadingSchedule: ["Memuat jadwal...", "Loading schedule...", "جارٍ تحميل المواقيت..."],
+  chooseLocation: ["Pilih lokasi", "Choose location", "اختر الموقع"],
+  chooseLocationHint: [
+    "Pilih kota agar jadwal sesuai lokasimu",
+    "Choose a city for accurate prayer times",
+    "اختر مدينتك لمواقيت دقيقة",
+  ],
+  healthJournal: ["Jurnal Kesehatan", "Health Journal", "مفكرة الصحة"],
+  exploreFeatures: ["Eksplorasi Fitur", "Explore Features", "استكشف الميزات"],
+  featQiraat: ["Qiraat", "Qiraat", "القراءات"],
+  featDzikir: ["Dzikir & Doa", "Dhikr & Du'a", "الأذكار والأدعية"],
+  featPrayer: ["Jadwal Shalat", "Prayer Times", "مواقيت الصلاة"],
+  featTajweed: ["Tajweed", "Tajweed", "التجويد"],
+  featThibbun: ["Thibbun Nabawi", "Prophetic Medicine", "الطب النبوي"],
+
+  // ---- Nama shalat ----
+  p_subuh: ["Subuh", "Fajr", "الفجر"],
+  p_terbit: ["Terbit", "Sunrise", "الشروق"],
+  p_dzuhur: ["Dzuhur", "Dhuhr", "الظهر"],
+  p_ashar: ["Ashar", "Asr", "العصر"],
+  p_maghrib: ["Maghrib", "Maghrib", "المغرب"],
+  p_isya: ["Isya", "Isha", "العشاء"],
+  p_subuhTomorrow: ["Subuh (Besok)", "Fajr (Tomorrow)", "الفجر (غدًا)"],
+
+  // ---- Jadwal shalat ----
+  prayerTitle: ["Jadwal Shalat", "Prayer Times", "مواقيت الصلاة"],
+  change: ["UBAH", "CHANGE", "تغيير"],
+  untilNext: ["Menuju Shalat Berikutnya", "Until Next Prayer", "حتى الصلاة القادمة"],
+  todayHeading: ["Hari Ini", "Today", "اليوم"],
+  scheduleLoadFailed: ["Gagal memuat data jadwal.", "Failed to load prayer times.", "تعذّر تحميل المواقيت."],
+  scheduleNotToday: [
+    "Jadwal untuk hari ini tidak ditemukan.",
+    "No schedule found for today.",
+    "لم يتم العثور على مواقيت اليوم.",
+  ],
+  pickCityHint: [
+    "Pilih kota agar jadwal shalat sesuai lokasimu.",
+    "Choose a city to get prayer times for your location.",
+    "اختر مدينة للحصول على مواقيت الصلاة لموقعك.",
+  ],
+  bakdaCardTitle: ["Dzikir Ba'da Shalat", "Post-Prayer Dhikr", "أذكار بعد الصلاة"],
+  bakdaCardSub: ["Tasbih, Tahmid, dan Takbir", "Tasbih, Tahmid and Takbir", "التسبيح والتحميد والتكبير"],
+  pickProvince: ["Pilih Provinsi", "Choose Province", "اختر المحافظة"],
+  pickCity: ["Pilih Kab/Kota", "Choose City", "اختر المدينة"],
+  searchProvince: ["Cari provinsi...", "Search province...", "ابحث عن محافظة..."],
+  searchCity: ["Cari kab/kota...", "Search city...", "ابحث عن مدينة..."],
+  locListFailed: ["Gagal memuat daftar lokasi.", "Failed to load locations.", "تعذّر تحميل المواقع."],
+
+  // ---- Mushaf (tab) ----
+  greeting: ["ASSALAMU'ALAIKUM", "ASSALAMU'ALAIKUM", "السلام عليكم"],
+  mushafLearn: ["Mushaf Belajar", "Study Mushaf", "مصحف التعلّم"],
+  selectedQiraat: ["Qira'at terpilih", "Selected Qira'at", "القراءة المختارة"],
+  continueLearning: ["LANJUTKAN BELAJAR", "CONTINUE LEARNING", "تابع التعلّم"],
+  surahAyahLine: ["Surah #{n} • Ayat {a}", "Surah #{n} • Verse {a}", "سورة #{n} • آية {a}"],
+  continueToAyah: ["Lanjut ke Ayat {a} ›", "Continue to Verse {a} ›", "تابع إلى الآية {a} ›"],
+  noBookmark: ["Belum ada tanda baca untuk {name}", "No bookmark yet for {name}", "لا توجد علامة قراءة لـ {name}"],
+  tapToBookmark: [
+    "Klik ayat di dalam surah untuk menandai",
+    "Tap a verse inside a surah to bookmark it",
+    "اضغط على آية داخل السورة لوضع علامة",
+  ],
+  searchSurah: [
+    "Cari nama surah, arti, atau nomor...",
+    "Search surah name, meaning or number...",
+    "ابحث باسم السورة أو معناها أو رقمها...",
+  ],
+  surahList: ["Daftar Surah", "Surah List", "قائمة السور"],
+
+  // ---- History ----
+  activityHistory: ["RIWAYAT AKTIVITAS", "ACTIVITY HISTORY", "سجل النشاط"],
+  lastReadTitle: ["Terakhir Dibaca", "Last Read", "آخر قراءة"],
+  loadingHistory: ["Memuat riwayat...", "Loading history...", "جارٍ تحميل السجل..."],
+  noHistory: ["Belum Ada Riwayat", "No History Yet", "لا يوجد سجل بعد"],
+  noHistoryDesc: [
+    "Mulailah membaca Al-Qur'an dan tandai ayat terakhir Anda untuk melihatnya di sini.",
+    "Start reading the Qur'an and mark your last verse to see it here.",
+    "ابدأ بقراءة القرآن وضع علامة على آخر آية لتراها هنا.",
+  ],
+  mushafN: ["Mushaf {n}", "Mushaf {n}", "المصحف {n}"],
+  todayAt: ["Hari ini, {time}", "Today, {time}", "اليوم، {time}"],
+
+  // ---- Qiraat (pilih mushaf) ----
+  loadingMushaf: ["Memuat daftar mushaf...", "Loading mushaf list...", "جارٍ تحميل قائمة المصاحف..."],
+  loadFailed: ["Gagal Memuat Data", "Failed to Load Data", "تعذّر تحميل البيانات"],
+  retryLoad: ["Coba Muat Ulang", "Reload", "إعادة التحميل"],
+  qiraatTag: ["ILMU AL-QUR'AN", "QUR'AN SCIENCES", "علوم القرآن"],
+  qiraatTitle: ["Pilihan Mushaf", "Mushaf Selection", "اختيار المصحف"],
+  aboutMushaf: ["Tentang Mushaf", "About Mushaf", "عن المصحف"],
+  aboutMushafBody: [
+    "Aplikasi ini mendukung berbagai riwayat Mushaf Al-Qur'an yang valid. Pilih mushaf yang ingin Anda gunakan sebagai tampilan default.",
+    "This app supports several valid Qur'an Mushaf transmissions. Choose the mushaf you want to use as your default view.",
+    "يدعم هذا التطبيق عدة روايات صحيحة للمصحف. اختر المصحف الذي تريد اعتماده افتراضيًا.",
+  ],
+  mushafListTitle: ["Daftar Mushaf Tersedia", "Available Mushafs", "المصاحف المتاحة"],
+  popular: ["POPULER", "POPULAR", "شائع"],
+  mushafSelected: ["Mushaf Terpilih", "Mushaf Selected", "تم اختيار المصحف"],
+  mushafSelectedBody: ["{name} berhasil dipilih.", "{name} has been selected.", "تم اختيار {name}."],
+  backToMushaf: ["Kembali ke Mushaf Belajar", "Back to Study Mushaf", "العودة إلى مصحف التعلّم"],
+
+  // ---- Qari (di layar surah) ----
+  pickReciter: ["Pilih Qari", "Choose Reciter", "اختر القارئ"],
+  pickReciterShort: ["Pilih qari", "Choose reciter", "اختر القارئ"],
+  filterPerAyah: ["Per ayat", "Per verse", "آية بآية"],
+  filterFullSurah: ["Full surah", "Full surah", "السورة كاملة"],
+  reciterCount: [
+    '{n} qari tersedia untuk surah ini • "Ayah" = bisa Ikuti Bacaan, "Surah" = file full surah',
+    '{n} reciters available for this surah • "Verse" = supports Follow Along, "Surah" = full-surah file',
+    '{n} قارئًا متاحًا لهذه السورة • "آية" = يدعم المتابعة، "سورة" = ملف السورة كاملة',
+  ],
+  noReciterFilter: ["Tidak ada qari untuk filter ini.", "No reciters for this filter.", "لا يوجد قراء لهذا التصفية."],
+  noReciterSurah: [
+    "Belum ada qari yang tersedia untuk surah ini.",
+    "No reciters are available for this surah yet.",
+    "لا يوجد قراء متاحون لهذه السورة بعد.",
+  ],
+  reciterLoadFailed: [
+    "Gagal memuat daftar qari. Pastikan koneksi internet aktif.",
+    "Failed to load reciters. Please check your internet connection.",
+    "تعذّر تحميل القراء. تأكد من اتصال الإنترنت.",
+  ],
+  badgeAyah: ["Ayah", "Verse", "آية"],
+  badgeSurah: ["Surah", "Surah", "سورة"],
+  syncAyah: ["(Sinkron per Ayat)", "(Verse-synced)", "(متزامن مع الآيات)"],
+  perSurahLabel: ["(Per Surah)", "(Full surah)", "(السورة كاملة)"],
+  reciterLabel: ["Qari", "Reciter", "القارئ"],
+  mushafLabel: ["Mushaf", "Mushaf", "المصحف"],
+  onlyPerAyah: [
+    "🎵 Qari ini cuma punya audio per-ayat, nggak ada file full-surah",
+    "🎵 This reciter only has per-verse audio, no full-surah file",
+    "🎵 هذا القارئ لديه صوت آية بآية فقط، بلا ملف للسورة كاملة",
+  ],
+  noPerAyah: [
+    "Qari ini nggak punya audio per-ayat",
+    "This reciter has no per-verse audio",
+    "هذا القارئ ليس لديه صوت آية بآية",
+  ],
+
+  // ---- Pesan hook ----
+  ayahRefInvalid: ["Referensi ayat tidak valid.", "Invalid verse reference.", "مرجع الآية غير صالح."],
+  ayahNotInSurah: ["Ayat {a} tidak ditemukan di surah {name}.", "Verse {a} not found in surah {name}.", "الآية {a} غير موجودة في سورة {name}."],
+  ayahLoadFailed: ["Gagal memuat ayat. Periksa koneksi internet.", "Failed to load the verse. Check your internet connection.", "تعذّر تحميل الآية. تحقق من اتصال الإنترنت."],
+
+  // ---- Layar surah ----
+  studyTag: ["STUDI AL-QUR'AN", "QUR'AN STUDY", "دراسة القرآن"],
+  loadingSurah: ["Memuat surat...", "Loading surah...", "جارٍ تحميل السورة..."],
+  loadingReading: ["Memuat bacaan...", "Loading recitation...", "جارٍ تحميل التلاوة..."],
+  tapRetry: ["{error} Ketuk untuk coba lagi.", "{error} Tap to retry.", "{error} اضغط لإعادة المحاولة."],
+  lastReadMarker: ["Terakhir dibaca", "Last read", "آخر قراءة"],
+  surahLoadFailed: [
+    "Gagal memuat data surat. Pastikan koneksi internet aktif.",
+    "Failed to load the surah. Please check your internet connection.",
+    "تعذّر تحميل السورة. تأكد من اتصال الإنترنت.",
+  ],
+  surahNotFound: ["Surat tidak ditemukan", "Surah not found", "السورة غير موجودة"],
+  followAyahN: ["Ikuti Bacaan • Ayat {n}", "Follow Along • Verse {n}", "المتابعة • الآية {n}"],
+  followContinue: ["Lanjutkan Ikuti Bacaan", "Resume Follow Along", "متابعة القراءة"],
+  followStart: ["Ikuti Bacaan (per ayat)", "Follow Along (per verse)", "تابع القراءة (آية بآية)"],
+  surahHeader: ["SURAH {n} • {type}", "SURAH {n} • {type}", "سورة {n} • {type}"],
+  makkiyahCaps: ["MAKKIYAH", "MECCAN", "مكية"],
+  madaniyahCaps: ["MADANIYAH", "MEDINAN", "مدنية"],
+  versesWord: ["ayat", "verses", "آية"],
+
+  // ---- Dzikir & Doa ----
+  dzikirTitle: ["DZIKIR & DOA", "DHIKR & DU'A", "الأذكار والأدعية"],
+  fAll: ["Semua", "All", "الكل"],
+  fMorning: ["Pagi", "Morning", "الصباح"],
+  fEvening: ["Petang", "Evening", "المساء"],
+  fBakda: ["Ba'da Shalat", "After Prayer", "بعد الصلاة"],
+  fPrayer: ["Sholat", "Prayer", "الصلاة"],
+  fDaily: ["Harian", "Daily", "يومية"],
+  searchDoa: ["Cari judul, arti, atau tagar...", "Search title, meaning or tag...", "ابحث بالعنوان أو المعنى أو الوسم..."],
+  loadingDzikir: ["Memuat Dzikir & Doa...", "Loading Dhikr & Du'a...", "جارٍ تحميل الأذكار والأدعية..."],
+  dzikirLoadFailed: [
+    "Gagal memuat data. Periksa koneksi internet.",
+    "Failed to load data. Check your internet connection.",
+    "تعذّر تحميل البيانات. تحقق من اتصال الإنترنت.",
+  ],
+  bakdaInfoTitle: ["Dzikir Ba'da Shalat", "Post-Prayer Dhikr", "أذكار بعد الصلاة"],
+  bakdaInfoBody: [
+    "Dibaca setelah salam. Buka tiap dzikir untuk melihat dalil hadis dan keutamaannya.",
+    "Recited after the salam. Open each dhikr to see its hadith evidence and virtues.",
+    "تُقرأ بعد السلام. افتح كل ذكر لترى دليله من الحديث وفضله.",
+  ],
+  noSearchResult: ["Tidak ada hasil untuk pencarian ini", "No results for this search", "لا نتائج لهذا البحث"],
+  noDoa: ["Tidak ada doa yang ditemukan", "No supplications found", "لم يتم العثور على أدعية"],
+  doaDetail: ["Detail Doa", "Du'a Detail", "تفاصيل الدعاء"],
+  general: ["Umum", "General", "عام"],
+  howToRead: ["Cara Baca", "Transliteration", "طريقة القراءة"],
+  meaningTitle: ["Arti / Terjemahan", "Meaning / Translation", "المعنى / الترجمة"],
+  dalilTitle: ["Dalil & Keutamaan", "Evidence & Virtues", "الدليل والفضل"],
+  dalilSource: [
+    "Sumber: EQuran.id. Periksa kembali derajat dan rujukan hadis pada kitab aslinya.",
+    "Source: EQuran.id. Please verify the grading and references in the original books.",
+    "المصدر: EQuran.id. يُرجى مراجعة درجة الحديث ومراجعه في الكتب الأصلية.",
+  ],
+  relatedTags: ["Terkait", "Related", "ذات صلة"],
+
+  // ---- Tajweed ----
+  lessonTag: ["PELAJARAN", "LESSON", "درس"],
+  searchTajweed: ["Cari hukum tajweed...", "Search tajweed rules...", "ابحث عن حكم تجويد..."],
+  aboutTajweed: ["Tentang Tajweed", "About Tajweed", "عن التجويد"],
+  aboutTajweedBody: [
+    "Tajweed adalah ilmu tentang cara mengucapkan huruf-huruf Al-Qur'an dengan benar sesuai makhraj dan sifatnya. Ketuk salah satu hukum untuk melihat huruf, cara baca, dan contoh ayatnya.",
+    "Tajweed is the science of pronouncing the Qur'anic letters correctly according to their articulation points and attributes. Tap a rule to see its letters, how to recite it and verse examples.",
+    "التجويد علم إخراج حروف القرآن من مخارجها بصفاتها. اضغط على حكم لترى حروفه وطريقة قراءته وأمثلته.",
+  ],
+  rulesHeading: ["Hukum Bacaan", "Recitation Rules", "أحكام التلاوة"],
+  lettersLabel: ["Huruf:", "Letters:", "الحروف:"],
+  ruleNotFound: ["Hukum tajweed tidak ditemukan.", "Tajweed rule not found.", "لم يتم العثور على الحكم."],
+  lettersCaps: ["HURUF", "LETTERS", "الحروف"],
+  durationCaps: ["DURASI", "DURATION", "المدة"],
+  howToRecite: ["Cara Membaca", "How to Recite", "طريقة القراءة"],
+  examples: ["Contoh", "Examples", "أمثلة"],
+  noteLabel: ["Catatan", "Note", "ملاحظة"],
+  cat_nun: ["Nun Mati & Tanwin", "Noon Sakinah & Tanween", "النون الساكنة والتنوين"],
+  cat_mim: ["Mim Mati", "Meem Sakinah", "الميم الساكنة"],
+  cat_ghunnah: ["Ghunnah & Qalqalah", "Ghunnah & Qalqalah", "الغنة والقلقلة"],
+  cat_tafkhim: ["Tafkhim & Tarqiq", "Tafkhim & Tarqiq", "التفخيم والترقيق"],
+  cat_mad: ["Mad", "Madd", "المد"],
+
+  // ---- Thibbun Nabawi ----
+  healthTag: ["KESEHATAN", "HEALTH", "الصحة"],
+  searchTheme: ["Cari tema, atau ketik 2:255", "Search a theme, or type 2:255", "ابحث عن موضوع، أو اكتب 2:255"],
+  noThemeMatch: ["Tidak ada tema yang cocok", "No matching themes", "لا توجد مواضيع مطابقة"],
+  sourceLine: [
+    "Sumber: {book} • {n} dari {m} tema",
+    "Source: {book} • {n} of {m} themes",
+    "المصدر: {book} • {n} من {m} موضوعًا",
+  ],
+  pageShort: ["Hal. {n}", "p. {n}", "ص {n}"],
+  qsShort: ["QS. {name}: {a}", "Qur'an {name}: {a}", "سورة {name}: {a}"],
+  themeNotFound: ["Tema tidak ditemukan.", "Theme not found.", "لم يتم العثور على الموضوع."],
+  loadingAyah: ["Memuat ayat...", "Loading verse...", "جارٍ تحميل الآية..."],
+  readFullSurah: ["Baca surah lengkap", "Read the full surah", "اقرأ السورة كاملة"],
+  catAll: ["Semua", "All", "الكل"],
+  cat_RUHANI: ["Ruhani", "Spiritual", "الروحي"],
+  cat_RAGAWI: ["Ragawi", "Physical", "البدني"],
+  cat_HIKMAH: ["Hikmah Ibadah", "Wisdom of Worship", "حكمة العبادة"],
+  cat_ALANABI: ["'Ala Nabi", "Prophetic Way", "على هدي النبي"],
+  medisDisclaimer: [
+    "Konten ini adalah kumpulan tema dari buku rujukan dan bukan pengganti pemeriksaan, diagnosis, atau pengobatan dari dokter. Jika Anda sakit atau mengalami gejala yang mengkhawatirkan, segera konsultasikan dengan tenaga medis.",
+    "This content is a collection of themes from a reference book and is not a substitute for examination, diagnosis or treatment by a doctor. If you are ill or have worrying symptoms, consult a medical professional promptly.",
+    "هذا المحتوى مجموعة مواضيع من كتاب مرجعي وليس بديلًا عن الفحص أو التشخيص أو العلاج لدى الطبيب. إذا كنت مريضًا أو تعاني من أعراض مقلقة فراجع الطبيب فورًا.",
+  ],
+
+  // ---- Pengaturan ----
+  settings: ["Pengaturan", "Settings", "الإعدادات"],
+  darkMode: ["Tampilan Gelap (Dark Mode)", "Dark Mode", "الوضع الداكن"],
+  language: ["Bahasa Aplikasi", "App Language", "لغة التطبيق"],
+  audioPlayback: ["Audio & Pemutaran", "Audio & Playback", "الصوت والتشغيل"],
+  autoPlayNext: ["Auto-play Ayat Selanjutnya", "Auto-play Next Verse", "تشغيل الآية التالية تلقائيًا"],
+  playInBackground: ["Putar di Latar Belakang", "Play in Background", "التشغيل في الخلفية"],
+  notificationPrayer: ["Notifikasi & Shalat", "Notifications & Prayer", "الإشعارات والصلاة"],
+  adhanNotification: ["Notifikasi Adzan", "Adhan Notification", "إشعار الأذان"],
+  prayerLocation: ["Lokasi Jadwal Shalat", "Prayer Time Location", "موقع مواقيت الصلاة"],
+  locationNotSet: ["Belum dipilih", "Not set", "لم يُحدَّد"],
+  about: ["Tentang", "About", "حول"],
+  appVersion: ["Versi Aplikasi", "App Version", "إصدار التطبيق"],
+  resetSettings: ["Reset Pengaturan", "Reset Settings", "إعادة تعيين الإعدادات"],
+  aboutUs: ["TENTANG KAMI", "ABOUT US", "معلومات عنا"],
+  contactUs: ["Hubungi Kami", "Contact Us", "اتصل بنا"],
+  website: ["Website", "Website", "الموقع الإلكتروني"],
+  success: ["Berhasil", "Success", "تم بنجاح"],
+  resetMsg: [
+    "Pengaturan dan data tersimpan telah direset.",
+    "Settings and saved data have been reset.",
+    "تمت إعادة تعيين الإعدادات والبيانات المحفوظة.",
+  ],
+  selectLanguage: ["Pilih Bahasa", "Select Language", "اختر اللغة"],
+  indonesian: ["Bahasa Indonesia", "Bahasa Indonesia", "Bahasa Indonesia"],
+  english: ["English", "English", "English"],
+  arabic: ["العربية", "العربية", "العربية"],
+  rtlRestartTitle: ["Muat ulang aplikasi", "Restart the app", "أعد تشغيل التطبيق"],
+  rtlRestartMsg: [
+    "Tutup aplikasi sepenuhnya lalu buka lagi agar tata letak mengikuti bahasa yang dipilih.",
+    "Fully close and reopen the app so the layout follows the selected language.",
+    "أغلق التطبيق كليًا ثم افتحه ليتبع التخطيط اللغة المختارة.",
+  ],
+};

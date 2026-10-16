@@ -8,7 +8,8 @@ import { useTheme } from "../../../src/context/ThemeContext";
 import { getDetailSurahMerged, getReciters, type Reciter } from "../../../src/services/quranService";
 import { useAyahPlaylist } from "../../../src/hooks/useAyahPlaylist";
 import AudioPlayer from "../../../src/components/AudioPlayer";
-import { useQiraatT, reciterName, reciterDetail } from "../../../src/i18n/qiraatI18n";
+import { useLanguage } from "../../../src/context/LanguageContext";
+import { reciterName, reciterDetail } from "../../../src/i18n/qiraatI18n";
 import { saveLastRead, getLastReadAyah } from "../../../src/utils/readingHistory";
 
 interface AyatItem {
@@ -42,7 +43,7 @@ type ReciterFilter = "all" | "ayah" | "surah";
 
 export default function SurahDetailScreen() {
   const { isDarkMode, theme } = useTheme();
-  const { lang, s } = useQiraatT();
+  const { t, language: lang, flip } = useLanguage();
   const { nomor, mushafId: routeMushafId, ayat: routeAyat } = useLocalSearchParams();
 
   const [surahData, setSurahData] = useState<SuratDetail | null>(null);
@@ -73,8 +74,8 @@ export default function SurahDetailScreen() {
   const activeReciterLabel = activeReciter
     ? reciterName(activeReciter.reciter || activeReciter.name, lang)
     : reciters.length === 0
-    ? s.loadingShort
-    : s.pickReciterShort;
+    ? t("loading")
+    : t("pickReciterShort");
 
   // Ambil daftar reciter (hanya yang punya surah ini), lalu pilih qari:
   // 1) pilihan sekarang kalau masih valid, 2) pilihan terakhir yang tersimpan,
@@ -93,7 +94,7 @@ export default function SurahDetailScreen() {
 
         if (list.length === 0) {
           setReciters([]);
-          setError(s.noReciterSurah);
+          setError(t("noReciterSurah"));
           setLoading(false);
           return;
         }
@@ -110,7 +111,7 @@ export default function SurahDetailScreen() {
       } catch (err: any) {
         if (cancelled) return;
         console.error("Gagal memuat daftar reciter:", err?.message);
-        setError(s.reciterLoadFailed);
+        setError(t("reciterLoadFailed"));
         setLoading(false);
       }
     };
@@ -363,7 +364,7 @@ export default function SurahDetailScreen() {
         setSurahData(data);
       } catch (err: any) {
         console.error("❌ Error loading surah:", err.message);
-        setError("Gagal memuat data surat. Pastikan koneksi internet aktif.");
+        setError(t("surahLoadFailed"));
       } finally {
         setLoading(false);
       }
@@ -413,7 +414,7 @@ export default function SurahDetailScreen() {
     return (
       <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center`} edges={["top"]}>
         <ActivityIndicator size="large" color={isDarkMode ? "#34d399" : "#047857"} />
-        <Text className={`mt-4 ${theme.textMuted}`}>Memuat surat...</Text>
+        <Text className={`mt-4 ${theme.textMuted}`}>{t("loadingSurah")}</Text>
       </SafeAreaView>
     );
   }
@@ -422,7 +423,7 @@ export default function SurahDetailScreen() {
     return (
       <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center p-6`} edges={["top"]}>
         <Text className={`text-center font-semibold mb-4 ${theme.text}`}>
-          {error || "Surat tidak ditemukan"}
+          {error || t("surahNotFound")}
         </Text>
         <Pressable
           onPress={() => {
@@ -432,7 +433,7 @@ export default function SurahDetailScreen() {
           }}
           className={`px-6 py-3 rounded-full ${isDarkMode ? "bg-emerald-600" : "bg-emerald-700"}`}
         >
-          <Text className="text-white font-bold">Coba Lagi</Text>
+          <Text className="text-white font-bold">{t("retry")}</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -456,12 +457,12 @@ export default function SurahDetailScreen() {
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={["top"]}>
       <View className={`flex-row items-center justify-between px-4 py-4 border-b ${theme.border}`}>
         <Pressable onPress={handleBack} className="h-11 w-11 items-center justify-center rounded-full active:opacity-70" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <ArrowLeft size={24} color={theme.iconColor} />
+          <ArrowLeft size={24} color={theme.iconColor} style={flip} />
         </Pressable>
 
         <View className="items-center flex-1">
-          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>AL-QUR'AN STUDY</Text>
-          <Text className={`text-base font-bold ${theme.text}`}>Mushaf Belajar</Text>
+          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>{t("studyTag")}</Text>
+          <Text className={`text-base font-bold ${theme.text}`}>{t("mushafLearn")}</Text>
         </View>
 
         <Pressable
@@ -480,7 +481,7 @@ export default function SurahDetailScreen() {
       {loading && (
         <View className={`flex-row items-center justify-center gap-2 py-2 ${isDarkMode ? "bg-emerald-900/40" : "bg-emerald-50"}`}>
           <ActivityIndicator size="small" color={isDarkMode ? "#34d399" : "#047857"} />
-          <Text className={`text-xs ${theme.textMuted}`}>Memuat bacaan...</Text>
+          <Text className={`text-xs ${theme.textMuted}`}>{t("loadingReading")}</Text>
         </View>
       )}
       {error && !loading && (
@@ -488,7 +489,7 @@ export default function SurahDetailScreen() {
           onPress={() => { setError(null); setRetryKey((k) => k + 1); }}
           className="py-2 px-4 bg-red-500/10"
         >
-          <Text className="text-xs text-center text-red-600">{error} Ketuk untuk coba lagi.</Text>
+          <Text className="text-xs text-center text-red-600">{t("tapRetry", { error: String(error) })}</Text>
         </Pressable>
       )}
 
@@ -507,7 +508,7 @@ export default function SurahDetailScreen() {
 
           <View className="flex-row items-center justify-between mb-3">
             <Pressable onPress={() => setShowQiraatOptions(!showQiraatOptions)} className="flex-row items-center gap-2">
-              <Text className={`font-bold ${theme.text}`}>{s.pickReciter}</Text>
+              <Text className={`font-bold ${theme.text}`}>{t("pickReciter")}</Text>
               <Text className={`text-xs ${theme.textSecondary}`}>{showQiraatOptions ? "▲" : "▼"}</Text>
             </Pressable>
 
@@ -524,9 +525,9 @@ export default function SurahDetailScreen() {
               {/* Filter jenis audio */}
               <View className="flex-row gap-2 mb-3">
                 {([
-                  { key: "all", label: s.all },
-                  { key: "ayah", label: s.perAyah },
-                  { key: "surah", label: s.fullSurah },
+                  { key: "all", label: t("all") },
+                  { key: "ayah", label: t("filterPerAyah") },
+                  { key: "surah", label: t("filterFullSurah") },
                 ] as { key: ReciterFilter; label: string }[]).map((f) => {
                   const active = reciterFilter === f.key;
                   return (
@@ -546,13 +547,13 @@ export default function SurahDetailScreen() {
               </View>
 
               <Text className={`text-[11px] mb-2 ${theme.textMuted}`}>
-                {s.reciterCount(filteredReciters.length)}
+                {t("reciterCount", { n: filteredReciters.length })}
               </Text>
 
               <ScrollView style={{ maxHeight: 280 }} nestedScrollEnabled showsVerticalScrollIndicator>
                 {filteredReciters.length === 0 && (
                   <Text className={`text-xs text-center py-4 ${theme.textMuted}`}>
-                    {s.noReciterFilter}
+                    {t("noReciterFilter")}
                   </Text>
                 )}
                 {filteredReciters.map((reciter) => {
@@ -600,7 +601,7 @@ export default function SurahDetailScreen() {
                               : theme.textMuted
                           }`}
                         >
-                          {reciter.perAyah ? s.badgeAyah : s.badgeSurah}
+                          {reciter.perAyah ? t("badgeAyah") : t("badgeSurah")}
                         </Text>
                       </View>
                     </Pressable>
@@ -616,18 +617,18 @@ export default function SurahDetailScreen() {
           <View className="flex-row items-start justify-between">
             <View className="flex-1">
               <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary} mb-1`}>
-                SURAH {String(surahData.info.nomor).padStart(2, "0")} • {surahData.info.tempatTurun === "Mekah" ? "MAKKIYAH" : "MADANIYAH"}
+                {t("surahHeader", { n: String(surahData.info.nomor).padStart(2, "0"), type: surahData.info.tempatTurun === "Mekah" ? t("makkiyahCaps") : t("madaniyahCaps") })}
               </Text>
               <Text className={`text-2xl font-bold ${theme.text} mb-1`}>{surahData.info.namaLatin}</Text>
-              <Text className={`text-sm ${theme.textMuted}`}>{surahData.info.arti} • {surahData.info.jumlahAyat} {lang === "en" ? "verses" : "ayat"}</Text>
+              <Text className={`text-sm ${theme.textMuted}`}>{surahData.info.arti} • {surahData.info.jumlahAyat} {t("versesWord")}</Text>
 
               {/* Badge Mushaf & Qari Aktif */}
               <View className="mt-2 px-3 py-1.5 rounded-lg bg-emerald-600/20 self-start">
-                <Text className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                  📜 Mushaf: {surahData.info.mushafAktif}
+                <Text className={`text-xs font-bold ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`}>
+                  📜 {t("mushafLabel")}: {surahData.info.mushafAktif}
                 </Text>
-                <Text className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">
-                  🎙️ {s.reciterLabel}: {reciterName(reciterAktifName, lang)} {isPerAyahActive ? s.syncAyah : s.perSurah}
+                <Text className={`text-[10px] mt-0.5 ${isDarkMode ? "text-emerald-400/70" : "text-emerald-700/70"}`}>
+                  🎙️ {t("reciterLabel")}: {reciterName(reciterAktifName, lang)} {isPerAyahActive ? t("syncAyah") : t("perSurahLabel")}
                 </Text>
               </View>
             </View>
@@ -650,7 +651,7 @@ export default function SurahDetailScreen() {
           <View className="px-6 mb-4">
             <View className={`p-4 rounded-2xl border ${theme.border} ${theme.bgCard} items-center`}>
               <Text className={`text-sm ${theme.textMuted}`}>
-                {s.onlyPerAyah}
+                {t("onlyPerAyah")}
               </Text>
             </View>
           </View>
@@ -684,12 +685,12 @@ export default function SurahDetailScreen() {
               }`}
             >
               {!hasPerAyahAudio
-                ? s.noPerAyah
+                ? t("noPerAyah")
                 : ayahPlaylist.isPlaying
-                ? `Ikuti Bacaan • Ayat ${activeAyahNumber ?? 1}`
+                ? t("followAyahN", { n: activeAyahNumber ?? 1 })
                 : followStarted
-                ? "Lanjutkan Ikuti Bacaan"
-                : "Ikuti Bacaan (per ayat)"}
+                ? t("followContinue")
+                : t("followStart")}
             </Text>
           </Pressable>
         </View>
@@ -714,7 +715,7 @@ export default function SurahDetailScreen() {
                   <View className="flex-row items-center gap-1 mb-2 -mt-1">
                     <Bookmark size={12} color={isDarkMode ? "#fbbf24" : "#b45309"} fill={isDarkMode ? "#fbbf24" : "#b45309"} />
                     <Text className={`text-[11px] font-semibold ${isDarkMode ? "text-amber-400" : "text-amber-700"}`}>
-                      Terakhir dibaca
+                      {t("lastReadMarker")}
                     </Text>
                   </View>
                 )}

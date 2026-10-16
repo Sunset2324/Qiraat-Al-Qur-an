@@ -4,11 +4,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Clock, BookOpen, Trash2 } from "lucide-react-native";
 import { useTheme } from "../../src/context/ThemeContext";
+import { useLanguage } from "../../src/context/LanguageContext";
 import { getHistoryList, type ReadingProgress } from "../../src/utils/readingHistory";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HistoryScreen() {
   const { isDarkMode, theme } = useTheme();
+  const { t, locale } = useLanguage();
   const [historyList, setHistoryList] = useState<ReadingProgress[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,10 +42,10 @@ export default function HistoryScreen() {
     const isToday = date.toDateString() === now.toDateString();
     
     if (isToday) {
-      return `Hari ini, ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+      return t("todayAt", { time: `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}` });
     }
     
-    return date.toLocaleDateString("id-ID", { 
+    return date.toLocaleDateString(locale, { 
       day: "numeric", 
       month: "long", 
       year: "numeric",
@@ -84,10 +86,10 @@ export default function HistoryScreen() {
       
       <View className="flex-1">
         <Text className={`text-base font-bold ${theme.text}`}>
-          {item.namaLatin} <Text className={`text-sm font-normal ${theme.textMuted}`}>(Ayat {item.ayatNomor})</Text>
+          {item.namaLatin} <Text className={`text-sm font-normal ${theme.textMuted}`}>({t("ayahN", { n: item.ayatNomor })})</Text>
         </Text>
         <Text className={`text-xs ${theme.textMuted} mt-1`}>
-           {item.mushafName || `Mushaf ${item.mushafId}`}
+           {item.mushafName || t("mushafN", { n: item.mushafId })}
         </Text>
         <View className="flex-row items-center mt-1">
           <Clock size={10} color={theme.mutedColor} />
@@ -105,8 +107,8 @@ export default function HistoryScreen() {
       <View className={`px-6 pt-6 pb-4 border-b ${theme.border}`}>
         <View className="flex-row items-center justify-between">
           <View>
-            <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>RIWAYAT AKTIVITAS</Text>
-            <Text className={`text-2xl font-bold mt-1 ${theme.text}`}>Terakhir Dibaca</Text>
+            <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>{t("activityHistory")}</Text>
+            <Text className={`text-2xl font-bold mt-1 ${theme.text}`}>{t("lastReadTitle")}</Text>
           </View>
           {historyList.length > 0 && (
             <Pressable onPress={handleClearHistory} className="p-2 rounded-full border border-red-500/30 bg-red-500/10">
@@ -120,16 +122,16 @@ export default function HistoryScreen() {
       {loading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={isDarkMode ? "#34d399" : "#047857"} />
-          <Text className={`mt-4 ${theme.textMuted}`}>Memuat riwayat...</Text>
+          <Text className={`mt-4 ${theme.textMuted}`}>{t("loadingHistory")}</Text>
         </View>
       ) : historyList.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">
           <View className={`h-20 w-20 rounded-full ${isDarkMode ? "bg-emerald-900/30" : "bg-emerald-100"} items-center justify-center mb-4`}>
             <Clock size={32} color={isDarkMode ? "#34d399" : "#047857"} />
           </View>
-          <Text className={`text-lg font-bold text-center ${theme.text}`}>Belum Ada Riwayat</Text>
+          <Text className={`text-lg font-bold text-center ${theme.text}`}>{t("noHistory")}</Text>
           <Text className={`text-sm text-center mt-2 ${theme.textMuted}`}>
-            Mulailah membaca Al-Qur'an dan tandai ayat terakhir Anda untuk melihatnya di sini.
+            {t("noHistoryDesc")}
           </Text>
         </View>
       ) : (

@@ -7,7 +7,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { getMushafList } from "../../../src/services/quranService";
 import { ARABIC_FONT } from "../../../src/constants/fonts";
-import { useQiraatT, mushafDescription } from "../../../src/i18n/qiraatI18n";
+import { useLanguage } from "../../../src/context/LanguageContext";
+import { mushafDescription } from "../../../src/i18n/qiraatI18n";
 
 interface MushafItem {
   id: string;
@@ -18,7 +19,7 @@ interface MushafItem {
 
 export default function QiraatScreen() {
   const { isDarkMode, theme } = useTheme();
-  const { lang, s } = useQiraatT();
+  const { t, language: lang, flip } = useLanguage();
   const [mushafList, setMushafList] = useState<MushafItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMushafId, setSelectedMushafId] = useState<string>("");
@@ -54,9 +55,9 @@ export default function QiraatScreen() {
       await AsyncStorage.setItem("selected_mushaf_id", id);
       await AsyncStorage.setItem("selected_mushaf_name", selectedName);
 
-      Alert.alert(s.selectedTitle, s.selectedBody(selectedName), [
+      Alert.alert(t("mushafSelected"), t("mushafSelectedBody", { name: selectedName }), [
         {
-          text: s.backToMushaf,
+          text: t("backToMushaf"),
           onPress: () => {
             router.replace({
               pathname: "/(tabs)/mushaf",
@@ -78,7 +79,7 @@ export default function QiraatScreen() {
     return (
       <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center`} edges={["top"]}>
         <ActivityIndicator size="large" color={isDarkMode ? "#34d399" : "#047857"} />
-        <Text className={`mt-4 ${theme.textMuted}`}>{s.loadingMushaf}</Text>
+        <Text className={`mt-4 ${theme.textMuted}`}>{t("loadingMushaf")}</Text>
       </SafeAreaView>
     );
   }
@@ -87,12 +88,12 @@ export default function QiraatScreen() {
     return (
       <SafeAreaView className={`flex-1 ${theme.bg} items-center justify-center p-6`} edges={["top"]}>
         <BookOpen size={48} color={theme.mutedColor} />
-        <Text className={`mt-4 text-center font-bold ${theme.text}`}>{s.loadFailed}</Text>
+        <Text className={`mt-4 text-center font-bold ${theme.text}`}>{t("loadFailed")}</Text>
         <Pressable
           onPress={loadData}
           className={`mt-6 px-6 py-3 rounded-full ${isDarkMode ? "bg-emerald-600" : "bg-emerald-700"}`}
         >
-          <Text className="text-white font-bold">{s.retry}</Text>
+          <Text className="text-white font-bold">{t("retryLoad")}</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -105,11 +106,11 @@ export default function QiraatScreen() {
           onPress={() => router.back()}
           className="h-11 w-11 items-center justify-center rounded-full active:opacity-70"
         >
-          <ArrowLeft size={24} color={theme.iconColor} />
+          <ArrowLeft size={24} color={theme.iconColor} style={flip} />
         </Pressable>
         <View className="items-center flex-1">
-          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>{s.topTag}</Text>
-          <Text className={`text-base font-bold ${theme.text}`}>{s.title}</Text>
+          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>{t("qiraatTag")}</Text>
+          <Text className={`text-base font-bold ${theme.text}`}>{t("qiraatTitle")}</Text>
         </View>
         <View className="w-11" />
       </View>
@@ -122,12 +123,12 @@ export default function QiraatScreen() {
         <View className={`p-5 rounded-2xl border ${theme.border} ${theme.bgCard} mb-6`}>
           <View className="flex-row items-center gap-3 mb-2">
             <BookOpen size={20} color={isDarkMode ? "#34d399" : "#047857"} />
-            <Text className={`text-sm font-bold ${theme.text}`}>{s.aboutTitle}</Text>
+            <Text className={`text-sm font-bold ${theme.text}`}>{t("aboutMushaf")}</Text>
           </View>
-          <Text className={`text-xs leading-5 ${theme.textMuted}`}>{s.aboutBody}</Text>
+          <Text className={`text-xs leading-5 ${theme.textMuted}`}>{t("aboutMushafBody")}</Text>
         </View>
 
-        <Text className={`text-lg font-bold ${theme.text} mb-4`}>{s.listTitle}</Text>
+        <Text className={`text-lg font-bold ${theme.text} mb-4`}>{t("mushafListTitle")}</Text>
 
         {mushafList.map((mushaf) => {
           const isActive = selectedMushafId === mushaf.id;
@@ -158,7 +159,7 @@ export default function QiraatScreen() {
                     </Text>
                     {isStandar && (
                       <View className="px-2 py-0.5 rounded bg-emerald-600">
-                        <Text className="text-[10px] font-bold text-white">{s.popular}</Text>
+                        <Text className="text-[10px] font-bold text-white">{t("popular")}</Text>
                       </View>
                     )}
                   </View>

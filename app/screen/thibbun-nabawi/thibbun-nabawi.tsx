@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { ArrowLeft, Search, X, ChevronRight, Heart, Activity, Sparkles, Moon, BookOpen } from "lucide-react-native";
 import { useTheme } from "../../../src/context/ThemeContext";
+import { useLanguage } from "../../../src/context/LanguageContext";
 import MedisDisclaimer from "../../../src/components/MedisDisclaimer";
 import { KATEGORI_LIST, TEMA_LIST, JUDUL_BUKU, cariTema, TemaMedis } from "../../../src/data/thibbunNabawi";
 import { getDaftarSurah } from "../../../src/services/quranService";
@@ -17,6 +18,7 @@ const IKON_KATEGORI: Record<string, any> = {
 
 export default function ThibbunNabawiScreen() {
   const { isDarkMode, theme } = useTheme();
+  const { t, flip } = useLanguage();
   const [query, setQuery] = useState("");
   const [kategoriId, setKategoriId] = useState<string | null>(null);
   const [namaSurah, setNamaSurah] = useState<Record<number, string>>({});
@@ -53,16 +55,16 @@ export default function ThibbunNabawiScreen() {
             <View className="flex-1">
               <Text className={`text-base font-semibold leading-6 ${theme.text}`}>{item.tema}</Text>
               <Text className={`text-xs mt-1 ${theme.textMuted}`}>
-                QS. {namaSurah[item.surah] ?? item.surah}: {item.ayat}
-                {item.halaman ? `  •  Hal. ${item.halaman}` : ""}
+                {t("qsShort", { name: namaSurah[item.surah] ?? item.surah, a: item.ayat })}
+                {item.halaman ? `  •  ${t("pageShort", { n: item.halaman })}` : ""}
               </Text>
             </View>
-            <ChevronRight size={18} color={mutedColor} />
+            <ChevronRight size={18} color={mutedColor} style={flip} />
           </View>
         </Pressable>
       );
     },
-    [theme, isDarkMode, accent, mutedColor, namaSurah]
+    [theme, isDarkMode, accent, mutedColor, namaSurah, t]
   );
 
   return (
@@ -70,11 +72,11 @@ export default function ThibbunNabawiScreen() {
       {/* HEADER */}
       <View className={`flex-row items-center justify-between px-4 py-4 border-b ${theme.border}`}>
         <Pressable onPress={() => router.back()} className="h-11 w-11 items-center justify-center rounded-full active:opacity-70">
-          <ArrowLeft size={24} color={theme.iconColor} />
+          <ArrowLeft size={24} color={theme.iconColor} style={flip} />
         </Pressable>
         <View className="items-center flex-1">
-          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>KESEHATAN</Text>
-          <Text className={`text-base font-bold ${theme.text}`}>Thibbun Nabawi</Text>
+          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>{t("healthTag")}</Text>
+          <Text className={`text-base font-bold ${theme.text}`}>{t("featThibbun")}</Text>
         </View>
         <View className="w-11" />
       </View>
@@ -84,7 +86,7 @@ export default function ThibbunNabawiScreen() {
         <View className={`flex-row items-center px-4 py-3 rounded-2xl border ${theme.border} ${theme.bgCard}`}>
           <Search size={20} color={mutedColor} />
           <TextInput
-            placeholder="Cari tema, atau ketik 2:255"
+            placeholder={t("searchTheme")}
             placeholderTextColor={mutedColor}
             className={`flex-1 ml-3 ${theme.text}`}
             value={query}
@@ -102,7 +104,7 @@ export default function ThibbunNabawiScreen() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3 mb-1" keyboardShouldPersistTaps="handled">
           {[null, ...KATEGORI_LIST.map((k) => k.id)].map((id) => {
             const aktif = kategoriId === id;
-            const label = id === null ? "Semua" : KATEGORI_LIST.find((k) => k.id === id)!.nama.replace(/^[IVX]+\.\s*/, "");
+            const label = id === null ? t("catAll") : t("cat_" + id);
             return (
               <Pressable
                 key={id ?? "all"}
@@ -130,14 +132,14 @@ export default function ThibbunNabawiScreen() {
           <View className="mb-4">
             <MedisDisclaimer />
             <Text className={`text-xs mt-4 ${theme.textMuted}`}>
-              Sumber: {JUDUL_BUKU} • {hasil.length} dari {TEMA_LIST.length} tema
+              {t("sourceLine", { book: JUDUL_BUKU, n: hasil.length, m: TEMA_LIST.length })}
             </Text>
           </View>
         }
         ListEmptyComponent={
           <View className="items-center justify-center py-12">
             <Search size={48} color={mutedColor} />
-            <Text className={`mt-4 text-center ${theme.textMuted}`}>Tidak ada tema yang cocok</Text>
+            <Text className={`mt-4 text-center ${theme.textMuted}`}>{t("noThemeMatch")}</Text>
           </View>
         }
       />

@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Check, Search, X } from "lucide-react-native";
 import { useTheme } from "../context/ThemeContext";
+import { useLanguage } from "../context/LanguageContext";
 import { getKabKotaShalat, getProvinsiShalat } from "../services/quranService";
 
 export interface LokasiShalat {
@@ -32,6 +33,7 @@ interface Props {
  */
 export default function LokasiShalatPicker({ visible, current, onClose, onSelect }: Props) {
   const { isDarkMode, theme } = useTheme();
+  const { t, flip } = useLanguage();
   const [langkah, setLangkah] = useState<"provinsi" | "kota">("provinsi");
   const [provinsi, setProvinsi] = useState<string | null>(null);
   const [daftar, setDaftar] = useState<string[]>([]);
@@ -62,7 +64,7 @@ export default function LokasiShalatPicker({ visible, current, onClose, onSelect
       } catch (e: any) {
         if (!batal) {
           setDaftar([]);
-          setError(e?.message || "Gagal memuat daftar lokasi.");
+          setError(e?.message || t("locListFailed"));
         }
       } finally {
         if (!batal) setLoading(false);
@@ -98,14 +100,14 @@ export default function LokasiShalatPicker({ visible, current, onClose, onSelect
     }
   };
 
-  const judul = langkah === "provinsi" ? "Pilih Provinsi" : `Pilih Kab/Kota`;
+  const judul = langkah === "provinsi" ? t("pickProvince") : t("pickCity");
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={kembali}>
       <SafeAreaView className={`flex-1 ${theme.bg}`} edges={["top", "bottom"]}>
         <View className={`flex-row items-center px-6 py-4 border-b ${theme.border}`}>
           <Pressable onPress={kembali} className="p-2 mr-2">
-            <ArrowLeft size={24} color={theme.iconColor} />
+            <ArrowLeft size={24} color={theme.iconColor} style={flip} />
           </Pressable>
           <View className="flex-1">
             <Text className={`text-lg font-bold ${theme.text}`}>{judul}</Text>
@@ -123,7 +125,7 @@ export default function LokasiShalatPicker({ visible, current, onClose, onSelect
             <Search size={18} color={isDarkMode ? "#9CA3AF" : "#6B7280"} />
             <TextInput
               className={`flex-1 ml-3 text-base ${theme.text}`}
-              placeholder={langkah === "provinsi" ? "Cari provinsi..." : "Cari kab/kota..."}
+              placeholder={langkah === "provinsi" ? t("searchProvince") : t("searchCity")}
               placeholderTextColor={isDarkMode ? "#6B7280" : "#9CA3AF"}
               value={query}
               onChangeText={setQuery}
@@ -141,7 +143,7 @@ export default function LokasiShalatPicker({ visible, current, onClose, onSelect
           <View className="flex-1 items-center justify-center px-8">
             <Text className={`text-center mb-4 ${theme.textMuted}`}>{error}</Text>
             <Pressable onPress={() => setRetryKey((k) => k + 1)} className="px-5 py-2 rounded-full bg-emerald-600 active:opacity-80">
-              <Text className="text-white font-semibold">Coba lagi</Text>
+              <Text className="text-white font-semibold">{t("retry")}</Text>
             </Pressable>
           </View>
         ) : (
@@ -151,7 +153,7 @@ export default function LokasiShalatPicker({ visible, current, onClose, onSelect
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
             ListEmptyComponent={
-              <Text className={`text-center mt-10 ${theme.textMuted}`}>Tidak ditemukan.</Text>
+              <Text className={`text-center mt-10 ${theme.textMuted}`}>{t("notFound")}</Text>
             }
             renderItem={({ item }) => {
               const aktif =

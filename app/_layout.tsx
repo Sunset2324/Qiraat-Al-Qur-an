@@ -3,13 +3,18 @@ import "../src/globals.css";
 
 import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View, Platform, PermissionsAndroid } from "react-native";
+import { View, Text, TextInput, Platform, PermissionsAndroid } from "react-native";
 import { useEffect } from "react";
 import { setAudioModeAsync } from "expo-audio";
 import { useFonts, AmiriQuran_400Regular } from "@expo-google-fonts/amiri-quran";
 import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
-import { LanguageProvider } from "../src/context/LanguageContext"; // <-- HANYA BARIS INI YANG DITAMBAHKAN
+import { LanguageProvider } from "../src/context/LanguageContext";
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
+
+// Batasi pembesaran font sistem agar layout tidak pecah di HP dengan font scale besar
+// (teks tetap membesar sampai 1.3x demi aksesibilitas).
+(Text as any).defaultProps = { ...((Text as any).defaultProps || {}), maxFontSizeMultiplier: 1.3 };
+(TextInput as any).defaultProps = { ...((TextInput as any).defaultProps || {}), maxFontSizeMultiplier: 1.3 };
 
 // Nonaktifkan strict mode warning di development
 configureReanimatedLogger({

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import { useLanguage } from "../context/LanguageContext";
 
 interface LockScreenMeta {
   title?: string; // contoh: "Al-Fatihah"
@@ -20,6 +21,7 @@ interface LockScreenMeta {
  * @param meta Judul/artist untuk notifikasi media.
  */
 export const useAyahPlaylist = (audioUrls: string[], meta?: LockScreenMeta) => {
+  const { t } = useLanguage();
   const player = useAudioPlayer(null, { updateInterval: 250 });
   const status = useAudioPlayerStatus(player);
 
@@ -35,7 +37,7 @@ export const useAyahPlaylist = (audioUrls: string[], meta?: LockScreenMeta) => {
   metaRef.current = meta;
 
   const lockMetadata = (index: number) => ({
-    title: `${metaRef.current?.title ?? "Al-Qur'an"} • Ayat ${index + 1}`,
+    title: `${metaRef.current?.title ?? "Al-Qur'an"} • ${t("ayahN", { n: index + 1 })}`,
     artist: metaRef.current?.artist ?? "Qiraat Al-Qur'an",
   });
 

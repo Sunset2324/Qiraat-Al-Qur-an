@@ -4,11 +4,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { ArrowLeft, Copy, Share2, Tag } from "lucide-react-native";
 import { useTheme } from "../../../../src/context/ThemeContext";
+import { useLanguage } from "../../../../src/context/LanguageContext";
 import { getDetailDoa } from "../../../../src/services/quranService";
 import { ARABIC_FONT } from "../../../../src/constants/fonts";
 
 export default function DoaDetailScreen() {
   const { isDarkMode, theme } = useTheme();
+  const { t, flip } = useLanguage();
   const { id } = useLocalSearchParams();
   
   const [doa, setDoa] = useState<any>(null);
@@ -42,9 +44,9 @@ export default function DoaDetailScreen() {
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
       <View className={`flex-row items-center justify-between px-6 py-4 border-b ${theme.border}`}>
         <Pressable onPress={() => router.back()} className="p-1 active:opacity-70">
-          <ArrowLeft size={24} color={theme.iconColor} />
+          <ArrowLeft size={24} color={theme.iconColor} style={flip} />
         </Pressable>
-        <Text className={`text-base font-bold ${theme.text}`}>Detail Doa</Text>
+        <Text className={`text-base font-bold ${theme.text}`}>{t("doaDetail")}</Text>
         <View className="flex-row gap-4">
           <Pressable className="p-1 active:opacity-70"><Copy size={22} color={theme.iconColor} /></Pressable>
           <Pressable className="p-1 active:opacity-70"><Share2 size={22} color={theme.iconColor} /></Pressable>
@@ -56,7 +58,7 @@ export default function DoaDetailScreen() {
           <View className="flex-row items-center gap-2 mb-2">
             <View className={`px-3 py-1 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"}`}>
               <Text className={`text-xs font-bold ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>
-                {doa.grup || "Umum"}
+                {doa.grup || t("general")}
               </Text>
             </View>
           </View>
@@ -78,13 +80,13 @@ export default function DoaDetailScreen() {
 
         {!!doa.latin && (
           <View className="px-6 mb-6">
-            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-2 uppercase tracking-wider`}>Cara Baca</Text>
+            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-2 uppercase tracking-wider`}>{t("howToRead")}</Text>
             <Text className={`text-base italic leading-6 ${theme.textMuted}`}>"{doa.latin}"</Text>
           </View>
         )}
 
         <View className="px-6 mb-6">
-          <Text className={`text-sm font-semibold ${theme.textSecondary} mb-3 uppercase tracking-wider`}>Arti / Terjemahan</Text>
+          <Text className={`text-sm font-semibold ${theme.textSecondary} mb-3 uppercase tracking-wider`}>{t("meaningTitle")}</Text>
           <View className={`p-5 rounded-2xl ${isDarkMode ? "bg-emerald-900/30" : "bg-emerald-50"} border ${isDarkMode ? "border-emerald-800" : "border-emerald-200"}`}>
             <Text className={`text-base leading-7 ${theme.text}`} style={{ textAlign: "left" }}>
               {doa.arti}
@@ -94,13 +96,13 @@ export default function DoaDetailScreen() {
 
         {!!doa.tentang && String(doa.tentang).trim().length > 0 && (
           <View className="px-6 mb-6">
-            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-3 uppercase tracking-wider`}>Dalil & Keutamaan</Text>
+            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-3 uppercase tracking-wider`}>{t("dalilTitle")}</Text>
             <View className={`p-5 rounded-2xl ${isDarkMode ? "bg-amber-900/20" : "bg-amber-50"} border ${isDarkMode ? "border-amber-800" : "border-amber-200"}`}>
               <Text className={`text-base leading-7 ${theme.text}`} style={{ textAlign: "left" }}>
                 {String(doa.tentang).trim()}
               </Text>
               <Text className={`text-[11px] mt-3 ${theme.textMuted}`}>
-                Sumber: EQuran.id. Periksa kembali derajat dan rujukan hadis pada kitab aslinya.
+                {t("dalilSource")}
               </Text>
             </View>
           </View>
@@ -109,7 +111,7 @@ export default function DoaDetailScreen() {
         {/* PERBAIKAN TAMPILAN TAGAR DENGAN IKON REACT */}
         {doa.tags && doa.tags.length > 0 && (
           <View className="px-6 mb-6">
-            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-3 uppercase tracking-wider`}>Terkait</Text>
+            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-3 uppercase tracking-wider`}>{t("relatedTags")}</Text>
             <View className="flex-row flex-wrap gap-2">
               {doa.tags.map((tag: string, index: number) => (
                 <View 

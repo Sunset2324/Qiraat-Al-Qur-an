@@ -7,6 +7,7 @@ import {
 } from "lucide-react-native";
 import { useState, useEffect, ReactNode } from "react";
 import { useTheme } from "../../../src/context/ThemeContext";
+import { useLanguage } from "../../../src/context/LanguageContext";
 import { getDaftarDoa } from "../../../src/services/quranService";
 import { isBakdaShalat } from "../../../src/data/bakdaShalat";
 
@@ -20,17 +21,19 @@ interface DoaItem {
   tags?: string[];
 }
 
+// key dipakai untuk menyaring data (Indonesia), labelKey untuk tampilan
 const FILTERS = [
-  { key: "all", label: "Semua" },
-  { key: "pagi", label: "Pagi" },
-  { key: "petang", label: "Petang" },
-  { key: "bakda", label: "Ba'da Shalat" },
-  { key: "sholat", label: "Sholat" },
-  { key: "doa", label: "Harian" },
+  { key: "all", labelKey: "fAll" },
+  { key: "pagi", labelKey: "fMorning" },
+  { key: "petang", labelKey: "fEvening" },
+  { key: "bakda", labelKey: "fBakda" },
+  { key: "sholat", labelKey: "fPrayer" },
+  { key: "doa", labelKey: "fDaily" },
 ];
 
 export default function DzikirDoaScreen() {
   const { isDarkMode, theme } = useTheme();
+  const { t, flip } = useLanguage();
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const [activeFilter, setActiveFilter] = useState(tab === "bakda" ? "bakda" : "all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,7 +57,7 @@ export default function DzikirDoaScreen() {
       const data = await getDaftarDoa();
       setDoaList(data);
     } catch (err) {
-      setError("Gagal memuat data. Periksa koneksi internet.");
+      setError("load_failed");
     } finally {
       setLoading(false);
     }
@@ -105,7 +108,7 @@ export default function DzikirDoaScreen() {
     return (
       <SafeAreaView className={`flex-1 justify-center items-center ${theme.bg}`}>
         <ActivityIndicator size="large" color={isDarkMode ? "#34d399" : "#047857"} />
-        <Text className={`mt-4 ${theme.textMuted}`}>Memuat Dzikir & Doa...</Text>
+        <Text className={`mt-4 ${theme.textMuted}`}>{t("loadingDzikir")}</Text>
       </SafeAreaView>
     );
   }
@@ -114,9 +117,9 @@ export default function DzikirDoaScreen() {
     return (
       <SafeAreaView className={`flex-1 justify-center items-center p-6 ${theme.bg}`}>
         <AlertCircle size={48} color={isDarkMode ? "#f87171" : "#ef4444"} />
-        <Text className={`mt-4 text-center font-semibold ${theme.text}`}>{error}</Text>
+        <Text className={`mt-4 text-center font-semibold ${theme.text}`}>{t("dzikirLoadFailed")}</Text>
         <Pressable onPress={fetchData} className={`mt-6 px-6 py-3 rounded-full ${isDarkMode ? "bg-emerald-600" : "bg-emerald-700"}`}>
-          <Text className="text-white font-bold">Coba Lagi</Text>
+          <Text className="text-white font-bold">{t("retry")}</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -127,9 +130,9 @@ export default function DzikirDoaScreen() {
       <View>
         <View className={`flex-row items-center justify-between px-6 py-4 border-b ${theme.border}`}>
           <Pressable onPress={() => router.back()} className="p-1 active:opacity-70">
-            <ArrowLeft size={24} color={theme.iconColor} />
+            <ArrowLeft size={24} color={theme.iconColor} style={flip} />
           </Pressable>
-          <Text className={`text-base font-bold tracking-[3px] ${theme.text}`}>DZIKIR & DOA</Text>
+          <Text className={`text-base font-bold tracking-[3px] ${theme.text}`}>{t("dzikirTitle")}</Text>
           <View className="w-8" />
         </View>
 
@@ -138,7 +141,7 @@ export default function DzikirDoaScreen() {
             <Search size={20} color={isDarkMode ? "#9CA3AF" : "#6B7280"} />
             <TextInput
               className={`flex-1 ml-3 text-base ${theme.text}`}
-              placeholder="Cari judul, arti, atau tagar..."
+              placeholder={t("searchDoa")}
               placeholderTextColor={isDarkMode ? "#6B7280" : "#9CA3AF"}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -164,7 +167,7 @@ export default function DzikirDoaScreen() {
               }`}
             >
               <Text className={`text-sm font-semibold ${activeFilter === filter.key ? "text-white" : theme.text}`}>
-                {filter.label}
+                {t(filter.labelKey)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -174,9 +177,9 @@ export default function DzikirDoaScreen() {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
         {activeFilter === "bakda" && (
           <View className={`mb-4 p-4 rounded-2xl border ${isDarkMode ? "bg-emerald-900/30 border-emerald-800" : "bg-emerald-50 border-emerald-200"}`}>
-            <Text className={`text-sm font-bold mb-1 ${theme.text}`}>Dzikir Ba'da Shalat</Text>
+            <Text className={`text-sm font-bold mb-1 ${theme.text}`}>{t("bakdaInfoTitle")}</Text>
             <Text className={`text-xs leading-5 ${theme.textMuted}`}>
-              Dibaca setelah salam. Buka tiap dzikir untuk melihat dalil hadis dan keutamaannya.
+              {t("bakdaInfoBody")}
             </Text>
           </View>
         )}
@@ -217,7 +220,7 @@ export default function DzikirDoaScreen() {
           <View className="py-12 items-center">
             <BookOpen size={48} color={isDarkMode ? "#4B5563" : "#9CA3AF"} />
             <Text className={`mt-4 text-center ${theme.textMuted}`}>
-              {searchQuery ? "Tidak ada hasil untuk pencarian ini" : "Tidak ada doa yang ditemukan"}
+              {searchQuery ? t("noSearchResult") : t("noDoa")}
             </Text>
           </View>
         )}

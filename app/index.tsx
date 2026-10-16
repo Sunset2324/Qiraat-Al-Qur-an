@@ -3,9 +3,11 @@ import { View, Text, Pressable, Image, Animated } from "react-native";
 import { DoorOpen, Globe } from "lucide-react-native";
 import { router } from "expo-router";
 import { useTheme } from "../src/context/ThemeContext";
+import { useLanguage } from "../src/context/LanguageContext";
 
 export default function BismillahScreen() {
   const { isDarkMode, theme } = useTheme();
+  const { t } = useLanguage();
   
   // Animasi masuk yang halus (fade-in + slide up dari bawah)
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -56,13 +58,13 @@ export default function BismillahScreen() {
         />
         
         <Text className={`text-center text-xs font-medium tracking-[2px] ${theme.text}`}>
-          MULAI DENGAN NAMA ALLAH
+          {t("startWithAllah")}
         </Text>
         <Text className={`text-center text-3xl leading-[52px] ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`}>
           بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
         </Text>
         <Text className={`max-w-[280px] text-center text-sm leading-6 ${theme.textMuted}`}>
-          Temukan ketenangan dalam setiap ayat, pelajari tajwid dengan penuh perhatian.
+          {t("splashTagline")}
         </Text>
 
         {/* Tombol Masuk */}

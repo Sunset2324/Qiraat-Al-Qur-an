@@ -1,80 +1,99 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
+import { I18nManager, Alert } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { DICT, LANG_INDEX, type Language } from "../i18n/translations";
 
-type Language = 'id' | 'en' | 'ar';
+export type { Language };
+
+type Params = Record<string, string | number>;
 
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: string) => string;
+  /** t("key") atau t("key", { n: 5 }) */
+  t: (key: string, params?: Params) => string;
+  /** true bila layout benar-benar RTL (setelah app dibuka ulang di bahasa Arab) */
+  isRTL: boolean;
+  /** locale untuk tanggal/angka: id-ID | en-US | ar */
+  locale: string;
+  /** style untuk membalik ikon panah arah (back/next) di layout RTL */
+  flip: { transform: { scaleX: number }[] } | undefined;
 }
 
-const translations: Record<Language, Record<string, string>> = {
-  id: {
-    settings: 'Pengaturan', general: 'Umum', darkMode: 'Tampilan Gelap (Dark Mode)',
-    language: 'Bahasa Aplikasi', audioPlayback: 'Audio & Pemutaran', autoPlayNext: 'Auto-play Ayat Selanjutnya',
-    playInBackground: 'Putar di Latar Belakang', notificationPrayer: 'Notifikasi & Shalat', adhanNotification: 'Notifikasi Adzan',
-    prayerLocation: 'Lokasi Jadwal Shalat', about: 'Tentang', appVersion: 'Versi Aplikasi', resetSettings: 'Reset Pengaturan',
-    aboutUs: 'ABOUT US', contactUs: 'Hubungi Kami', website: 'Website', success: 'Berhasil', resetMsg: 'Pengaturan dan data tersimpan telah direset.',
-    selectLanguage: 'Pilih Bahasa', indonesian: 'Bahasa Indonesia', english: 'English', arabic: 'العربية',
-  },
-  en: {
-    settings: 'Settings', general: 'General', darkMode: 'Dark Mode',
-    language: 'App Language', audioPlayback: 'Audio & Playback', autoPlayNext: 'Auto-play Next Ayah',
-    playInBackground: 'Play in Background', notificationPrayer: 'Notification & Prayer', adhanNotification: 'Adhan Notification',
-    prayerLocation: 'Prayer Location', about: 'About', appVersion: 'App Version', resetSettings: 'Reset Settings',
-    aboutUs: 'ABOUT US', contactUs: 'Contact Us', website: 'Website', success: 'Success', resetMsg: 'Settings and saved data have been reset.',
-    selectLanguage: 'Select Language', indonesian: 'Bahasa Indonesia', english: 'English', arabic: 'العربية',
-  },
-  ar: {
-    settings: 'الإعدادات', general: 'عام', darkMode: 'الوضع الداكن',
-    language: 'لغة التطبيق', audioPlayback: 'الصوت والتشغيل', autoPlayNext: 'تشغيل الآية التالية تلقائيًا',
-    playInBackground: 'التشغيل في الخلفية', notificationPrayer: 'الإشعارات والصلاة', adhanNotification: 'إشعار الأذان',
-    prayerLocation: 'موقع الصلاة', about: 'حول', appVersion: 'إصدار التطبيق', resetSettings: 'إعادة تعيين الإعدادات',
-    aboutUs: 'معلومات عنا', contactUs: 'اتصل بنا', website: 'موقع إلكتروني', success: 'نجاح', resetMsg: 'تم إعادة تعيين الإعدادات والبيانات المحفوظة.',
-    selectLanguage: 'اختر اللغة', indonesian: 'Bahasa Indonesia', english: 'English', arabic: 'العربية',
-  },
-};
+const LOCALES: Record<Language, string> = { id: "id-ID", en: "en-US", ar: "ar" };
+const STORAGE_KEY = "app_language";
+
+// Izinkan RTL sejak awal; forceRTL baru berlaku di peluncuran berikutnya.
+try {
+  I18nManager.allowRTL(true);
+} catch {}
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  const [language, setLanguageState] = useState<Language>('id');
+  const [language, setLanguageState] = useState<Language>("id");
 
   useEffect(() => {
-    const loadLanguage = async () => {
+    (async () => {
       try {
-        const savedLang = await AsyncStorage.getItem('app_language');
-        if (savedLang && ['id', 'en', 'ar'].includes(savedLang)) {
-          setLanguageState(savedLang as Language);
+        const saved = await AsyncStorage.getItem(STORAGE_KEY);
+        if (saved === "id" || saved === "en" || saved === "ar") {
+          setLanguageState(saved);
+          // jaga arah layout sesuai bahasa tersimpan (berlaku di peluncuran berikutnya)
+          const wantRTL = saved === "ar";
+          if (I18nManager.isRTL !== wantRTL) I18nManager.forceRTL(wantRTL);
         }
       } catch (e) {
-        console.error('Gagal memuat bahasa:', e);
+        console.error("Gagal memuat bahasa:", e);
       }
-    };
-    loadLanguage();
+    })();
   }, []);
 
-  const setLanguage = async (lang: Language) => {
-    setLanguageState(lang);
-    try {
-      await AsyncStorage.setItem('app_language', lang);
-    } catch (e) {
-      console.error('Gagal menyimpan bahasa:', e);
-    }
-  };
-
-  const t = (key: string) => translations[language][key] || key;
-
-  return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
-      {children}
-    </LanguageContext.Provider>
+  const t = useCallback(
+    (key: string, params?: Params) => {
+      const row = DICT[key];
+      let s = row ? row[LANG_INDEX[language]] || row[1] || row[0] : key;
+      if (params) for (const k of Object.keys(params)) s = s.split(`{${k}}`).join(String(params[k]));
+      return s;
+    },
+    [language]
   );
+
+  const setLanguage = useCallback(
+    async (lang: Language) => {
+      setLanguageState(lang);
+      try {
+        await AsyncStorage.setItem(STORAGE_KEY, lang);
+      } catch (e) {
+        console.error("Gagal menyimpan bahasa:", e);
+      }
+      const wantRTL = lang === "ar";
+      if (I18nManager.isRTL !== wantRTL) {
+        I18nManager.forceRTL(wantRTL);
+        const row = (k: string) => DICT[k][LANG_INDEX[lang]];
+        Alert.alert(row("rtlRestartTitle"), row("rtlRestartMsg"));
+      }
+    },
+    []
+  );
+
+  const value = useMemo(
+    () => ({
+      language,
+      setLanguage,
+      t,
+      isRTL: I18nManager.isRTL,
+      locale: LOCALES[language],
+      flip: I18nManager.isRTL ? { transform: [{ scaleX: -1 }] } : undefined,
+    }),
+    [language, setLanguage, t]
+  );
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 };
 
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
-  if (!context) throw new Error('useLanguage must be used within LanguageProvider');
+  if (!context) throw new Error("useLanguage must be used within LanguageProvider");
   return context;
 };

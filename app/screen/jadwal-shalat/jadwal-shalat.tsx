@@ -6,17 +6,19 @@ import { useState, useEffect, useMemo } from "react";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { getJadwalShalat } from "../../../src/services/quranService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useLanguage } from "../../../src/context/LanguageContext";
+import { formatGregorian, formatHijri } from "../../../src/utils/dateFormat";
 import LokasiShalatPicker, { LokasiShalat } from "../../../src/components/LokasiShalatPicker";
 
 const LOKASI_KEY = "user_shalat_location";
 
 const WAKTU = [
-  { key: "subuh", nama: "Subuh" },
-  { key: "terbit", nama: "Terbit" },
-  { key: "dzuhur", nama: "Dzuhur" },
-  { key: "ashar", nama: "Ashar" },
-  { key: "maghrib", nama: "Maghrib" },
-  { key: "isya", nama: "Isya" },
+  { key: "subuh", nama: "p_subuh" },
+  { key: "terbit", nama: "p_terbit" },
+  { key: "dzuhur", nama: "p_dzuhur" },
+  { key: "ashar", nama: "p_ashar" },
+  { key: "maghrib", nama: "p_maghrib" },
+  { key: "isya", nama: "p_isya" },
 ] as const;
 
 // Backend bisa mengembalikan { jadwal: [...] } (EQuran) atau array langsung (fallback Aladhan)
@@ -46,6 +48,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 
 export default function JadwalShalatScreen() {
   const { isDarkMode, theme } = useTheme();
+  const { t, locale, flip } = useLanguage();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,18 +89,17 @@ export default function JadwalShalatScreen() {
       try {
         setLoading(true);
         setError(null);
-        const t = new Date();
-        const data = await getJadwalShalat(lokasi.provinsi, lokasi.kota, t.getMonth() + 1, t.getFullYear());
+        const tgl = new Date();
+        const data = await getJadwalShalat(lokasi.provinsi, lokasi.kota, tgl.getMonth() + 1, tgl.getFullYear());
         const list = ambilListJadwal(data);
-        const hariIni = list.find((it) => ambilHari(it) === t.getDate());
+        const hariIni = list.find((it) => ambilHari(it) === tgl.getDate());
         if (batal) return;
-        if (!hariIni) throw new Error("Jadwal untuk hari ini tidak ditemukan.");
+        if (!hariIni) throw new Error("not_today");
         setJadwalHariIni(hariIni);
       } catch (err: any) {
         if (batal) return;
         console.error("Gagal memuat jadwal:", err);
-        const msg = err?.response?.data?.message || err?.message || "Gagal memuat data jadwal.";
-        setError(msg);
+        setError(err?.message === "not_today" ? t("scheduleNotToday") : t("scheduleLoadFailed"));
         setJadwalHariIni(null);
       } finally {
         if (!batal) setLoading(false);
@@ -180,9 +182,9 @@ export default function JadwalShalatScreen() {
       {/* Header */}
       <View className={`flex-row items-center px-6 py-4 border-b ${theme.border}`}>
         <Pressable onPress={() => router.back()} className="p-2 mr-2">
-          <ArrowLeft size={24} color={theme.iconColor} />
+          <ArrowLeft size={24} color={theme.iconColor} style={flip} />
         </Pressable>
-        <Text className={`text-xl font-bold flex-1 ${theme.text}`}>Jadwal Shalat</Text>
+        <Text className={`text-xl font-bold flex-1 ${theme.text}`}>{t("prayerTitle")}</Text>
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -200,16 +202,16 @@ export default function JadwalShalatScreen() {
                   className={`text-sm font-medium flex-shrink ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}
                   numberOfLines={1}
                 >
-                  {lokasi ? `${lokasi.kota}, ${lokasi.provinsi}` : "Pilih lokasi"}
+                  {lokasi ? `${lokasi.kota}, ${lokasi.provinsi}` : t("chooseLocation")}
                 </Text>
               </View>
               <Text className={`text-xs font-bold ml-3 ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>
-                UBAH
+                {t("change")}
               </Text>
             </Pressable>
             
             <Text className={`text-xs uppercase tracking-wider mb-1 ${theme.textMuted}`}>
-              Menuju Shalat Berikutnya
+              {t("untilNext")}
             </Text>
             <Text className={`text-4xl font-bold ${theme.text}`}>
               {loading ? "--:--:--" : countdown}
@@ -220,11 +222,12 @@ export default function JadwalShalatScreen() {
         {/* 2. DAFTAR WAKTU SHALAT HARI INI */}
         <View className="px-6 mt-6">
           <View className="flex-row items-center justify-between mb-4">
-            <Text className={`text-lg font-bold ${theme.text}`}>Hari Ini</Text>
+            <Text className={`text-lg font-bold ${theme.text}`}>{t("todayHeading")}</Text>
             <View className="flex-row items-center gap-1">
               <Calendar size={16} color={theme.iconColor} />
               <Text className={`text-sm ${theme.textMuted}`}>
-                {now.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" })}
+                {formatGregorian(now, locale)}
+                {formatHijri(now, locale) ? ` • ${formatHijri(now, locale)}` : ""}
               </Text>
             </View>
           </View>
@@ -235,15 +238,15 @@ export default function JadwalShalatScreen() {
             </View>
           ) : jadwalHariIni ? (
             <View>
-              {WAKTU.map((w) => renderWaktuShalat(w.nama, jadwalHariIni[w.key], w.key === nextKey))}
+              {WAKTU.map((w) => renderWaktuShalat(t(w.nama), jadwalHariIni[w.key], w.key === nextKey))}
             </View>
           ) : (
             <View className="items-center py-10">
               <Text className={`text-center mb-4 ${theme.textMuted}`}>
-                {lokasi ? error || "Gagal memuat data jadwal." : "Pilih kota agar jadwal shalat sesuai lokasimu."}
+                {lokasi ? error || t("scheduleLoadFailed") : t("pickCityHint")}
               </Text>
               <Pressable onPress={() => (lokasi ? setRetryKey((k) => k + 1) : setPickerBuka(true))} className="px-5 py-2 rounded-full bg-emerald-600 active:opacity-80">
-                <Text className="text-white font-semibold">{lokasi ? "Coba lagi" : "Pilih lokasi"}</Text>
+                <Text className="text-white font-semibold">{lokasi ? t("retry") : t("chooseLocation")}</Text>
               </Pressable>
             </View>
           )}
@@ -260,11 +263,11 @@ export default function JadwalShalatScreen() {
                 <BookOpen size={20} color={isDarkMode ? "#60a5fa" : "#2563eb"} />
               </View>
               <View>
-                <Text className={`text-base font-bold ${theme.text}`}>Dzikir Ba'da Shalat</Text>
-                <Text className={`text-xs ${theme.textMuted}`}>Tasbih, Tahmid, dan Takbir</Text>
+                <Text className={`text-base font-bold ${theme.text}`}>{t("bakdaCardTitle")}</Text>
+                <Text className={`text-xs ${theme.textMuted}`}>{t("bakdaCardSub")}</Text>
               </View>
             </View>
-            <Text className={`text-xl ${theme.textMuted}`}>›</Text>
+            <Text className={`text-xl ${theme.textMuted}`} style={flip}>›</Text>
           </Pressable>
         </View>
 

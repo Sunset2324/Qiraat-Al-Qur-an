@@ -1,7 +1,8 @@
 import { View, Text, Pressable, ScrollView, Switch, Alert, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useState, useCallback } from "react";
 import {
   ArrowLeft, Moon, Sun, Globe, Headphones, Play, 
   Bell, MapPin, Info, Phone, RotateCcw, X, Check
@@ -12,12 +13,25 @@ import { clearApiCache } from "../../src/utils/apiCache";
 
 export default function SettingsScreen() {
   const { isDarkMode, toggleTheme, theme } = useTheme();
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage, t, flip } = useLanguage();
   
   const [adhanNotification, setAdhanNotification] = useState(true);
   const [autoPlay, setAutoPlay] = useState(false);
   const [backgroundPlay, setBackgroundPlay] = useState(true);
-  const [lokasiShalat, setLokasiShalat] = useState("DKI Jakarta, Jakarta Selatan");
+  const [lokasiShalat, setLokasiShalat] = useState<string>("");
+
+  // Lokasi dibaca dari pilihan di layar Jadwal Shalat (satu sumber kebenaran)
+  useFocusEffect(
+    useCallback(() => {
+      AsyncStorage.getItem("user_shalat_location")
+        .then((s) => {
+          const p = s ? JSON.parse(s) : null;
+          const kota = p?.kota || p?.kabkota;
+          setLokasiShalat(kota && p?.provinsi ? `${kota}, ${p.provinsi}` : "");
+        })
+        .catch(() => setLokasiShalat(""));
+    }, [])
+  );
   const [showLanguageModal, setShowLanguageModal] = useState(false);
 
   const SettingItem = ({ icon: Icon, label, value, onPress, rightElement }: any) => (
@@ -56,7 +70,7 @@ export default function SettingsScreen() {
       {/* Header */}
       <View className={`flex-row items-center justify-center px-6 py-4 border-b ${theme.border}`}>
         <Pressable onPress={() => router.back()} className="absolute left-6 p-2">
-          <ArrowLeft size={22} color={theme.iconColor} />
+          <ArrowLeft size={22} color={theme.iconColor} style={flip} />
         </Pressable>
         <Text className={`text-lg font-bold tracking-[2px] ${theme.text}`}>{t('settings').toUpperCase()}</Text>
       </View>
@@ -138,8 +152,8 @@ export default function SettingsScreen() {
             <SettingItem 
               icon={MapPin} 
               label={t('prayerLocation')} 
-              value={lokasiShalat}
-              onPress={() => Alert.alert("Info", "Fitur pilih lokasi akan segera hadir!")}
+              value={lokasiShalat || t('locationNotSet')}
+              onPress={() => router.push('/screen/jadwal-shalat/jadwal-shalat')}
             />
           </View>
         </View>
