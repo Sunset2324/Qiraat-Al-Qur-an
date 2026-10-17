@@ -93,7 +93,7 @@ export default function DashboardScreen() {
         {/* 2. MAIN CONTENT */}
         <View className="flex-1 px-6 -mt-16">
           <Pressable
-            onPress={() => router.push("/journal")}
+            onPress={() => router.push("/screen/jurnal-kesehatan/jurnal-kesehatan" as any)}
             className={`${theme.bgCard} rounded-3xl border ${theme.border} py-6 flex-row items-center justify-center gap-3 mb-8 shadow-sm active:opacity-90`}
           >
             <FileText size={28} color={theme.iconColor} />
