@@ -6,9 +6,13 @@ import { useAudio } from '../hooks/useAudio';
 interface AudioPlayerProps {
   audioUrl: string;
   title?: string;
+  /** Nama qari, tampil di notifikasi media. */
+  artist?: string;
+  /** Nama surah, jadi judul notifikasi. */
+  notifTitle?: string;
 }
 
-export default function AudioPlayer({ audioUrl, title = 'Murottal' }: AudioPlayerProps) {
+export default function AudioPlayer({ audioUrl, title = 'Murottal', artist, notifTitle }: AudioPlayerProps) {
   const { isDarkMode, theme } = useTheme();
   const {
     isPlaying,
@@ -30,7 +34,7 @@ export default function AudioPlayer({ audioUrl, title = 'Murottal' }: AudioPlaye
   
   const handlePlay = async () => {
     if (!isPlaying && !isLoading) {
-      await playAudio(audioUrl, { title });
+      await playAudio(audioUrl, { title: notifTitle ?? title, artist });
     }
   };
 

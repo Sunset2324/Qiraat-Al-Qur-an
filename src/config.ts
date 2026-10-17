@@ -11,3 +11,5 @@ export const API_BASE_URL = "https://backend-qiraat.vercel.app/api";
 // 3. Jika pakai HP Asli (Expo Go) & Laptop di Wi-Fi yang sama:
 // Ganti '192.168.x.x' dengan IPv4 Address laptop Anda (cek via 'ipconfig' di PowerShell)
 // export const API_BASE_URL = 'http://192.168.1.15:3000/api';
+// Gambar sampul untuk notifikasi media (disajikan backend, PNG 512x512).
+export const NOTIF_ARTWORK_URL = `${API_BASE_URL}/notif-art.png`;

@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import { NOTIF_ARTWORK_URL } from "../config";
 
 // Format waktu dari detik ke "mm:ss"
 // (expo-audio pakai satuan detik, beda dengan expo-av yang pakai milidetik)
@@ -30,16 +31,23 @@ export const useAudio = () => {
   // Mode audio global (background, silent mode) diatur sekali di app/_layout.tsx
 
   const playAudio = useCallback(
-    (url: string, meta?: { title?: string; artist?: string }) => {
+    (url: string, meta?: { title?: string; artist?: string; album?: string }) => {
       hasSourceRef.current = true;
       player.replace(url);
       player.play();
       // Kontrol media di notifikasi & lock screen
       try {
-        player.setActiveForLockScreen(true, {
-          title: meta?.title ?? "Qiraat Al-Qur'an",
-          artist: meta?.artist ?? "Qiraat Al-Qur'an",
-        });
+        player.setActiveForLockScreen(
+          true,
+          {
+            title: meta?.title ?? "Qiraat Al-Qur'an",
+            artist: meta?.artist ?? "Qiraat Al-Qur'an",
+            albumTitle: meta?.album ?? "Qiraat Al-Qur'an",
+            artworkUrl: NOTIF_ARTWORK_URL,
+          },
+          // Audio satu surah panjang: tampilkan tombol mundur/maju di notifikasi.
+          { showSeekBackward: true, showSeekForward: true }
+        );
       } catch {}
     },
     [player]

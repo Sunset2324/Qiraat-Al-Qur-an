@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { useLanguage } from "../context/LanguageContext";
+import { NOTIF_ARTWORK_URL } from "../config";
 
 interface LockScreenMeta {
   title?: string; // contoh: "Al-Fatihah"
   artist?: string; // contoh: nama qari
+  album?: string; // contoh: "Qiraat Al-Qur'an" (tampil kecil di header notifikasi)
 }
 
 /**
@@ -36,10 +38,18 @@ export const useAyahPlaylist = (audioUrls: string[], meta?: LockScreenMeta) => {
   urlsRef.current = audioUrls;
   metaRef.current = meta;
 
-  const lockMetadata = (index: number) => ({
-    title: `${metaRef.current?.title ?? "Al-Qur'an"} • ${t("ayahN", { n: index + 1 })}`,
-    artist: metaRef.current?.artist ?? "Qiraat Al-Qur'an",
-  });
+  // Notifikasi: judul "Al-Fatihah • Ayat 2/7", baris kedua nama qari,
+  // header kecil nama app, dan gambar sampul dari backend.
+  const lockMetadata = (index: number) => {
+    const total = urlsRef.current.filter(Boolean).length;
+    const ayah = t("ayahN", { n: index + 1 });
+    return {
+      title: `${metaRef.current?.title ?? "Al-Qur'an"} • ${ayah}${total ? `/${total}` : ""}`,
+      artist: metaRef.current?.artist ?? "Qiraat Al-Qur'an",
+      albumTitle: metaRef.current?.album ?? "Qiraat Al-Qur'an",
+      artworkUrl: NOTIF_ARTWORK_URL,
+    };
+  };
 
   const playFrom = useCallback(
     (index: number) => {

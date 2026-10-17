@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, PanResponder, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
-import { ArrowLeft, Bookmark, Headphones, Volume2, Play, Pause } from "lucide-react-native";
+import { ArrowLeft, ArrowRight, Bookmark, Headphones, Volume2, Play, Pause } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { getDetailSurahMerged, getReciters, type Reciter } from "../../../src/services/quranService";
@@ -141,7 +141,52 @@ export default function SurahDetailScreen() {
   // ▶ Mode "Ikuti Bacaan": playlist audio per-ayat yang otomatis lanjut
   // ke ayat berikutnya, dipakai juga untuk tombol play per-ayat.
   const ayahAudioUrls = useMemo(() => surahData?.ayat.map((a) => a.audio) ?? [], [surahData]);
-  const ayahPlaylist = useAyahPlaylist(ayahAudioUrls);
+  // Data notifikasi media: nama surah + nama qari yang sedang aktif.
+  const lockMeta = useMemo(() => {
+    const ra = surahData?.info.reciterAktif;
+    const nama = ra && typeof ra === "object" ? ra.nama : typeof ra === "string" ? ra : undefined;
+    return { title: surahData?.info.namaLatin, artist: nama };
+  }, [surahData]);
+  const ayahPlaylist = useAyahPlaylist(ayahAudioUrls, lockMeta);
+
+  // ↔ Geser layar untuk pindah surah: geser ke kanan = surah berikutnya,
+  // geser ke kiri = surah sebelumnya (seperti membalik halaman mushaf).
+  const nomorRef = useRef(Number(nomor));
+  nomorRef.current = Number(nomor);
+  const mushafParamRef = useRef(routeMushafId);
+  mushafParamRef.current = routeMushafId;
+
+  const goToSurah = useCallback((n: number) => {
+    if (!Number.isInteger(n) || n < 1 || n > 114) return;
+    const mid = mushafParamRef.current;
+    router.replace({
+      pathname: "/screen/surah/[nomor]",
+      params: { nomor: String(n), ...(mid ? { mushafId: String(mid) } : {}) },
+    });
+  }, []);
+
+  const swipe = useRef(
+    PanResponder.create({
+      // Ambil alih hanya kalau gerakan jelas mendatar, supaya scroll vertikal tetap normal.
+      // Sentuhan yang mulai di tepi layar dilewati agar gesture "kembali" sistem tidak bentrok.
+      onMoveShouldSetPanResponderCapture: (_e, g) => {
+        const w = Dimensions.get("window").width;
+        return (
+          Math.abs(g.dx) > 16 &&
+          Math.abs(g.dx) > Math.abs(g.dy) * 2 &&
+          g.x0 > 28 &&
+          g.x0 < w - 28
+        );
+      },
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderRelease: (_e, g) => {
+        const jauh = Math.abs(g.dx) > 90;
+        const cepat = Math.abs(g.dx) > 50 && Math.abs(g.vx) > 0.5;
+        if (!jauh && !cepat) return;
+        goToSurah(nomorRef.current + (g.dx > 0 ? 1 : -1));
+      },
+    })
+  ).current;
   const hasPerAyahAudio = ayahPlaylist.trackCount > 0;
 
   // true setelah "Ikuti Bacaan" / tombol play salah satu ayat pernah ditekan,
@@ -493,6 +538,7 @@ export default function SurahDetailScreen() {
         </Pressable>
       )}
 
+      <View className="flex-1" {...swipe.panHandlers}>
       <ScrollView
         ref={scrollRef}
         className="flex-1"
@@ -645,6 +691,8 @@ export default function SurahDetailScreen() {
             <AudioPlayer
               audioUrl={audioFullUrl}
               title={`Murottal Full: ${surahData.info.namaLatin}`}
+              notifTitle={surahData.info.namaLatin}
+              artist={reciterAktifName !== "—" ? reciterAktifName : undefined}
             />
           </View>
         ) : (
@@ -764,7 +812,33 @@ export default function SurahDetailScreen() {
             );
           })}
         </View>
+
+        {/* Pindah surah: tombol (alternatif untuk geser layar) */}
+        <View className="flex-row items-center justify-between gap-3 px-6 pt-6">
+          <Pressable
+            onPress={() => goToSurah(surahData.info.nomor - 1)}
+            disabled={surahData.info.nomor <= 1}
+            accessibilityRole="button"
+            accessibilityLabel={t("prevSurah")}
+            className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-2xl border ${theme.border} ${theme.bgCard} active:opacity-80 ${surahData.info.nomor <= 1 ? "opacity-40" : ""}`}
+          >
+            <ArrowLeft size={18} color={theme.iconColor} style={flip} />
+            <Text className={`text-sm font-semibold ${theme.text}`}>{t("prevSurah")}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => goToSurah(surahData.info.nomor + 1)}
+            disabled={surahData.info.nomor >= 114}
+            accessibilityRole="button"
+            accessibilityLabel={t("nextSurah")}
+            className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-700 active:opacity-90 ${surahData.info.nomor >= 114 ? "opacity-40" : ""}`}
+          >
+            <Text className="text-sm font-semibold text-white">{t("nextSurah")}</Text>
+            <ArrowRight size={18} color="#fff" style={flip} />
+          </Pressable>
+        </View>
+        <Text className={`text-center text-[11px] mt-3 ${theme.textMuted}`}>{t("swipeSurahHint")}</Text>
       </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }

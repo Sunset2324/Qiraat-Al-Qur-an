@@ -63,6 +63,13 @@ export const DICT: Record<string, Row> = {
     "Verses from Thibbun Nabawi alongside selected herbal products from Ataubah Center.",
     "آيات من الطب النبوي مع منتجات عشبية مختارة من مركز التوبة.",
   ],
+  prevSurah: ["Surah sebelumnya", "Previous surah", "السورة السابقة"],
+  nextSurah: ["Surah berikutnya", "Next surah", "السورة التالية"],
+  swipeSurahHint: [
+    "Geser layar ke kanan untuk surah berikutnya, ke kiri untuk sebelumnya.",
+    "Swipe right for the next surah, left for the previous one.",
+    "اسحب لليمين للسورة التالية ولليسار للسابقة.",
+  ],
   adLabel: ["Iklan", "Ad", "إعلان"],
   adOpenProduct: ["Lihat Produk", "View Product", "عرض المنتج"],
   adOpenFailed: ["Tautan tidak dapat dibuka.", "Could not open the link.", "تعذّر فتح الرابط."],
