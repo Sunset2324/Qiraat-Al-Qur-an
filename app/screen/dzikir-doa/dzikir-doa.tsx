@@ -5,14 +5,17 @@ import {
   ArrowLeft, Search, BookOpen, AlertCircle, Sun, Moon, Hand, 
   Home, Utensils, Bed, Mosque, Book, Tag 
 } from "lucide-react-native";
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, useMemo, ReactNode } from "react";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import { getDaftarDoa } from "../../../src/services/quranService";
 import { isBakdaShalat } from "../../../src/data/bakdaShalat";
+import { DZIKIR_SUNNAH, pick } from "../../../src/data/dzikirSunnah";
 
 interface DoaItem {
-  id: number;
+  id: number | string; // number = EQuran.id, "dd-..." = data sunnah bawaan (offline)
+  kat?: "pagi" | "petang" | "bakda" | "doa"; // hanya data bawaan
+  order?: number;
   judul: string;
   doa: string;
   latin?: string;
@@ -33,7 +36,7 @@ const FILTERS = [
 
 export default function DzikirDoaScreen() {
   const { isDarkMode, theme } = useTheme();
-  const { t, flip } = useLanguage();
+  const { t, flip, language } = useLanguage();
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const [activeFilter, setActiveFilter] = useState(tab === "bakda" ? "bakda" : "all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -78,19 +81,37 @@ export default function DzikirDoaScreen() {
     return <Book size={24} color={isDarkMode ? "#34d399" : "#047857"} />;
   };
 
-  // PERBAIKAN LOGIKA: Filter sekarang juga memeriksa array `tags` secara eksplisit
-  const filteredData = doaList
+  // Data sunnah bawaan (offline) digabung di belakang data EQuran.id
+  const localItems: DoaItem[] = useMemo(
+    () =>
+      DZIKIR_SUNNAH.map((d, i) => ({
+        id: d.id,
+        kat: d.kat,
+        order: 1_000_000 + i,
+        judul: pick(d.judul, language),
+        doa: d.arab,
+        latin: d.latin,
+        arti: pick(d.arti, language),
+        grup: pick(d.grup, language),
+        tags: [],
+      })),
+    [language]
+  );
+  const allItems = useMemo(() => [...doaList.map((x) => ({ ...x, order: Number(x.id) })), ...localItems], [doaList, localItems]);
+
+  const filteredData = allItems
     .filter((item) => {
-      const bakda = isBakdaShalat(item);
+      const bakda = item.kat ? item.kat === "bakda" : isBakdaShalat(item);
       const itemTags = (item.tags || []).map(t => t.toLowerCase());
       
       const matchFilter =
         activeFilter === "bakda"
-          ? bakda || itemTags.some(t => t.includes("bakda") || t.includes("sholat"))
+          ? bakda || (!item.kat && itemTags.some(t => t.includes("bakda") || t.includes("sholat")))
           : !bakda && (
-              activeFilter === "all" || 
-              !!item.grup?.toLowerCase().includes(activeFilter) || 
-              itemTags.some(t => t.includes(activeFilter))
+              activeFilter === "all" ||
+              (item.kat
+                ? item.kat === activeFilter
+                : !!item.grup?.toLowerCase().includes(activeFilter) || itemTags.some(t => t.includes(activeFilter)))
             );
             
       const query = searchQuery.toLowerCase();
@@ -102,7 +123,7 @@ export default function DzikirDoaScreen() {
         
       return matchFilter && matchSearch;
     })
-    .sort((a, b) => (activeFilter === "bakda" ? a.id - b.id : 0));
+    .sort((a, b) => (activeFilter === "bakda" ? (a.order ?? 0) - (b.order ?? 0) : 0));
 
   if (loading) {
     return (
@@ -215,6 +236,8 @@ export default function DzikirDoaScreen() {
             </Pressable>
           ))}
         </View>
+
+        <Text className={`text-[10px] text-center mt-2 mb-4 ${theme.textMuted}`}>{t("dzikirDataCredit")}</Text>
 
         {filteredData.length === 0 && (
           <View className="py-12 items-center">

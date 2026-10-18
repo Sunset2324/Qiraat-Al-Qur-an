@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useIsFocused } from "expo-router";
 import { ArrowLeft, MapPin, Clock, Calendar, BookOpen } from "lucide-react-native";
 import { useState, useEffect, useMemo } from "react";
 import { useTheme } from "../../../src/context/ThemeContext";
@@ -8,6 +8,8 @@ import { getJadwalShalat } from "../../../src/services/quranService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import { formatGregorian, formatHijri } from "../../../src/utils/dateFormat";
+import QiblaCompass from "../../../src/components/QiblaCompass";
+import { useQibla } from "../../../src/hooks/useQibla";
 import LokasiShalatPicker, { LokasiShalat } from "../../../src/components/LokasiShalatPicker";
 
 const LOKASI_KEY = "user_shalat_location";
@@ -59,6 +61,8 @@ export default function JadwalShalatScreen() {
   const [pickerBuka, setPickerBuka] = useState(false);
   const [now, setNow] = useState(new Date());
   const [retryKey, setRetryKey] = useState(0);
+  const fokus = useIsFocused(); // sensor kompas mati saat layar kiblat/lain di atas
+  const qibla = useQibla(fokus);
 
   // 1) Baca lokasi tersimpan sekali saat layar dibuka
   useEffect(() => {
@@ -210,12 +214,30 @@ export default function JadwalShalatScreen() {
               </Text>
             </Pressable>
             
-            <Text className={`text-xs uppercase tracking-wider mb-1 ${theme.textMuted}`}>
-              {t("untilNext")}
-            </Text>
-            <Text className={`text-4xl font-bold ${theme.text}`}>
-              {loading ? "--:--:--" : countdown}
-            </Text>
+            <View className="flex-row items-center justify-between">
+              <View className="flex-1 pr-3">
+                <Text className={`text-xs uppercase tracking-wider mb-1 ${theme.textMuted}`}>
+                  {t("untilNext")}
+                </Text>
+                <Text className={`text-3xl font-bold ${theme.text}`} numberOfLines={1} adjustsFontSizeToFit>
+                  {loading ? "--:--:--" : countdown}
+                </Text>
+              </View>
+
+              {/* Kompas kiblat realtime (Aladhan) — ketuk untuk mode detail */}
+              <Pressable
+                onPress={() => router.push("/screen/kiblat/kiblat")}
+                accessibilityRole="button"
+                accessibilityLabel={t("qiblaTitle")}
+                className="items-center active:opacity-80"
+              >
+                <QiblaCompass size={96} bearing={qibla.bearing} heading={qibla.heading} compact />
+                <Text className={`text-[11px] font-semibold mt-2 ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>
+                  {t("qiblaTitle")}{qibla.bearing !== null ? ` · ${Math.round(qibla.bearing)}°` : ""}
+                </Text>
+                <Text className={`text-[10px] ${theme.textMuted}`}>{t("qiblaCardHint")}</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
 

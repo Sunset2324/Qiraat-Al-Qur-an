@@ -7,10 +7,14 @@ import { useTheme } from "../../../../src/context/ThemeContext";
 import { useLanguage } from "../../../../src/context/LanguageContext";
 import { getDetailDoa } from "../../../../src/services/quranService";
 import { ARABIC_FONT } from "../../../../src/constants/fonts";
+import DzikirCounter from "../../../../src/components/DzikirCounter";
+import { getLocalDzikir, isLocalDzikirId, pick } from "../../../../src/data/dzikirSunnah";
+
+const DZIKIR_RE = /dzikir|zikir|tasbih|tahmid|takbir|tahlil|istighfar|hauqalah|subhanallah|alhamdulillah|allahu akbar/i;
 
 export default function DoaDetailScreen() {
   const { isDarkMode, theme } = useTheme();
-  const { t, flip } = useLanguage();
+  const { t, flip, language } = useLanguage();
   const { id } = useLocalSearchParams();
   
   const [doa, setDoa] = useState<any>(null);
@@ -18,11 +22,31 @@ export default function DoaDetailScreen() {
 
   useEffect(() => {
     fetchDetail();
-  }, [id]);
+  }, [id, language]);
 
   const fetchDetail = async () => {
     try {
       setLoading(true);
+      if (isLocalDzikirId(id)) {
+        // data bawaan: tanpa jaringan
+        const d = getLocalDzikir(id);
+        setDoa(
+          d && {
+            judul: pick(d.judul, language),
+            grup: pick(d.grup, language),
+            doa: d.arab,
+            latin: d.latin,
+            arti: pick(d.arti, language),
+            catatan: pick(d.catatan, language),
+            faedah: pick(d.faedah, language),
+            sumber: d.sumber,
+            jumlah: d.jumlah,
+            counter: d.kat !== "doa" || d.jumlah > 1,
+            tags: [],
+          }
+        );
+        return;
+      }
       const data = await getDetailDoa(Number(id));
       setDoa(data);
     } catch (error) {
@@ -93,6 +117,31 @@ export default function DoaDetailScreen() {
             </Text>
           </View>
         </View>
+
+        {!!doa.catatan && (
+          <View className="px-6 mb-6">
+            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-2 uppercase tracking-wider`}>{t("noteTitle")}</Text>
+            <Text className={`text-base leading-6 ${theme.text}`} style={{ textAlign: "left" }}>{doa.catatan}</Text>
+          </View>
+        )}
+
+        {(doa.counter || DZIKIR_RE.test(`${doa.judul} ${doa.grup ?? ""}`)) && (
+          <View className="px-6 mb-6">
+            <DzikirCounter recommended={doa.jumlah} />
+          </View>
+        )}
+
+        {!!doa.faedah && (
+          <View className="px-6 mb-6">
+            <Text className={`text-sm font-semibold ${theme.textSecondary} mb-3 uppercase tracking-wider`}>{t("faedahTitle")}</Text>
+            <View className={`p-5 rounded-2xl ${isDarkMode ? "bg-amber-900/20" : "bg-amber-50"} border ${isDarkMode ? "border-amber-800" : "border-amber-200"}`}>
+              <Text className={`text-base leading-7 ${theme.text}`} style={{ textAlign: "left" }}>{doa.faedah}</Text>
+              {!!doa.sumber && (
+                <Text className={`text-[11px] mt-3 ${theme.textMuted}`}>{t("sourceHadith", { src: doa.sumber })}</Text>
+              )}
+            </View>
+          </View>
+        )}
 
         {!!doa.tentang && String(doa.tentang).trim().length > 0 && (
           <View className="px-6 mb-6">
