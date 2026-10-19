@@ -3,7 +3,7 @@
 // HP Fisik (ganti dengan IP laptop): http://192.168.x.x:3000/api
 // iOS Simulator: http://localhost:3000/api
 
-export const API_BASE_URL = "https://api.alqiraat.app";
+export const API_BASE_URL = "https://api.alqiraat.app/api";
 
 // 2. Jika pakai iOS Simulator di Mac:
 // export const API_BASE_URL = 'http://localhost:3000/api';
