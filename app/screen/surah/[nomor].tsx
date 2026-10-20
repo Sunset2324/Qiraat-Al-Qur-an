@@ -11,6 +11,7 @@ import AudioPlayer from "../../../src/components/AudioPlayer";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import { reciterName, reciterDetail } from "../../../src/i18n/qiraatI18n";
 import { saveLastRead, getLastReadAyah } from "../../../src/utils/readingHistory";
+import { QURAN_FONT } from "../../../src/constants/fonts";
 
 interface AyatItem {
   nomor: number;
@@ -789,10 +790,10 @@ export default function SurahDetailScreen() {
                     style={{
                       writingDirection: "rtl",
                       textAlign: "right",
-                      lineHeight: 65,
+                      lineHeight: 75,
                       includeFontPadding: false,
                       textAlignVertical: "center",
-                      fontFamily: "System",
+                      fontFamily: QURAN_FONT,
                     }}
                   >
                     {ayat.teksArab}

@@ -67,7 +67,10 @@ function RootLayoutContent() {
 export default function RootLayout() {
   // Muat font Arab sebelum menampilkan app. Kalau gagal dimuat, app tetap jalan
   // dengan font sistem (error dianggap sudah selesai).
-  const [fontsLoaded, fontError] = useFonts({ AmiriQuran_400Regular });
+  const [fontsLoaded, fontError] = useFonts({
+    AmiriQuran_400Regular,
+    UthmanicHafs: require("../assets/fonts/UthmanicHafs.otf"),
+  });
   if (!fontsLoaded && !fontError) {
     return <View style={{ flex: 1, backgroundColor: "#fbf8ef" }} />;
   }
