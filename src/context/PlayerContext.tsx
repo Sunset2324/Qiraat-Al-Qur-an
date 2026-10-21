@@ -47,7 +47,7 @@ interface PlayerControls {
   switching: boolean;
   /** pesan singkat (mis. surah tidak tersedia untuk qari ini), hilang sendiri */
   notice: string | null;
-  start: (session: PlayerSession, index?: number) => boolean;
+  start: (session: PlayerSession, index?: number, cancelPending?: boolean) => boolean;
   toggle: () => void;
   pause: () => void;
   stop: () => void;
@@ -132,11 +132,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // cancelPending=false dipakai playSurah (token-nya sendiri yang sedang berjalan)
   const start = useCallback(
-    (s: PlayerSession, index = 0) => {
+    (s: PlayerSession, index = 0, cancelPending = true) => {
       const url = s.urls[index];
       if (!url) return false;
-      switchTokenRef.current += 1; // batalkan perpindahan surah yang masih berjalan
+      if (cancelPending) {
+        switchTokenRef.current += 1; // batalkan perpindahan surah yang masih berjalan
+        setSwitching(false);
+      }
       sessionRef.current = s;
       indexRef.current = index;
       lastFinishedRef.current = -1;
@@ -185,7 +189,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           urls: kind === "ayah" ? ayahUrls : [full as string],
         };
         const first = next.urls.findIndex(Boolean);
-        return start(next, first < 0 ? 0 : first);
+        return start(next, first < 0 ? 0 : first, false);
       } catch (e: any) {
         console.warn("Gagal memuat surah untuk pemutar:", e?.message);
         showNotice(tRef.current("surahNoAudio"));

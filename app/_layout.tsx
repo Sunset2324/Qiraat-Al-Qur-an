@@ -1,7 +1,7 @@
 // @ts-ignore NativeWind's global stylesheet is loaded at runtime.
 import "../src/globals.css";
 
-import { Slot, useSegments, useGlobalSearchParams } from "expo-router";
+import { Slot, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View, Text, TextInput, Platform, PermissionsAndroid } from "react-native";
 import { useEffect } from "react";
@@ -25,14 +25,12 @@ configureReanimatedLogger({
 });
 
 // Mini player di luar tab (di dalam tab, dia ditaruh di atas tab bar oleh app/(tabs)/_layout.tsx).
-// Disembunyikan di splash dan di layar surah yang sedang diputar (layar itu punya kontrol sendiri).
+// Disembunyikan hanya di splash. Layar surah juga menampilkannya.
 function GlobalMiniPlayer() {
   const segments = useSegments() as string[];
-  const params = useGlobalSearchParams<{ nomor?: string }>();
   const { session } = usePlayer();
   if (!session) return null;
   if (segments.length === 0 || segments[0] === "(tabs)") return null;
-  if (segments[0] === "screen" && segments[1] === "surah" && Number(params.nomor) === session.surah) return null;
   return <MiniPlayer withSafeBottom />;
 }
 
