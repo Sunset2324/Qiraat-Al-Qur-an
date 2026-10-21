@@ -12,7 +12,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.qiraat.alquran"
+      "bundleIdentifier": "app.qiraat_al_qur_an"
     },
     "android": {
       "adaptiveIcon": {
