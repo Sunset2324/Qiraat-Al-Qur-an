@@ -2,11 +2,12 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { View, Text, ScrollView, Pressable, ActivityIndicator, PanResponder, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
-import { ArrowLeft, ArrowRight, Bookmark, Headphones, Volume2, Play, Pause } from "lucide-react-native";
+import { ArrowLeft, ArrowRight, Bookmark, Headphones, Volume2, Play, Pause, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { getDetailSurahMerged, getReciters, type Reciter } from "../../../src/services/quranService";
-import { useAyahPlaylist } from "../../../src/hooks/useAyahPlaylist";
+import { usePlayer, type PlayerSession } from "../../../src/context/PlayerContext";
+import SurahPickerSheet from "../../../src/components/SurahPickerSheet";
 import AudioPlayer from "../../../src/components/AudioPlayer";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import { reciterName, reciterDetail } from "../../../src/i18n/qiraatI18n";
@@ -148,7 +149,30 @@ export default function SurahDetailScreen() {
     const nama = ra && typeof ra === "object" ? ra.nama : typeof ra === "string" ? ra : undefined;
     return { title: surahData?.info.namaLatin, artist: nama };
   }, [surahData]);
-  const ayahPlaylist = useAyahPlaylist(ayahAudioUrls, lockMeta);
+
+  // Pemutar global (lanjut jalan walau layar ini ditutup; kontrol ada di mini player)
+  const player = usePlayer();
+  const isMine =
+    !!surahData && player.session?.surah === surahData.info.nomor && player.session.kind === "ayah";
+  const buildSession = (): PlayerSession => ({
+    kind: "ayah",
+    surah: surahData!.info.nomor,
+    surahName: surahData!.info.namaLatin,
+    reciterId: selectedReciterId ? Number(selectedReciterId) : null,
+    reciterName: lockMeta.artist,
+    mushafId: activeMushafId,
+    urls: ayahAudioUrls,
+  });
+  const ayahPlaylist = {
+    currentIndex: isMine ? player.currentIndex : 0,
+    isPlaying: isMine && player.isPlaying,
+    trackCount: ayahAudioUrls.filter(Boolean).length,
+    playFrom: (i: number) => {
+      if (surahData) player.start(buildSession(), i);
+    },
+    pause: () => player.pause(),
+  };
+  const [showPicker, setShowPicker] = useState(false);
 
   // ↔ Geser layar untuk pindah surah: geser ke kanan = surah berikutnya,
   // geser ke kiri = surah sebelumnya (seperti membalik halaman mushaf).
@@ -157,8 +181,14 @@ export default function SurahDetailScreen() {
   const mushafParamRef = useRef(routeMushafId);
   mushafParamRef.current = routeMushafId;
 
+  const playerRef = useRef(player);
+  playerRef.current = player;
+
   const goToSurah = useCallback((n: number) => {
     if (!Number.isInteger(n) || n < 1 || n > 114) return;
+    // Kalau surah ini sedang diputar, audio ikut pindah ke surah tujuan (seperti tombol next di pemutar musik)
+    const pl = playerRef.current;
+    if (pl.isPlaying && pl.session?.surah === nomorRef.current) pl.playSurah(n);
     const mid = mushafParamRef.current;
     router.replace({
       pathname: "/screen/surah/[nomor]",
@@ -192,7 +222,7 @@ export default function SurahDetailScreen() {
 
   // true setelah "Ikuti Bacaan" / tombol play salah satu ayat pernah ditekan,
   // dipakai supaya highlight ayat aktif nggak nongol sebelum user memutar apa-apa.
-  const [followStarted, setFollowStarted] = useState(false);
+  const followStarted = isMine;
 
   const activeAyahNumber = followStarted
     ? surahData?.ayat[ayahPlaylist.currentIndex]?.nomor ?? null
@@ -380,8 +410,6 @@ export default function SurahDetailScreen() {
       try {
         setLoading(true);
         setError(null);
-        setFollowStarted(false);
-        ayahPlaylist.stop();
 
         let mushafIdToUse = "1";
         if (routeMushafId) {
@@ -434,7 +462,6 @@ export default function SurahDetailScreen() {
     const index = surahData.ayat.findIndex((a) => a.nomor === ayatNomor);
     if (index === -1) return;
 
-    setFollowStarted(true);
     ayahPlaylist.playFrom(index);
   };
 
@@ -447,7 +474,6 @@ export default function SurahDetailScreen() {
       return;
     }
 
-    setFollowStarted(true);
     const resumeIndex = ayahPlaylist.currentIndex >= 0 ? ayahPlaylist.currentIndex : 0;
     ayahPlaylist.playFrom(resumeIndex);
   };
@@ -538,6 +564,52 @@ export default function SurahDetailScreen() {
           <Text className="text-xs text-center text-red-600">{t("tapRetry", { error: String(error) })}</Text>
         </Pressable>
       )}
+
+      {/* Bar pindah surah: sebelumnya / daftar semua surah / berikutnya */}
+      <View className={`flex-row items-center px-3 py-2 border-b ${theme.border}`}>
+        <Pressable
+          onPress={() => goToSurah(surahData.info.nomor - 1)}
+          disabled={surahData.info.nomor <= 1}
+          accessibilityRole="button"
+          accessibilityLabel={t("prevSurah")}
+          hitSlop={8}
+          className={`h-9 w-9 items-center justify-center rounded-full active:opacity-60 ${surahData.info.nomor <= 1 ? "opacity-30" : ""}`}
+        >
+          <ChevronLeft size={22} color={theme.iconColor} style={flip} />
+        </Pressable>
+        <Pressable
+          onPress={() => setShowPicker(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t("pickSurah")}
+          className={`flex-1 mx-2 flex-row items-center justify-center gap-2 py-2 rounded-full border ${theme.border} ${theme.bgCard} active:opacity-70`}
+        >
+          <Text className={`text-sm font-bold ${theme.text}`} numberOfLines={1}>
+            {surahData.info.nomor}. {surahData.info.namaLatin}
+          </Text>
+          <ChevronDown size={16} color={theme.iconColor} />
+        </Pressable>
+        <Pressable
+          onPress={() => goToSurah(surahData.info.nomor + 1)}
+          disabled={surahData.info.nomor >= 114}
+          accessibilityRole="button"
+          accessibilityLabel={t("nextSurah")}
+          hitSlop={8}
+          className={`h-9 w-9 items-center justify-center rounded-full active:opacity-60 ${surahData.info.nomor >= 114 ? "opacity-30" : ""}`}
+        >
+          <ChevronRight size={22} color={theme.iconColor} style={flip} />
+        </Pressable>
+      </View>
+
+      <SurahPickerSheet
+        visible={showPicker}
+        currentNomor={surahData.info.nomor}
+        playingNomor={player.session?.surah ?? null}
+        onClose={() => setShowPicker(false)}
+        onSelect={(n) => {
+          setShowPicker(false);
+          if (n !== surahData.info.nomor) goToSurah(n);
+        }}
+      />
 
       <View className="flex-1" {...swipe.panHandlers}>
       <ScrollView
@@ -694,6 +766,9 @@ export default function SurahDetailScreen() {
               title={`Murottal Full: ${surahData.info.namaLatin}`}
               notifTitle={surahData.info.namaLatin}
               artist={reciterAktifName !== "—" ? reciterAktifName : undefined}
+              surahNomor={surahData.info.nomor}
+              reciterId={selectedReciterId ? Number(selectedReciterId) : null}
+              mushafId={activeMushafId}
             />
           </View>
         ) : (

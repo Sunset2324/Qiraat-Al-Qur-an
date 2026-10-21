@@ -1,7 +1,7 @@
 // @ts-ignore NativeWind's global stylesheet is loaded at runtime.
 import "../src/globals.css";
 
-import { Slot } from "expo-router";
+import { Slot, useSegments, useGlobalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View, Text, TextInput, Platform, PermissionsAndroid } from "react-native";
 import { useEffect } from "react";
@@ -9,6 +9,8 @@ import { setAudioModeAsync } from "expo-audio";
 import { useFonts, AmiriQuran_400Regular } from "@expo-google-fonts/amiri-quran";
 import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
 import { LanguageProvider } from "../src/context/LanguageContext";
+import { PlayerProvider, usePlayer } from "../src/context/PlayerContext";
+import MiniPlayer from "../src/components/MiniPlayer";
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
 
 // Batasi pembesaran font sistem agar layout tidak pecah di HP dengan font scale besar
@@ -21,6 +23,18 @@ configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
   strict: false, 
 });
+
+// Mini player di luar tab (di dalam tab, dia ditaruh di atas tab bar oleh app/(tabs)/_layout.tsx).
+// Disembunyikan di splash dan di layar surah yang sedang diputar (layar itu punya kontrol sendiri).
+function GlobalMiniPlayer() {
+  const segments = useSegments() as string[];
+  const params = useGlobalSearchParams<{ nomor?: string }>();
+  const { session } = usePlayer();
+  if (!session) return null;
+  if (segments.length === 0 || segments[0] === "(tabs)") return null;
+  if (segments[0] === "screen" && segments[1] === "surah" && Number(params.nomor) === session.surah) return null;
+  return <MiniPlayer withSafeBottom />;
+}
 
 function RootLayoutContent() {
   const { isDarkMode } = useTheme();
@@ -59,7 +73,10 @@ function RootLayoutContent() {
   return (
     <View className={`flex-1 ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fbf8ef]"}`}>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
-      <Slot />
+      <View className="flex-1">
+        <Slot />
+      </View>
+      <GlobalMiniPlayer />
     </View>
   );
 }
@@ -78,7 +95,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <RootLayoutContent />
+        <PlayerProvider>
+          <RootLayoutContent />
+        </PlayerProvider>
       </LanguageProvider>
     </ThemeProvider>
   );

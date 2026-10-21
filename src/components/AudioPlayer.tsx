@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Play, Pause, SkipBack, SkipForward } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
-import { useAudio } from '../hooks/useAudio';
+import { usePlayer, usePlayerProgress } from '../context/PlayerContext';
 
 interface AudioPlayerProps {
   audioUrl: string;
@@ -10,32 +10,46 @@ interface AudioPlayerProps {
   artist?: string;
   /** Nama surah, jadi judul notifikasi. */
   notifTitle?: string;
+  /** Info sesi untuk pemutar global (mini player, surah berikutnya, dst). */
+  surahNomor: number;
+  reciterId: number | null;
+  mushafId: string;
 }
 
-export default function AudioPlayer({ audioUrl, title = 'Murottal', artist, notifTitle }: AudioPlayerProps) {
+export default function AudioPlayer({ audioUrl, title = 'Murottal', artist, notifTitle, surahNomor, reciterId, mushafId }: AudioPlayerProps) {
   const { isDarkMode, theme } = useTheme();
-  const {
-    isPlaying,
-    isLoading,
-    position,
-    duration,
-    formattedPosition,
-    formattedDuration,
-    playAudio,
-    togglePlayPause,
-    seekBy, // Ambil fungsi seekBy
-  } = useAudio();
+  const player = usePlayer();
+  const prog = usePlayerProgress();
 
-  // Play audio saat URL berubah atau komponen pertama kali di-mount dengan URL
-  // Kita gunakan useEffect sederhana untuk memastikan audio dimuat saat url berubah
-  // Namun, untuk menghindari auto-play yang tidak diinginkan, kita bisa memanggil playAudio 
-  // hanya jika user belum pernah berinteraksi, atau biarkan user menekan tombol play.
-  // Di sini, kita biarkan user yang menekan tombol play secara manual untuk UX yang lebih baik.
-  
-  const handlePlay = async () => {
-    if (!isPlaying && !isLoading) {
-      await playAudio(audioUrl, { title: notifTitle ?? title, artist });
+  // Pemutar global dipakai bersama: kartu ini hanya "aktif" kalau yang sedang
+  // diputar memang audio surah penuh ini.
+  const mine = player.session?.kind === 'full' && player.session.urls[0] === audioUrl;
+  const isPlaying = mine && player.isPlaying;
+  const isLoading = mine && player.isLoading;
+  const position = mine ? prog.position : 0;
+  const duration = mine ? prog.duration : 0;
+  const fmt = (sec: number) => {
+    const total = Math.max(0, Math.floor(sec || 0));
+    return `${Math.floor(total / 60)}:${total % 60 < 10 ? '0' : ''}${total % 60}`;
+  };
+  const formattedPosition = fmt(position);
+  const formattedDuration = fmt(duration);
+  const seekBy = player.seekBy;
+
+  const handlePlay = () => {
+    if (mine) {
+      player.toggle();
+      return;
     }
+    player.start({
+      kind: 'full',
+      surah: surahNomor,
+      surahName: notifTitle ?? title,
+      reciterId,
+      reciterName: artist,
+      mushafId,
+      urls: [audioUrl],
+    });
   };
 
   // Progress bar
@@ -61,7 +75,7 @@ export default function AudioPlayer({ audioUrl, title = 'Murottal', artist, noti
 
         {/* Play/Pause Button */}
         <TouchableOpacity
-          onPress={isPlaying ? togglePlayPause : handlePlay}
+          onPress={handlePlay}
           disabled={isLoading}
           className="w-16 h-16 bg-emerald-600 rounded-full items-center justify-center shadow-lg active:opacity-80"
         >

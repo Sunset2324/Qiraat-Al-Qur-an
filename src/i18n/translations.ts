@@ -64,6 +64,13 @@ export const DICT: Record<string, Row> = {
     "آيات من الطب النبوي مع منتجات عشبية مختارة من مركز التوبة.",
   ],
   prevSurah: ["Surah sebelumnya", "Previous surah", "السورة السابقة"],
+  pickSurah: ["Pilih surah", "Choose surah", "اختر السورة"],
+  surahNoAudio: [
+    "Audio surah ini belum tersedia untuk qari terpilih.",
+    "Audio for this surah isn't available for the selected reciter.",
+    "صوت هذه السورة غير متاح للقارئ المختار.",
+  ],
+  closePlayer: ["Tutup pemutar", "Close player", "إغلاق المشغل"],
   nextSurah: ["Surah berikutnya", "Next surah", "السورة التالية"],
   swipeSurahHint: [
     "Geser layar ke kanan untuk surah berikutnya, ke kiri untuk sebelumnya.",

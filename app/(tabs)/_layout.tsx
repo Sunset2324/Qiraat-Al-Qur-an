@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useLanguage } from "../../src/context/LanguageContext";
+import MiniPlayer from "../../src/components/MiniPlayer";
 
 const TAB_LABEL_KEY: Record<string, string> = {
   index: "tabHome",
@@ -28,7 +29,9 @@ function CustomFooter({ state, navigation }: any) {
   const inactive = isDarkMode ? "#9CA3AF" : "#6B7280";
 
   return (
-    <View className="px-4 bg-transparent" style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
+    <View className="bg-transparent" style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
+      <MiniPlayer />
+      <View className="px-4">
       <View
         className={`flex-row items-center justify-between rounded-2xl px-2 border ${
           isDarkMode ? "bg-[#242424] border-gray-700" : "bg-white border-gray-100"
@@ -68,6 +71,7 @@ function CustomFooter({ state, navigation }: any) {
             </Pressable>
           );
         })}
+      </View>
       </View>
     </View>
   );
