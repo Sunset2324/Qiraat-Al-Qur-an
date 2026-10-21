@@ -19,7 +19,7 @@
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#fbf8ef"
       },
-      "package": "com.qiraat.alquran",
+      "package": "app.qiraat_al_qur_an",
       "permissions": [
         "POST_NOTIFICATIONS",
         "ACCESS_COARSE_LOCATION",
