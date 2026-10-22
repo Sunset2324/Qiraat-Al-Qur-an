@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { View, Text, ScrollView, Pressable, ActivityIndicator, PanResponder, Dimensions } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, PanResponder, Dimensions, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { ArrowLeft, ArrowRight, Bookmark, Headphones, Volume2, Play, Pause, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react-native";
@@ -267,6 +267,8 @@ export default function SurahDetailScreen() {
   // (buat kasih penanda 📍 di list + auto-scroll pas pertama buka).
   const [lastReadAyahNumber, setLastReadAyahNumber] = useState<number | null>(null);
   const hasAutoScrolledToLastRead = useRef(false);
+  // true setelah user menandai ayat secara manual: scroll tidak menimpa pilihannya lagi
+  const pinnedRef = useRef(false);
 
   // Umpan balik singkat pas tombol bookmark ditekan
   const [justSaved, setJustSaved] = useState(false);
@@ -292,7 +294,7 @@ export default function SurahDetailScreen() {
   const handleScroll = (e: any) => {
     hasScrolledRef.current = true;
     currentScrollY.current = e.nativeEvent.contentOffset.y;
-    if (!surahData) return;
+    if (!surahData || pinnedRef.current) return;
     const ayatNomor = getVisibleAyahNumber();
     if (ayatNomor == null) return;
     latestProgressRef.current = {
@@ -308,6 +310,7 @@ export default function SurahDetailScreen() {
   useEffect(() => {
     hasAutoScrolledToLastRead.current = false;
     hasScrolledRef.current = false;
+    pinnedRef.current = false;
     if (!surahData) return;
 
     const info = surahData.info;
@@ -390,12 +393,43 @@ export default function SurahDetailScreen() {
     return () => clearTimeout(timer);
   }, [surahData, lastReadAyahNumber, routeAyat]);
 
-  // Tombol bookmark di header: simpan progres saat ini secara eksplisit
-  const handleBookmarkPress = async () => {
-    if (!latestProgressRef.current) return;
-    await saveLastRead(latestProgressRef.current);
-    setJustSaved(true);
-    setTimeout(() => setJustSaved(false), 1500);
+  // Simpan tanda "terakhir dibaca" ke ayat tertentu; konfirmasi dulu sebelum menyimpan
+  const confirmMarkAyah = async (ayatNomor: number) => {
+    if (!surahData) return;
+    const progress = {
+      surahNomor: surahData.info.nomor,
+      namaLatin: surahData.info.namaLatin,
+      ayatNomor,
+      totalAyat: surahData.ayat.length,
+      mushafId: activeMushafId,
+    };
+    const commit = async () => {
+      pinnedRef.current = true;
+      latestProgressRef.current = progress;
+      await saveLastRead(progress);
+      setLastReadAyahNumber(ayatNomor);
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 1500);
+    };
+    const previous = await getLastReadAyah(progress.surahNomor, progress.mushafId);
+    if (previous === ayatNomor) return; // sudah jadi tanda
+    const hasOther = previous != null;
+    Alert.alert(
+      t(hasOther ? "replaceMarkerTitle" : "markAyahTitle"),
+      hasOther
+        ? t("replaceMarkerMsg", { from: previous as number, to: ayatNomor })
+        : t("markAyahMsg", { n: ayatNomor }),
+      [
+        { text: t("cancel"), style: "cancel" },
+        { text: t(hasOther ? "replaceMarkerConfirm" : "markAyahConfirm"), onPress: commit },
+      ]
+    );
+  };
+
+  // Tombol bookmark di header: tandai ayat yang sedang terlihat di layar
+  const handleBookmarkPress = () => {
+    const n = latestProgressRef.current?.ayatNomor ?? getVisibleAyahNumber();
+    if (n != null) confirmMarkAyah(n);
   };
 
   // ─────────────────────────────────────────────────────────
@@ -653,8 +687,8 @@ export default function SurahDetailScreen() {
                     <Pressable
                       key={f.key}
                       onPress={() => setReciterFilter(f.key)}
-                      className={`px-3 py-1.5 rounded-full ${
-                        active ? "bg-emerald-600" : isDarkMode ? "bg-gray-700" : "bg-gray-200"
+                      className={`px-3 py-1.5 rounded-full border ${
+                        active ? "bg-emerald-600 border-emerald-600" : `${theme.bgCard} ${theme.border}`
                       }`}
                     >
                       <Text className={`text-xs font-medium ${active ? "text-white" : theme.text}`}>
@@ -833,7 +867,13 @@ export default function SurahDetailScreen() {
               <View
                 key={ayat.nomor}
                 onLayout={(e) => { ayahOffsetY.current[ayat.nomor] = e.nativeEvent.layout.y; }}
-                className={`mb-8 rounded-2xl ${isActive ? (isDarkMode ? "bg-emerald-900/20" : "bg-emerald-50") : isLastRead ? (isDarkMode ? "bg-amber-900/10" : "bg-amber-50") : ""} p-3 -mx-3`}
+                className={`mb-4 rounded-2xl border p-4 ${
+                  isActive
+                    ? isDarkMode ? "border-emerald-600 bg-emerald-900/20" : "border-emerald-600 bg-emerald-50"
+                    : isLastRead
+                    ? isDarkMode ? "border-amber-700 bg-amber-900/10" : "border-amber-300 bg-amber-50"
+                    : `${theme.border} ${theme.bgCard}`
+                }`}
               >
                 {isLastRead && (
                   <View className="flex-row items-center gap-1 mb-2 -mt-1">
@@ -845,9 +885,15 @@ export default function SurahDetailScreen() {
                 )}
 
                 <View className="flex-row items-center justify-between mb-4">
-                  <View className={`h-8 w-8 rounded-full ${isDarkMode ? "bg-[#f5f0e1]" : "bg-[#f5f0e1]"} items-center justify-center`}>
+                  <Pressable
+                    onPress={() => confirmMarkAyah(ayat.nomor)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("markAyahTitle")}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    className={`h-8 w-8 rounded-full ${isLastRead ? "bg-amber-200" : "bg-[#f5f0e1]"} items-center justify-center active:opacity-70`}
+                  >
                     <Text className={`text-xs font-bold text-emerald-800`}>{ayat.nomor}</Text>
-                  </View>
+                  </Pressable>
 
                   <Pressable
                     onPress={() => handlePlayAyat(ayat.nomor)}
@@ -875,15 +921,9 @@ export default function SurahDetailScreen() {
                   </Text>
                 </View>
 
-                <View className={`p-4 rounded-xl ${isDarkMode ? "bg-[#242424]" : "bg-[#fffcf5]"} border ${theme.border}`}>
-                  <Text className={`text-sm leading-6 ${theme.textMuted}`} style={{ textAlign: "center" }}>
-                    {ayat.teksIndonesia}
-                  </Text>
-                </View>
-
-                {ayat.nomor < surahData.info.jumlahAyat && (
-                  <View className={`h-px w-full my-6 ${isDarkMode ? "bg-gray-700" : "bg-gray-200"}`} />
-                )}
+                <Text className={`text-sm leading-6 ${theme.textMuted}`} style={{ textAlign: "center" }}>
+                  {ayat.teksIndonesia}
+                </Text>
               </View>
             );
           })}

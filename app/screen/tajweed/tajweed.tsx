@@ -90,8 +90,8 @@ export default function TajweedScreen() {
               <Pressable
                 key={cat ?? "all"}
                 onPress={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full mr-2 ${
-                  aktif ? "bg-emerald-600" : isDarkMode ? "bg-gray-700" : "bg-gray-200"
+                className={`px-4 py-2 rounded-full mr-2 border ${
+                  aktif ? "bg-emerald-600 border-emerald-600" : `${theme.bgCard} ${theme.border}`
                 }`}
               >
                 <Text className={`text-xs font-medium ${aktif ? "text-white" : theme.text}`}>

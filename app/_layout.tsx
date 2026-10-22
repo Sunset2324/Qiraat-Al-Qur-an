@@ -71,10 +71,13 @@ function RootLayoutContent() {
   return (
     <View className={`flex-1 ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fbf8ef]"}`}>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
-      <View className="flex-1">
-        <Slot />
+      {/* Tablet/layar lebar: konten dibatasi 720 dp dan di tengah, HP tetap penuh */}
+      <View className="flex-1" style={{ width: "100%", maxWidth: 720, alignSelf: "center" }}>
+        <View className="flex-1">
+          <Slot />
+        </View>
+        <GlobalMiniPlayer />
       </View>
-      <GlobalMiniPlayer />
     </View>
   );
 }

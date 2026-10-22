@@ -21,22 +21,20 @@ const TAB_ICON: Record<string, [string, string]> = {
 };
 
 function CustomFooter({ state, navigation }: any) {
-  const { isDarkMode } = useTheme();
+  const { isDarkMode, theme } = useTheme();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
 
-  const active = "#059669";
-  const inactive = isDarkMode ? "#9CA3AF" : "#6B7280";
+  // Gaya sama dengan prototype di landing page: bar rata, latar krem, garis pasir di atas
+  const active = isDarkMode ? "#34d399" : "#047857";
+  const inactive = isDarkMode ? "#9CA3AF" : "#9a9486";
 
   return (
-    <View className="bg-transparent" style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
+    <View className="bg-transparent">
       <MiniPlayer />
-      <View className="px-4">
       <View
-        className={`flex-row items-center justify-between rounded-2xl px-2 border ${
-          isDarkMode ? "bg-[#242424] border-gray-700" : "bg-white border-gray-100"
-        }`}
-        style={{ minHeight: 64, elevation: 6 }}
+        className={`flex-row items-center justify-around border-t ${theme.bgCard} ${theme.border}`}
+        style={{ paddingBottom: Math.max(insets.bottom, 6), paddingTop: 6 }}
       >
         {state.routes.map((route: any, index: number) => {
           const isFocused = state.index === index;
@@ -56,22 +54,25 @@ function CustomFooter({ state, navigation }: any) {
               accessibilityState={{ selected: isFocused }}
               accessibilityLabel={label}
               hitSlop={4}
-              className="flex-1 items-center justify-center py-2 active:opacity-60"
-              style={{ minHeight: 56 }}
+              className="flex-1 items-center justify-center py-1 active:opacity-60"
+              style={{ minHeight: 52 }}
             >
-              <Ionicons name={(isFocused ? on : off) as any} size={24} color={isFocused ? active : inactive} />
+              <Ionicons name={(isFocused ? on : off) as any} size={22} color={isFocused ? active : inactive} />
               <Text
                 numberOfLines={1}
                 adjustsFontSizeToFit
                 minimumFontScale={0.8}
-                className={`text-[10px] mt-1 ${isFocused ? "text-emerald-600 font-bold" : isDarkMode ? "text-gray-400" : "text-gray-500"}`}
+                className={`text-[10px] mt-0.5 ${
+                  isFocused
+                    ? `font-bold ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`
+                    : isDarkMode ? "text-gray-400" : "text-[#9a9486]"
+                }`}
               >
                 {label}
               </Text>
             </Pressable>
           );
         })}
-      </View>
       </View>
     </View>
   );

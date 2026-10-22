@@ -55,7 +55,7 @@ export default function MiniPlayer({ withSafeBottom = false }: { withSafeBottom?
         </View>
       ) : null}
       <View
-        className={`rounded-2xl border overflow-hidden ${isDarkMode ? "bg-[#242424] border-gray-700" : "bg-white border-gray-200"}`}
+        className={`rounded-2xl border overflow-hidden ${theme.bgCard} ${theme.border}`}
         style={{ elevation: 8 }}
       >
         <View className="flex-row items-center px-3 py-2.5">
@@ -124,7 +124,7 @@ export default function MiniPlayer({ withSafeBottom = false }: { withSafeBottom?
             <X size={16} color={theme.iconColor} />
           </Pressable>
         </View>
-        <View className={`h-[3px] ${isDarkMode ? "bg-gray-700" : "bg-gray-200"}`}>
+        <View className={`h-[3px] ${isDarkMode ? "bg-gray-700" : "bg-emerald-950/10"}`}>
           <View className="h-full bg-emerald-600" style={{ width: `${(busy ? 0 : progress) * 100}%` }} />
         </View>
       </View>

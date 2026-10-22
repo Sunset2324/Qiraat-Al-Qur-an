@@ -412,4 +412,26 @@ export const DICT: Record<string, Row> = {
   qiblaCardHint: ["Ketuk untuk detail", "Tap for details", "اضغط للتفاصيل"],
   qiblaNorthShort: ["U", "N", "ش"],
   qiblaFlatHint: ["Letakkan ponsel mendatar agar lebih akurat.", "Hold the phone flat for better accuracy.", "أمسك الهاتف أفقيًا لدقة أفضل."],
+  cancel: ["Batal", "Cancel", "إلغاء"],
+  clearHistoryTitle: ["Hapus semua riwayat?", "Clear all history?", "حذف كل السجل؟"],
+  clearHistoryMsg: [
+    "Semua riwayat dan tanda terakhir dibaca di daftar ini akan dihapus. Tindakan ini tidak bisa dibatalkan.",
+    "All reading history and last-read entries in this list will be removed. This cannot be undone.",
+    "سيتم حذف كل السجل وعلامات آخر قراءة في هذه القائمة. لا يمكن التراجع عن هذا الإجراء.",
+  ],
+  clearHistoryConfirm: ["Hapus", "Delete", "حذف"],
+  replaceMarkerTitle: ["Ganti tanda terakhir dibaca?", "Replace last-read marker?", "استبدال علامة آخر قراءة؟"],
+  replaceMarkerMsg: [
+    "Tanda terakhir dibaca di surah ini akan dipindah dari ayat {from} ke ayat {to}.",
+    "The last-read marker in this surah will move from verse {from} to verse {to}.",
+    "ستنتقل علامة آخر قراءة في هذه السورة من الآية {from} إلى الآية {to}.",
+  ],
+  replaceMarkerConfirm: ["Ganti", "Replace", "استبدال"],
+  markAyahTitle: ["Tandai terakhir dibaca?", "Mark as last read?", "تحديد كآخر قراءة؟"],
+  markAyahMsg: [
+    "Tandai ayat {n} sebagai terakhir dibaca di surah ini?",
+    "Mark verse {n} as your last read in this surah?",
+    "تحديد الآية {n} كآخر قراءة في هذه السورة؟",
+  ],
+  markAyahConfirm: ["Tandai", "Mark", "تحديد"],
 };

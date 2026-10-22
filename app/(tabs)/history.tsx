@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { View, Text, FlatList, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, Pressable, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Clock, BookOpen, Trash2 } from "lucide-react-native";
@@ -54,8 +54,15 @@ export default function HistoryScreen() {
     });
   };
 
-  // Hapus riwayat spesifik (opsional, untuk UX yang lebih baik)
-  const handleClearHistory = async () => {
+  // Hapus semua riwayat; minta konfirmasi dulu karena tidak bisa dibatalkan
+  const handleClearHistory = () => {
+    Alert.alert(t("clearHistoryTitle"), t("clearHistoryMsg"), [
+      { text: t("cancel"), style: "cancel" },
+      { text: t("clearHistoryConfirm"), style: "destructive", onPress: doClearHistory },
+    ]);
+  };
+
+  const doClearHistory = async () => {
     try {
       await AsyncStorage.removeItem("reading_history_list_v2");
       setHistoryList([]);
