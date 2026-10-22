@@ -12,14 +12,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.qiraat_al_qur_an"
+      "bundleIdentifier": "app.qiraat.alquran"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#fbf8ef"
       },
-      "package": "app.qiraat_al_qur_an",
+      "package": "app.qiraat.alquran",
       "permissions": [
         "POST_NOTIFICATIONS",
         "ACCESS_COARSE_LOCATION",
