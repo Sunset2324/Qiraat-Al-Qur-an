@@ -31,7 +31,7 @@ http.interceptors.response.use(
 export const getMushafList = async () => {
   try {
     return await cachedRequest(
-      'mushafs',
+      'mushafs-v2', // v2: sekarang menyertakan rawi
       async () => (await http.get('/mushafs')).data.data,
       { ttlMs: 7 * DAY }
     );

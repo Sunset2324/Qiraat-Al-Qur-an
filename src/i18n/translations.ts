@@ -434,4 +434,15 @@ export const DICT: Record<string, Row> = {
     "تحديد الآية {n} كآخر قراءة في هذه السورة؟",
   ],
   markAyahConfirm: ["Tandai", "Mark", "تحديد"],
+  followAlong: ["Ikuti Bacaan", "Follow Along", "تابع القراءة"],
+  reciterQiraatNote: [
+    "Hanya qari yang membaca riwayat {name}",
+    "Only reciters of the {name} transmission",
+    "قرّاء رواية {name} فقط",
+  ],
+  ayahIncomplete: [
+    "Sebagian ayat pada riwayat ini belum lengkap di sumber data (ayat Hafs: {list}).",
+    "Some verses of this transmission are incomplete in the data source (Hafs verses: {list}).",
+    "بعض آيات هذه الرواية غير مكتملة في مصدر البيانات (آيات حفص: {list}).",
+  ],
 };

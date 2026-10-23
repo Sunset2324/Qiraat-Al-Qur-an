@@ -1,15 +1,25 @@
-import { View, Text, Pressable, ScrollView, Switch, Alert, Modal } from "react-native";
+import { View, Text, Pressable, ScrollView, Switch, Alert, Modal, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useCallback } from "react";
 import {
   ArrowLeft, Moon, Sun, Globe, Headphones, Play, 
-  Bell, MapPin, Info, Phone, RotateCcw, X, Check
+  Bell, MapPin, Info, Mail, RotateCcw, X, Check
 } from "lucide-react-native";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useLanguage } from "../../src/context/LanguageContext";
 import { clearApiCache } from "../../src/utils/apiCache";
+import { WEBSITE_URL, CONTACT_EMAIL } from "../../src/config";
+
+// Buka tautan (https / mailto) di aplikasi luar; kalau gagal, tampilkan alamatnya
+const openLink = async (url: string, title: string, fallbackText: string) => {
+  try {
+    await Linking.openURL(url);
+  } catch {
+    Alert.alert(title, fallbackText);
+  }
+};
 
 export default function SettingsScreen() {
   const { isDarkMode, toggleTheme, theme } = useTheme();
@@ -186,10 +196,20 @@ export default function SettingsScreen() {
       <View className={`absolute bottom-0 left-0 right-0 ${theme.footerBg || 'bg-emerald-800'} px-6 py-5`}>
         <Text className="text-white text-center text-sm font-bold mb-3 tracking-wider">{t('aboutUs')}</Text>
         <View className="flex-row items-center justify-center gap-8">
-          <Pressable className="items-center" onPress={() => Alert.alert(t('contactUs'), "Email: support@qiraat.app")}>
-            <View className="bg-white/20 p-3 rounded-full"><Phone size={24} color="#fff" /></View>
+          <Pressable
+            className="items-center active:opacity-70"
+            accessibilityRole="link"
+            accessibilityLabel={t('contactUs')}
+            onPress={() => openLink(`mailto:${CONTACT_EMAIL}`, t('contactUs'), `Email: ${CONTACT_EMAIL}`)}
+          >
+            <View className="bg-white/20 p-3 rounded-full"><Mail size={24} color="#fff" /></View>
           </Pressable>
-          <Pressable className="items-center" onPress={() => Alert.alert(t('website'), "https://qiraat.app")}>
+          <Pressable
+            className="items-center active:opacity-70"
+            accessibilityRole="link"
+            accessibilityLabel={t('website')}
+            onPress={() => openLink(WEBSITE_URL, t('https://alqiraat.app/'), WEBSITE_URL)}
+          >
             <View className="bg-white/20 p-3 rounded-full"><Globe size={24} color="#fff" /></View>
           </Pressable>
         </View>

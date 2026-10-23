@@ -2,18 +2,19 @@ import { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, Pressable, Alert, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { ArrowLeft, Check, BookOpen } from "lucide-react-native";
+import { ArrowLeft, BookOpen } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { getMushafList } from "../../../src/services/quranService";
 import { ARABIC_FONT } from "../../../src/constants/fonts";
 import { useLanguage } from "../../../src/context/LanguageContext";
-import { mushafDescription } from "../../../src/i18n/qiraatI18n";
+import { mushafDescription, mushafTitle } from "../../../src/i18n/qiraatI18n";
 
 interface MushafItem {
   id: string;
   name: string;
   arabic: string;
+  rawi?: string | null;
   description: string;
 }
 
@@ -133,13 +134,15 @@ export default function QiraatScreen() {
         {mushafList.map((mushaf) => {
           const isActive = selectedMushafId === mushaf.id;
           const lower = mushaf.name.toLowerCase();
-          const isStandar = lower.includes("standar") || lower.includes("madinah");
+          const isStandar = mushaf.id === "1" || lower.includes("standar") || lower.includes("madinah");
 
           return (
             <Pressable
               key={mushaf.id}
               onPress={() => handleSelectMushaf(mushaf.id)}
-              className={`mb-4 p-5 rounded-2xl border-2 ${
+              accessibilityRole="button"
+              accessibilityState={{ selected: isActive }}
+              className={`mb-3 p-4 rounded-2xl border-2 active:opacity-90 ${
                 isActive
                   ? isDarkMode
                     ? "border-emerald-600 bg-emerald-900/20"
@@ -147,40 +150,32 @@ export default function QiraatScreen() {
                   : `${theme.border} ${theme.bgCard}`
               }`}
             >
-              <View className="flex-row justify-between items-start mb-2">
-                <View className="flex-1 pr-4">
-                  <View className="flex-row items-center gap-2 flex-wrap mb-1">
-                    <Text
-                      className={`text-base font-bold ${
-                        isActive ? (isDarkMode ? "text-emerald-400" : "text-emerald-700") : theme.text
-                      }`}
-                    >
-                      {mushaf.name}
-                    </Text>
-                    {isStandar && (
-                      <View className="px-2 py-0.5 rounded bg-emerald-600">
-                        <Text className="text-[10px] font-bold text-white">{t("popular")}</Text>
-                      </View>
-                    )}
-                  </View>
-                  {mushaf.arabic ? (
-                    <Text className={`text-sm ${theme.textMuted} text-right`} style={{ fontFamily: ARABIC_FONT }}>
-                      {mushaf.arabic}
-                    </Text>
-                  ) : null}
-                </View>
-
-                <View
-                  className={`h-8 w-8 rounded-full items-center justify-center ${
-                    isActive ? "bg-emerald-600" : isDarkMode ? "bg-gray-700" : "bg-gray-200"
+              <View className="flex-row items-center justify-between gap-3">
+                <Text
+                  className={`flex-1 text-base font-bold ${
+                    isActive ? (isDarkMode ? "text-emerald-400" : "text-emerald-800") : theme.text
                   }`}
                 >
-                  <Check size={16} color={isActive ? "#fff" : theme.mutedColor} />
-                </View>
+                  {mushafTitle(mushaf, lang)}
+                </Text>
+                {mushaf.arabic ? (
+                  <Text
+                    className={`text-lg ${theme.text}`}
+                    style={{ fontFamily: ARABIC_FONT, writingDirection: "rtl", textAlign: "right", maxWidth: "50%" }}
+                    numberOfLines={1}
+                  >
+                    {mushaf.arabic}
+                  </Text>
+                ) : null}
               </View>
 
-              <View className={`p-3 rounded-xl ${isDarkMode ? "bg-black/20" : "bg-cream-100"}`}>
-                <Text className={`text-xs leading-5 ${theme.textMuted}`}>
+              <View className="flex-row items-start gap-2 mt-2">
+                {isStandar && (
+                  <View className="px-1.5 py-0.5 rounded bg-emerald-600 mt-0.5">
+                    <Text className="text-[10px] font-bold text-white">{t("popular")}</Text>
+                  </View>
+                )}
+                <Text className={`flex-1 text-xs leading-5 ${theme.textMuted}`}>
                   {mushafDescription(mushaf, lang)}
                 </Text>
               </View>

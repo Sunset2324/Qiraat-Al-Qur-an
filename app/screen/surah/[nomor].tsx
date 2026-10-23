@@ -2,15 +2,15 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { View, Text, ScrollView, Pressable, ActivityIndicator, PanResponder, Dimensions, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
-import { ArrowLeft, ArrowRight, Bookmark, Headphones, Volume2, Play, Pause, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react-native";
+import { ArrowLeft, ArrowRight, Bookmark, Volume2, Play, Pause, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../../src/context/ThemeContext";
-import { getDetailSurahMerged, getReciters, type Reciter } from "../../../src/services/quranService";
+import { getDetailSurahMerged, getReciters, getMushafList, type Reciter } from "../../../src/services/quranService";
 import { usePlayer, type PlayerSession } from "../../../src/context/PlayerContext";
 import SurahPickerSheet from "../../../src/components/SurahPickerSheet";
 import AudioPlayer from "../../../src/components/AudioPlayer";
 import { useLanguage } from "../../../src/context/LanguageContext";
-import { reciterName, reciterDetail } from "../../../src/i18n/qiraatI18n";
+import { reciterName, reciterDetail, rawiLabel } from "../../../src/i18n/qiraatI18n";
 import { saveLastRead, getLastReadAyah } from "../../../src/utils/readingHistory";
 import { QURAN_FONT } from "../../../src/constants/fonts";
 
@@ -34,6 +34,8 @@ interface SuratDetail {
     // Backend ngirim null kalau reciterId yang diminta nggak ketemu,
     // atau string/object kalau ketemu (object = reciter dari Quranpedia).
     reciterAktif?: { id: number; nama: string; perAyah: boolean } | string | null;
+    // ayat Hafs yang tidak terwakili di data riwayat ini (kosong = lengkap)
+    ayatTidakLengkap?: number[];
   };
   audioFull?: string;
   ayat: AyatItem[];
@@ -71,6 +73,8 @@ export default function SurahDetailScreen() {
   const [retryKey, setRetryKey] = useState(0);
 
   const [activeMushafId, setActiveMushafId] = useState<string>("1");
+  // Rawi (riwayat) dari mushaf aktif: daftar qari hanya memuat qari yang membaca riwayat ini
+  const [activeRawi, setActiveRawi] = useState<string | null>(null);
 
   const activeReciter = reciters.find((r) => String(r.id) === selectedReciterId);
   const activeReciterLabel = activeReciter
@@ -79,18 +83,34 @@ export default function SurahDetailScreen() {
     ? t("loading")
     : t("pickReciterShort");
 
-  // Ambil daftar reciter (hanya yang punya surah ini), lalu pilih qari:
-  // 1) pilihan sekarang kalau masih valid, 2) pilihan terakhir yang tersimpan,
+  // Ambil daftar reciter: hanya yang punya surah ini DAN membaca riwayat (qiraat) mushaf aktif,
+  // lalu pilih qari: 1) pilihan sekarang kalau masih valid, 2) pilihan terakhir untuk riwayat ini,
   // 3) qari pertama yang support per-ayat.
   useEffect(() => {
     let cancelled = false;
 
     const init = async () => {
       try {
+        setRecitersSurah(null); // tahan pemuat surah sampai daftar qari yang baru siap
         const surahNumber = Number(nomor);
-        const [list, savedId] = await Promise.all([
-          getReciters(null, Number.isFinite(surahNumber) ? surahNumber : null),
-          AsyncStorage.getItem(RECITER_STORAGE_KEY),
+
+        let mid = routeMushafId ? String(routeMushafId) : "";
+        if (!mid) mid = (await AsyncStorage.getItem("selected_mushaf_id")) || "1";
+        let rawi: string | null = null;
+        try {
+          const mushafs = await getMushafList();
+          rawi = mushafs.find((m: any) => String(m.id) === mid)?.rawi ?? null;
+        } catch {
+          // daftar mushaf gagal dimuat: lanjut tanpa filter rawi
+        }
+        if (cancelled) return;
+        setActiveMushafId(mid);
+        setActiveRawi(rawi);
+
+        const [list, savedId, legacyId] = await Promise.all([
+          getReciters(rawi, Number.isFinite(surahNumber) ? surahNumber : null),
+          AsyncStorage.getItem(`${RECITER_STORAGE_KEY}_${rawi ?? "all"}`),
+          AsyncStorage.getItem(RECITER_STORAGE_KEY), // kunci lama (sebelum dipisah per riwayat)
         ]);
         if (cancelled) return;
 
@@ -106,6 +126,7 @@ export default function SurahDetailScreen() {
           const valid = (id: string | null) => !!id && list.some((r) => String(r.id) === id);
           if (valid(prev)) return prev;
           if (valid(savedId)) return savedId;
+          if (valid(legacyId)) return legacyId;
           const fallback = list.find((r) => r.perAyah) || list[0];
           return String(fallback.id);
         });
@@ -123,13 +144,13 @@ export default function SurahDetailScreen() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nomor, retryKey]);
+  }, [nomor, routeMushafId, retryKey]);
 
   const handleSelectReciter = (id: number) => {
     const idStr = String(id);
     setSelectedReciterId(idStr);
     setShowQiraatOptions(false);
-    AsyncStorage.setItem(RECITER_STORAGE_KEY, idStr).catch(() => {});
+    AsyncStorage.setItem(`${RECITER_STORAGE_KEY}_${activeRawi ?? "all"}`, idStr).catch(() => {});
   };
 
   const filteredReciters = useMemo(
@@ -655,23 +676,27 @@ export default function SurahDetailScreen() {
         scrollEventThrottle={200}
       >
 
-        {/* 1. CARD BACAAN PILIHAN */}
-        <View className={`mx-6 mt-6 p-4 ${theme.bgCard} border ${theme.border} rounded-2xl`}>
-          <Text className={`text-xs font-medium ${theme.textSecondary} mb-3`}>Bacaan pilihan</Text>
-
-          <View className="flex-row items-center justify-between mb-3">
-            <Pressable onPress={() => setShowQiraatOptions(!showQiraatOptions)} className="flex-row items-center gap-2">
-              <Text className={`font-bold ${theme.text}`}>{t("pickReciter")}</Text>
-              <Text className={`text-xs ${theme.textSecondary}`}>{showQiraatOptions ? "▲" : "▼"}</Text>
-            </Pressable>
-
-            <Pressable onPress={() => setShowQiraatOptions(!showQiraatOptions)} className={`flex-row items-center gap-2 px-4 py-2 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-[#f5f0e1]"}`}>
-              <Headphones size={16} color={isDarkMode ? "#34d399" : "#047857"} />
-              <Text className={`text-xs font-medium ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`} numberOfLines={1}>
+        {/* 1. CHOOSE RECITER */}
+        <View className={`mx-6 mt-5 px-3 py-2.5 ${theme.bgCard} border ${theme.border} rounded-2xl`}>
+          <View className="flex-row items-center justify-between gap-3">
+            <Text className={`text-sm font-bold ${theme.text}`}>{t("pickReciter")}</Text>
+            <Pressable
+              onPress={() => setShowQiraatOptions(!showQiraatOptions)}
+              accessibilityRole="button"
+              className={`flex-row items-center gap-1 px-3 py-1.5 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-[#f5f0e1]"} active:opacity-70`}
+              style={{ maxWidth: "62%" }}
+            >
+              <Text className={`text-xs font-medium flex-shrink ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`} numberOfLines={1}>
                 {activeReciterLabel}
               </Text>
+              <ChevronDown size={14} color={isDarkMode ? "#34d399" : "#047857"} />
             </Pressable>
           </View>
+          {!!activeRawi && (
+            <Text className={`text-[11px] mt-1.5 ${theme.textMuted}`}>
+              {t("reciterQiraatNote", { name: rawiLabel(activeRawi, lang) })}
+            </Text>
+          )}
 
           {showQiraatOptions && (
             <View className={`mt-2 pt-3 border-t ${theme.border}`}>
@@ -765,31 +790,49 @@ export default function SurahDetailScreen() {
           )}
         </View>
 
-        {/* 2. INFORMASI SURAT */}
-        <View className="px-6 mt-6 mb-4">
-          <View className="flex-row items-start justify-between">
+        {/* 2. INFORMASI SURAT + IKUTI BACAAN */}
+        <View className="px-6 mt-5 mb-3">
+          <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1">
-              <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary} mb-1`}>
-                {t("surahHeader", { n: String(surahData.info.nomor).padStart(2, "0"), type: surahData.info.tempatTurun === "Mekah" ? t("makkiyahCaps") : t("madaniyahCaps") })}
+              <Text className={`text-[11px] font-bold tracking-[2px] ${theme.textSecondary} mb-1`}>
+                {t("surahHeader", { n: String(surahData.info.nomor), type: surahData.info.tempatTurun === "Mekah" ? t("makkiyahCaps") : t("madaniyahCaps") })}
               </Text>
-              <Text className={`text-2xl font-bold ${theme.text} mb-1`}>{surahData.info.namaLatin}</Text>
+              <Text className={`text-2xl font-bold ${theme.text}`}>{surahData.info.namaLatin}</Text>
               <Text className={`text-sm ${theme.textMuted}`}>{surahData.info.arti} • {surahData.info.jumlahAyat} {t("versesWord")}</Text>
-
-              {/* Badge Mushaf & Qari Aktif */}
-              <View className="mt-2 px-3 py-1.5 rounded-lg bg-emerald-600/20 self-start">
-                <Text className={`text-xs font-bold ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`}>
-                  📜 {t("mushafLabel")}: {surahData.info.mushafAktif}
-                </Text>
-                <Text className={`text-[10px] mt-0.5 ${isDarkMode ? "text-emerald-400/70" : "text-emerald-700/70"}`}>
-                  🎙️ {t("reciterLabel")}: {reciterName(reciterAktifName, lang)} {isPerAyahActive ? t("syncAyah") : t("perSurahLabel")}
-                </Text>
-              </View>
             </View>
 
-            <View className={`h-12 w-12 rounded-full border-2 ${isDarkMode ? "border-emerald-600" : "border-emerald-700"} items-center justify-center`}>
-              <Text className={`font-bold text-lg ${isDarkMode ? "text-emerald-400" : "text-emerald-800"}`}>{surahData.info.nomor}</Text>
-            </View>
+            <Pressable
+              onPress={handleToggleFollowMode}
+              disabled={!hasPerAyahAudio}
+              accessibilityRole="button"
+              className={`flex-row items-center gap-1.5 px-4 py-2.5 rounded-full active:opacity-80 ${
+                !hasPerAyahAudio
+                  ? isDarkMode ? "bg-gray-800" : "bg-gray-200"
+                  : ayahPlaylist.isPlaying ? "bg-emerald-600" : "bg-emerald-700"
+              }`}
+            >
+              {hasPerAyahAudio ? (
+                ayahPlaylist.isPlaying ? <Pause size={14} color="#fff" /> : <Play size={14} color="#fff" />
+              ) : null}
+              <Text className={`text-xs font-bold ${hasPerAyahAudio ? "text-white" : theme.textMuted}`}>
+                {t("followAlong")}
+              </Text>
+            </Pressable>
           </View>
+
+          <Text className={`text-[11px] mt-2 ${isDarkMode ? "text-emerald-400/80" : "text-emerald-700/80"}`}>
+            📜 {surahData.info.mushafAktif} • 🎙️ {reciterName(reciterAktifName, lang)} {isPerAyahActive ? t("syncAyah") : t("perSurahLabel")}
+          </Text>
+          {!hasPerAyahAudio && (
+            <Text className={`text-[11px] mt-1 ${theme.textMuted}`}>{t("noPerAyah")}</Text>
+          )}
+          {!!surahData.info.ayatTidakLengkap?.length && (
+            <View className="mt-2 px-3 py-2 rounded-xl bg-amber-500/15">
+              <Text className={`text-[11px] ${isDarkMode ? "text-amber-300" : "text-amber-800"}`}>
+                {t("ayahIncomplete", { list: surahData.info.ayatTidakLengkap.join(", ") })}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* 3. AUDIO PLAYER FULL SURAH */}
@@ -814,44 +857,6 @@ export default function SurahDetailScreen() {
             </View>
           </View>
         )}
-
-        {/* 3b. TOMBOL IKUTI BACAAN (audio per-ayat, otomatis lanjut + highlight) */}
-        <View className="px-6 mb-4">
-          <Pressable
-            onPress={handleToggleFollowMode}
-            disabled={!hasPerAyahAudio}
-            className={`flex-row items-center justify-center gap-2 py-3 rounded-2xl ${
-              !hasPerAyahAudio
-                ? isDarkMode ? "bg-gray-800" : "bg-gray-100"
-                : ayahPlaylist.isPlaying
-                ? "bg-emerald-600"
-                : isDarkMode ? "bg-emerald-900/40" : "bg-emerald-50"
-            } border ${theme.border} active:opacity-80`}
-          >
-            {!hasPerAyahAudio ? null : ayahPlaylist.isPlaying ? (
-              <Pause size={18} color="#fff" />
-            ) : (
-              <Play size={18} color={isDarkMode ? "#34d399" : "#047857"} />
-            )}
-            <Text
-              className={`text-sm font-bold ${
-                !hasPerAyahAudio
-                  ? theme.textMuted
-                  : ayahPlaylist.isPlaying
-                  ? "text-white"
-                  : isDarkMode ? "text-emerald-300" : "text-emerald-800"
-              }`}
-            >
-              {!hasPerAyahAudio
-                ? t("noPerAyah")
-                : ayahPlaylist.isPlaying
-                ? t("followAyahN", { n: activeAyahNumber ?? 1 })
-                : followStarted
-                ? t("followContinue")
-                : t("followStart")}
-            </Text>
-          </Pressable>
-        </View>
 
         {/* 4. AYAT-AYAT */}
         <View
@@ -905,9 +910,9 @@ export default function SurahDetailScreen() {
                   </Pressable>
                 </View>
 
-                <View className="items-center mb-4 px-2">
+                <View className="mb-3">
                   <Text
-                    className={`text-3xl text-center ${theme.text}`}
+                    className={`text-3xl ${theme.text}`}
                     style={{
                       writingDirection: "rtl",
                       textAlign: "right",
@@ -921,7 +926,15 @@ export default function SurahDetailScreen() {
                   </Text>
                 </View>
 
-                <Text className={`text-sm leading-6 ${theme.textMuted}`} style={{ textAlign: "center" }}>
+                {!!ayat.teksLatin && (
+                  <Text
+                    className={`text-xs italic leading-5 mb-1.5 ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`}
+                    style={{ textAlign: lang === "ar" ? "right" : "left" }}
+                  >
+                    {ayat.teksLatin}
+                  </Text>
+                )}
+                <Text className={`text-sm leading-6 ${theme.textMuted}`} style={{ textAlign: lang === "ar" ? "right" : "left" }}>
                   {ayat.teksIndonesia}
                 </Text>
               </View>

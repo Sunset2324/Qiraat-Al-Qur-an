@@ -13,3 +13,7 @@ export const API_BASE_URL = "https://api.alqiraat.app/api";
 // export const API_BASE_URL = 'http://192.168.1.15:3000/api';
 // Gambar sampul untuk notifikasi media (disajikan backend, PNG 512x512).
 export const NOTIF_ARTWORK_URL = `${API_BASE_URL}/notif-art.png`;
+
+// Tautan di footer Pengaturan (Hubungi Kami & Website)
+export const WEBSITE_URL = "https://alqiraat.app";
+export const CONTACT_EMAIL = "support@qiraat.app"; // ganti kalau alamat email resminya berbeda

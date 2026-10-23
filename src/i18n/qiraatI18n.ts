@@ -105,3 +105,19 @@ export function mushafDescription(
     return ar ? "رواية قالون عن نافع، تُستعمل في ليبيا وتونس وأجزاء من أفريقيا." : "Transmission of Qalun from Nafi', used in Libya, Tunisia and parts of Africa.";
   return m.description; // fallback: teks asli dari server
 }
+
+const MUSHAF_VARIANT: Record<string, { id: string; en: string }> = {
+  "نسخة نصية": { id: "Versi teks", en: "Text edition" },
+  "نستعليق": { id: "Nastaliq", en: "Nastaliq" },
+  "التجويد الملون": { id: "Tajwid berwarna", en: "Color-coded tajweed" },
+  "الأوقاف الليبية": { id: "Awqaf Libya", en: "Libyan Awqaf" },
+};
+
+/** Judul mushaf per bahasa, mis. "Warsh 'an Nafi'" atau "Hafs 'an 'Ashim • Versi teks". */
+export function mushafTitle(m: { name: string; rawi?: string | null }, lang: Lang): string {
+  if (lang === "ar") return m.name;
+  const label = m.rawi ? rawiLabel(m.rawi, lang) : "";
+  if (!label || label === m.rawi) return m.name;
+  const variant = Object.entries(MUSHAF_VARIANT).find(([k]) => strip(m.name).includes(strip(k)));
+  return variant ? `${label} • ${variant[1][lang]}` : label;
+}
