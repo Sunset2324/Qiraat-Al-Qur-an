@@ -54,19 +54,22 @@ function CustomFooter({ state, navigation }: any) {
               accessibilityState={{ selected: isFocused }}
               accessibilityLabel={label}
               hitSlop={4}
-              className="flex-1 items-center justify-center py-1 active:opacity-60"
-              style={{ minHeight: 52 }}
+              className="flex-1 items-center justify-center active:opacity-60"
+              style={{ height: 54 }}
             >
-              <Ionicons name={(isFocused ? on : off) as any} size={22} color={isFocused ? active : inactive} />
+              {/* Ikon & label berukuran tetap supaya semua tab sejajar (tidak ada auto-shrink per label) */}
+              <View style={{ width: 28, height: 26, alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name={(isFocused ? on : off) as any} size={22} color={isFocused ? active : inactive} />
+              </View>
               <Text
                 numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.8}
-                className={`text-[10px] mt-0.5 ${
+                allowFontScaling={false}
+                style={{ height: 14, lineHeight: 14, fontSize: 10, textAlign: "center", includeFontPadding: false }}
+                className={
                   isFocused
                     ? `font-bold ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`
                     : isDarkMode ? "text-gray-400" : "text-[#9a9486]"
-                }`}
+                }
               >
                 {label}
               </Text>

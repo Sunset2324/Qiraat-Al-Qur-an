@@ -32,28 +32,52 @@ const CLASSIFICATION: Record<string, { id: string; en: string }> = {
   "حسب الآيات": { id: "Per ayat", en: "By verse" },
 };
 
-// Qari populer (nama Arab → transliterasi). Selain ini tampil nama Arab apa adanya.
+// Qari (nama Arab -> transliterasi Latin). Selain ini tampil nama Arab apa adanya.
 const QARI: Record<string, string> = {
   "إبراهيم الأخضر": "Ibrahim Al-Akhdar",
-  "مشاري راشد العفاسي": "Mishary Rashid Alafasy",
-  "عبد الباسط عبد الصمد": "Abdul Basit Abdus Samad",
-  "محمود خليل الحصري": "Mahmoud Khalil Al-Husary",
-  "محمد صديق المنشاوي": "Muhammad Siddiq Al-Minshawi",
-  "عبد الرحمن السديس": "Abdurrahman As-Sudais",
-  "سعود الشريم": "Saud Ash-Shuraim",
-  "ماهر المعيقلي": "Maher Al-Muaiqly",
-  "ياسر الدوسري": "Yasser Ad-Dosari",
-  "سعد الغامدي": "Saad Al-Ghamdi",
+  "أبو بكر الشاطري": "Abu Bakr Ash-Shatri",
+  "أحمد بن علي العجمي": "Ahmad Al-Ajmi",
   "أحمد العجمي": "Ahmad Al-Ajmi",
+  "أحمد نعينع": "Ahmad Nuaina",
+  "أكرم العلاقمي": "Akram Al-Alaqmi",
+  "ياسين": "Yasin",
+  "سهل ياسين": "Sahl Yasin",
+  "خالد القحطاني": "Khalid Al-Qahtani",
+  "خليفة الطنيجي": "Khalifa At-Tunaiji",
+  "سعود الشريم": "Saud Ash-Shuraim",
+  "صلاح البدير": "Salah Al-Budair",
+  "صلاح بو خاطر": "Salah Bukhatir",
+  "عبدالباسط عبدالصمد": "Abdul Basit Abdus Samad",
+  "عبدالرحمن السديس": "Abdurrahman As-Sudais",
+  "عبدالله المطرود": "Abdullah Al-Matrood",
+  "عبدالله بصفر": "Abdullah Basfar",
+  "عبدالله عواد الجهني": "Abdullah Awad Al-Juhani",
+  "عبدالمحسن القاسم": "Abdul Muhsin Al-Qasim",
+  "علي جابر": "Ali Jaber",
+  "علي حجاج السويسي": "Ali Hajjaj As-Suwaisi",
+  "فارس عباد": "Fares Abbad",
   "ناصر القطامي": "Nasser Al-Qatami",
   "هاني الرفاعي": "Hani Ar-Rifai",
-  "علي الحذيفي": "Ali Al-Hudhaify",
+  "ياسر الدوسري": "Yasser Ad-Dosari",
+  "ماهر المعيقلي": "Maher Al-Muaiqly",
+  "محمد الطبلاوي": "Muhammad At-Tablawi",
+  "مشاري راشد العفاسي": "Mishary Rashid Alafasy",
+  "مشاري العفاسي": "Mishary Rashid Alafasy",
+  "محمود خليل الحصري": "Mahmoud Khalil Al-Husary",
+  "محمد صديق المنشاوي": "Muhammad Siddiq Al-Minshawi",
   "محمد أيوب": "Muhammad Ayyub",
+  "محمد جبريل": "Muhammad Jibreel",
+  "محمود علي البنا": "Mahmoud Ali Al-Banna",
+  "مصطفى إسماعيل": "Mustafa Ismail",
+  "سعد الغامدي": "Saad Al-Ghamdi",
+  "معيض الحارثي": "Muaidh Al-Harthi",
+  "منصور السالمي": "Mansour As-Salimi",
+  "علي الحذيفي": "Ali Al-Hudhaify",
   "بندر بليلة": "Bandar Baleela",
-  "عبد الله بصفر": "Abdullah Basfar",
-  "أبو بكر الشاطري": "Abu Bakr Ash-Shatri",
-  "فارس عباد": "Fares Abbad",
   "إدريس أبكر": "Idris Abkar",
+  "ماجد الزامل": "Majed Az-Zamil",
+  "وديع اليمني": "Wadee Al-Yamani",
+  "توفيق الصائغ": "Tawfeeq As-Sayegh",
 };
 
 const strip = (s: string) => s.replace(/[ً-ٰٟ]/g, "").trim(); // buang harakat
@@ -71,15 +95,23 @@ export const recitationLabel = (ar: string | null | undefined, lang: Lang) => lo
 export const classificationLabel = (ar: string | null | undefined, lang: Lang) =>
   lookup(CLASSIFICATION, ar, lang);
 
-/** Nama qari: id/en → transliterasi Latin bila dikenal; fallback nama Arab. */
+// Samakan penulisan: tanpa harakat, bentuk alif seragam, tanpa spasi ("عبد الله" == "عبدالله")
+const squash = (x: string) =>
+  strip(x).replace(/[أإآٱ]/g, "ا").replace(/\s+/g, "");
+const QARI_INDEX = Object.entries(QARI)
+  .map(([k, v]) => [squash(k), v] as const)
+  .sort((a, b) => b[0].length - a[0].length); // yang paling spesifik dicoba dulu
+
+/** Nama qari: id/en -> transliterasi Latin bila dikenal; fallback nama Arab. */
 export function reciterName(ar: string | null | undefined, lang: Lang): string {
   if (!ar) return "";
   if (lang === "ar") return ar;
-  const key = strip(ar);
-  for (const [k, v] of Object.entries(QARI)) {
-    if (key.includes(strip(k))) return v;
-  }
-  return ar;
+  const key = squash(ar);
+  const exact = QARI_INDEX.find(([k]) => k === key);
+  if (exact) return exact[1];
+  // nama panjang yang memuat nama qari (mis. judul lengkap entri), hanya untuk kunci cukup panjang
+  const part = QARI_INDEX.find(([k]) => k.length >= 8 && key.includes(k));
+  return part ? part[1] : ar;
 }
 
 /** Baris detail di bawah nama qari, mis. "Hafs 'an 'Ashim • Murattal (tartil)". */

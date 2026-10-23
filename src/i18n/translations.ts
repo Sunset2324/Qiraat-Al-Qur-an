@@ -445,4 +445,5 @@ export const DICT: Record<string, Row> = {
     "Some verses of this transmission are incomplete in the data source (Hafs verses: {list}).",
     "بعض آيات هذه الرواية غير مكتملة في مصدر البيانات (آيات حفص: {list}).",
   ],
+  searchReciter: ["Cari nama qari", "Search reciter name", "ابحث عن اسم القارئ"],
 };

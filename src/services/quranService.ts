@@ -143,6 +143,8 @@ export interface Reciter {
   rawi: string | null;      // mis. "حفص"
   recitationType: string | null; // mis. "مرتل"
   perAyah: boolean;         // true = bisa dipakai untuk "Ikuti Bacaan" (audio per ayat)
+  hasAyah?: boolean;        // punya audio per ayat
+  hasFull?: boolean;        // punya audio surah penuh
   surahCount: number;
 }
 
@@ -161,7 +163,7 @@ export const getReciters = async (
     if (rawi) params.rawi = rawi;
     if (surah) params.surah = surah;
     return await cachedRequest<Reciter[]>(
-      `reciters:${rawi ?? ''}:${surah ?? ''}`,
+      `reciters-v2:${rawi ?? ''}:${surah ?? ''}`,
       async () => (await http.get('/reciters', { params })).data.data,
       { ttlMs: DAY, group: 'reciters', maxEntries: 40 }
     );

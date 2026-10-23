@@ -13,6 +13,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLanguage } from "./LanguageContext";
 import { NOTIF_ARTWORK_URL } from "../config";
 import { getDetailSurahMerged } from "../services/quranService";
+import { reciterName as reciterLabel } from "../i18n/qiraatI18n";
 
 /**
  * Pemutar audio GLOBAL (satu AudioPlayer untuk seluruh app), supaya audio tetap
@@ -72,7 +73,7 @@ export const usePlayer = () => {
 export const usePlayerProgress = () => useContext(ProgressCtx);
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const player = useAudioPlayer(null, { updateInterval: 250 });
   const status = useAudioPlayerStatus(player);
 
@@ -90,6 +91,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tRef = useRef(t);
   tRef.current = t;
+  const langRef = useRef(language);
+  langRef.current = language;
   // Status dibaca lewat ref supaya toggle/seekBy tetap stabil (nggak berubah tiap 250 ms)
   const statusRef = useRef(status);
   statusRef.current = status;
@@ -184,7 +187,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           surah: data.info?.nomor ?? n,
           surahName: data.info?.namaLatin ?? `Surah ${n}`,
           reciterId: ra && typeof ra === "object" ? ra.id : s?.reciterId ?? null,
-          reciterName: ra && typeof ra === "object" ? ra.nama : typeof ra === "string" ? ra : s?.reciterName,
+          reciterName:
+            ra && typeof ra === "object"
+              ? reciterLabel(ra.nama, langRef.current)
+              : typeof ra === "string"
+              ? reciterLabel(ra, langRef.current)
+              : s?.reciterName,
           mushafId,
           urls: kind === "ayah" ? ayahUrls : [full as string],
         };

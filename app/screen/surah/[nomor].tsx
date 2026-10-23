@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { View, Text, ScrollView, Pressable, ActivityIndicator, PanResponder, Dimensions, Alert } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, PanResponder, Dimensions, Alert, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { ArrowLeft, ArrowRight, Bookmark, Volume2, Play, Pause, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react-native";
@@ -10,7 +10,7 @@ import { usePlayer, type PlayerSession } from "../../../src/context/PlayerContex
 import SurahPickerSheet from "../../../src/components/SurahPickerSheet";
 import AudioPlayer from "../../../src/components/AudioPlayer";
 import { useLanguage } from "../../../src/context/LanguageContext";
-import { reciterName, reciterDetail, rawiLabel } from "../../../src/i18n/qiraatI18n";
+import { reciterName, recitationLabel, rawiLabel } from "../../../src/i18n/qiraatI18n";
 import { saveLastRead, getLastReadAyah } from "../../../src/utils/readingHistory";
 import { QURAN_FONT } from "../../../src/constants/fonts";
 
@@ -68,6 +68,7 @@ export default function SurahDetailScreen() {
   const [selectedReciterId, setSelectedReciterId] = useState<string | null>(null);
   const [showQiraatOptions, setShowQiraatOptions] = useState(false);
   const [reciterFilter, setReciterFilter] = useState<ReciterFilter>("all");
+  const [reciterQuery, setReciterQuery] = useState("");
 
   // Naikkan angka ini buat memicu fetch ulang (dipakai tombol "Coba Lagi")
   const [retryKey, setRetryKey] = useState(0);
@@ -153,13 +154,23 @@ export default function SurahDetailScreen() {
     AsyncStorage.setItem(`${RECITER_STORAGE_KEY}_${activeRawi ?? "all"}`, idStr).catch(() => {});
   };
 
-  const filteredReciters = useMemo(
-    () =>
-      reciters.filter((r) =>
-        reciterFilter === "all" ? true : reciterFilter === "ayah" ? r.perAyah : !r.perAyah
-      ),
-    [reciters, reciterFilter]
-  );
+  const filteredReciters = useMemo(() => {
+    const q = reciterQuery.trim().toLowerCase();
+    return reciters
+      .filter((r) => {
+        const ayah = r.hasAyah ?? r.perAyah;
+        const full = r.hasFull ?? !r.perAyah;
+        return reciterFilter === "all" ? true : reciterFilter === "ayah" ? ayah : full;
+      })
+      .filter((r) => {
+        if (!q) return true;
+        const latin = reciterName(r.reciter || r.name, lang).toLowerCase();
+        return latin.includes(q) || (r.reciter || r.name).includes(reciterQuery.trim());
+      })
+      .map((r) => ({ r, label: reciterName(r.reciter || r.name, lang) }))
+      .sort((x, y) => x.label.localeCompare(y.label, lang === "ar" ? "ar" : "en"))
+      .map((x) => x.r);
+  }, [reciters, reciterFilter, reciterQuery, lang]);
 
   // ▶ Mode "Ikuti Bacaan": playlist audio per-ayat yang otomatis lanjut
   // ke ayat berikutnya, dipakai juga untuk tombol play per-ayat.
@@ -168,8 +179,8 @@ export default function SurahDetailScreen() {
   const lockMeta = useMemo(() => {
     const ra = surahData?.info.reciterAktif;
     const nama = ra && typeof ra === "object" ? ra.nama : typeof ra === "string" ? ra : undefined;
-    return { title: surahData?.info.namaLatin, artist: nama };
-  }, [surahData]);
+    return { title: surahData?.info.namaLatin, artist: nama ? reciterName(nama, lang) : undefined };
+  }, [surahData, lang]);
 
   // Pemutar global (lanjut jalan walau layar ini ditutup; kontrol ada di mini player)
   const player = usePlayer();
@@ -700,6 +711,15 @@ export default function SurahDetailScreen() {
 
           {showQiraatOptions && (
             <View className={`mt-2 pt-3 border-t ${theme.border}`}>
+              <TextInput
+                value={reciterQuery}
+                onChangeText={setReciterQuery}
+                placeholder={t("searchReciter")}
+                placeholderTextColor={theme.mutedColor}
+                autoCorrect={false}
+                className={`px-3 py-2 mb-3 rounded-xl border text-sm ${theme.border} ${theme.bgCard} ${theme.text}`}
+              />
+
               {/* Filter jenis audio */}
               <View className="flex-row gap-2 mb-3">
                 {([
@@ -728,7 +748,7 @@ export default function SurahDetailScreen() {
                 {t("reciterCount", { n: filteredReciters.length })}
               </Text>
 
-              <ScrollView style={{ maxHeight: 280 }} nestedScrollEnabled showsVerticalScrollIndicator>
+              <ScrollView style={{ maxHeight: 300 }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator>
                 {filteredReciters.length === 0 && (
                   <Text className={`text-xs text-center py-4 ${theme.textMuted}`}>
                     {t("noReciterFilter")}
@@ -736,51 +756,60 @@ export default function SurahDetailScreen() {
                 )}
                 {filteredReciters.map((reciter) => {
                   const isSelected = String(reciter.id) === selectedReciterId;
-                  const detail = reciterDetail(reciter, lang);
+                  const arabicName = reciter.reciter || reciter.name;
+                  const label = reciterName(arabicName, lang);
+                  const sub = [
+                    lang !== "ar" && label !== arabicName ? arabicName : "",
+                    recitationLabel(reciter.recitationType, lang),
+                  ]
+                    .filter(Boolean)
+                    .join(" • ");
+                  const hasAyah = reciter.hasAyah ?? reciter.perAyah;
+                  const hasFull = reciter.hasFull ?? !reciter.perAyah;
+                  const chip = (text: string) => (
+                    <View
+                      className={`px-1.5 py-0.5 rounded ${
+                        isSelected ? "bg-white/25" : isDarkMode ? "bg-emerald-900/50" : "bg-emerald-600/15"
+                      }`}
+                    >
+                      <Text
+                        className={`text-[10px] font-bold ${
+                          isSelected ? "text-white" : isDarkMode ? "text-emerald-300" : "text-emerald-700"
+                        }`}
+                      >
+                        {text}
+                      </Text>
+                    </View>
+                  );
                   return (
                     <Pressable
                       key={reciter.id}
                       onPress={() => handleSelectReciter(reciter.id)}
-                      className={`flex-row items-center justify-between px-3 py-2.5 mb-1.5 rounded-xl ${
-                        isSelected ? "bg-emerald-600" : isDarkMode ? "bg-gray-800" : "bg-gray-100"
+                      className={`flex-row items-center justify-between px-3 py-2.5 mb-1.5 rounded-xl border ${
+                        isSelected
+                          ? "bg-emerald-600 border-emerald-600"
+                          : `${theme.bgCard} ${theme.border}`
                       }`}
                     >
                       <View className="flex-1 pr-3">
                         <Text
                           numberOfLines={1}
-                          className={`text-sm font-medium ${isSelected ? "text-white" : theme.text}`}
+                          className={`text-sm font-semibold ${isSelected ? "text-white" : theme.text}`}
                         >
-                          {reciterName(reciter.reciter || reciter.name, lang)}
+                          {label}
                         </Text>
-                        {!!detail && (
+                        {!!sub && (
                           <Text
                             numberOfLines={1}
                             className={`text-[11px] mt-0.5 ${isSelected ? "text-emerald-100" : theme.textMuted}`}
                           >
-                            {detail}
+                            {sub}
                           </Text>
                         )}
                       </View>
-                      <View
-                        className={`px-2 py-0.5 rounded ${
-                          isSelected
-                            ? "bg-white/25"
-                            : reciter.perAyah
-                            ? "bg-emerald-600/20"
-                            : isDarkMode ? "bg-gray-700" : "bg-gray-300"
-                        }`}
-                      >
-                        <Text
-                          className={`text-[10px] font-bold ${
-                            isSelected
-                              ? "text-white"
-                              : reciter.perAyah
-                              ? isDarkMode ? "text-emerald-300" : "text-emerald-700"
-                              : theme.textMuted
-                          }`}
-                        >
-                          {reciter.perAyah ? t("badgeAyah") : t("badgeSurah")}
-                        </Text>
+                      <View className="flex-row gap-1">
+                        {hasAyah && chip(t("badgeAyah"))}
+                        {hasFull && chip(t("badgeSurah"))}
                       </View>
                     </Pressable>
                   );
@@ -842,7 +871,7 @@ export default function SurahDetailScreen() {
               audioUrl={audioFullUrl}
               title={`Murottal Full: ${surahData.info.namaLatin}`}
               notifTitle={surahData.info.namaLatin}
-              artist={reciterAktifName !== "—" ? reciterAktifName : undefined}
+              artist={reciterAktifName !== "—" ? reciterName(reciterAktifName, lang) : undefined}
               surahNomor={surahData.info.nomor}
               reciterId={selectedReciterId ? Number(selectedReciterId) : null}
               mushafId={activeMushafId}
