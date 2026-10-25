@@ -310,3 +310,51 @@ export const getTeksSurah = async (nomor: number): Promise<SurahTeks> => {
     throw error;
   }
 };
+
+/** Ringkasan halaman sebuah mushaf (qiraat): jumlah halaman + juz + surah pertama tiap halaman. */
+export interface MushafPagesSummary {
+  mushafId: string;
+  totalPages: number;
+  pages: { page: number; juz: number | null; surah: number; ayah: number }[];
+}
+
+export const getMushafPages = async (mushafId: string): Promise<MushafPagesSummary> => {
+  try {
+    return await cachedRequest<MushafPagesSummary>(
+      `pages-summary:${mushafId}`,
+      async () => (await http.get(`/mushafs/${mushafId}/pages`, { timeout: 60000 })).data.data,
+      { ttlMs: 30 * DAY }
+    );
+  } catch (error) {
+    console.error('Error fetching mushaf pages:', error);
+    throw error;
+  }
+};
+
+/** Isi satu halaman mushaf: ayat dikelompokkan per surah. */
+export interface MushafPageData {
+  mushafId: string;
+  page: number;
+  totalPages: number;
+  juz: number | null;
+  bismillah: string | null;
+  segments: {
+    surah: { nomor: number; nama: string; namaLatin: string; arti: string; tempatTurun: string; jumlahAyat: number };
+    startsSurah: boolean;
+    endsSurah: boolean;
+    ayat: { nomor: number; teksArab: string; teksLatin: string; teksIndonesia: string }[];
+  }[];
+}
+
+export const getMushafPage = async (mushafId: string, page: number): Promise<MushafPageData> => {
+  try {
+    return await cachedRequest<MushafPageData>(
+      `page:${mushafId}:${page}`,
+      async () => (await http.get(`/mushafs/${mushafId}/pages/${page}`, { timeout: 60000 })).data.data,
+      { ttlMs: 30 * DAY, group: 'pages', maxEntries: 40 }
+    );
+  } catch (error) {
+    console.error(`Error fetching page ${page}:`, error);
+    throw error;
+  }
+};
