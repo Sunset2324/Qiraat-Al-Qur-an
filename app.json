@@ -2,7 +2,7 @@
   "expo": {
     "name": "Qiraat Al-Qur'an",
     "slug": "qiraat-al-quran",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "scheme": "qiraat-al-qur-an",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
