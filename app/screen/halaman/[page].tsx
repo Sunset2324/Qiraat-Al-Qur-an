@@ -11,6 +11,9 @@ import { useTheme } from "../../../src/context/ThemeContext";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import { getMushafPage, getMushafPages, type MushafPageData } from "../../../src/services/quranService";
 import { QURAN_FONT } from "../../../src/constants/fonts";
+import TajweedText from "../../../src/components/TajweedText";
+import TajweedLegend from "../../../src/components/TajweedLegend";
+import { TAJWEED_MUSHAF_ID } from "../../../src/utils/tajweedColor";
 
 const toArabicDigits = (n: number) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[Number(d)]);
 const startsWithBasmala = (txt: string) =>
@@ -256,6 +259,7 @@ export default function PageReaderScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ padding: 20, paddingBottom: 60 }}
         >
+          {String(mushafId) === TAJWEED_MUSHAF_ID && <TajweedLegend />}
           {data!.segments.map((seg, si) => {
             const first = seg.ayat[0]?.teksArab ?? "";
             const showBasmala =
@@ -305,7 +309,11 @@ export default function PageReaderScreen() {
                   >
                     {seg.ayat.map((a) => (
                       <Text key={a.nomor}>
-                        {a.teksArab}{" "}
+                        {String(mushafId) === TAJWEED_MUSHAF_ID ? (
+                          <TajweedText text={a.teksArab} isDark={isDarkMode} />
+                        ) : (
+                          a.teksArab
+                        )}{" "}
                         <Text style={{ color: accent, fontSize: fontSize * 0.8 }}>
                           {"۝"}
                           {toArabicDigits(a.nomor)}

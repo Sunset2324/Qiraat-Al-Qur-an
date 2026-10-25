@@ -13,6 +13,9 @@ import { useLanguage } from "../../../src/context/LanguageContext";
 import { reciterName, recitationLabel, rawiLabel } from "../../../src/i18n/qiraatI18n";
 import { saveLastRead, getLastReadAyah } from "../../../src/utils/readingHistory";
 import { QURAN_FONT } from "../../../src/constants/fonts";
+import TajweedText from "../../../src/components/TajweedText";
+import TajweedLegend from "../../../src/components/TajweedLegend";
+import { TAJWEED_MUSHAF_ID } from "../../../src/utils/tajweedColor";
 
 interface AyatItem {
   nomor: number;
@@ -864,6 +867,13 @@ export default function SurahDetailScreen() {
           )}
         </View>
 
+        {/* Keterangan warna tajwid (khusus mushaf Tajwid Berwarna) */}
+        {String(activeMushafId) === TAJWEED_MUSHAF_ID && (
+          <View className="px-6">
+            <TajweedLegend />
+          </View>
+        )}
+
         {/* 3. AUDIO PLAYER FULL SURAH */}
         {audioFullUrl ? (
           <View className="px-6 mb-4">
@@ -951,7 +961,11 @@ export default function SurahDetailScreen() {
                       fontFamily: QURAN_FONT,
                     }}
                   >
-                    {ayat.teksArab}
+                    {String(activeMushafId) === TAJWEED_MUSHAF_ID ? (
+                      <TajweedText text={ayat.teksArab} isDark={isDarkMode} />
+                    ) : (
+                      ayat.teksArab
+                    )}
                   </Text>
                 </View>
 
