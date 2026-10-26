@@ -2,10 +2,10 @@
   "expo": {
     "name": "Qiraat Al-Qur'an",
     "slug": "qiraat-al-quran",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "scheme": "qiraat-al-qur-an",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.png",
+    "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
     "assetBundlePatterns": [
       "**/*"
@@ -16,7 +16,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.png",
+        "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#fbf8ef"
       },
       "package": "app.qiraat.alquran",
@@ -32,6 +32,8 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      "./plugins/withMediaNotificationIcon",
+      "./plugins/withNetworkHardening",
       [
         "expo-audio",
         {

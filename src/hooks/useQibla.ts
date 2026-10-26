@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import * as Location from "expo-location";
+import { assertNetworkAllowed, assertSensitiveAllowed } from "../security/guard";
 import { qiblaBearing, distanceToKaabaKm, smoothAngle, norm360 } from "../utils/qibla";
 
 const COORDS_KEY = "qibla_coords_v1";
@@ -17,6 +18,10 @@ interface Coords { lat: number; lng: number; from: "gps" | "city" | "saved" }
 const key = (c: { lat: number; lng: number }) => `qibla_dir_${c.lat.toFixed(2)}_${c.lng.toFixed(2)}`;
 
 async function fetchAladhan(lat: number, lng: number): Promise<number> {
+  // koordinat pengguna dikirim ke pihak ketiga -> hanya di perangkat aman & tanpa VPN/proxy.
+  // Bila diblokir, pemanggil sudah punya cadangan hitungan lokal.
+  await assertSensitiveAllowed();
+  await assertNetworkAllowed();
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 8000);
   try {

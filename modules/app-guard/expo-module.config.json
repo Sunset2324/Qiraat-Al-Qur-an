@@ -1,0 +1,6 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": ["app.qiraat.alquran.appguard.AppGuardModule"]
+  }
+}

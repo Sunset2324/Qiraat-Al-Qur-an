@@ -553,4 +553,17 @@ export const DICT: Record<string, Row> = {
     "Lam shamsiyyah: the lam of ال is not pronounced; the next letter is doubled.",
     "لام شمسية: لا تُنطق لام ال ويُشدَّد الحرف بعدها.",
   ],
+  guardNetTitle: ["VPN / proxy terdeteksi", "VPN / proxy detected", "تم اكتشاف VPN / بروكسي"],
+  guardNetMsg: [
+    "Demi keamanan, matikan VPN atau proxy agar konten bisa dimuat.",
+    "For your security, turn off the VPN or proxy so content can load.",
+    "حفاظًا على أمانك، أوقف VPN أو البروكسي ليتم تحميل المحتوى.",
+  ],
+  guardRecheck: ["Cek ulang", "Re-check", "إعادة الفحص"],
+  guardRestrictedTitle: ["Mode terbatas", "Restricted mode", "وضع مقيَّد"],
+  guardRestrictedMsg: [
+    "Opsi pengembang/debugging aktif. Iklan dan arah kiblat online dinonaktifkan; membaca Al-Qur'an tetap bisa.",
+    "Developer options/debugging detected. Ads and online qibla lookup are disabled; Qur'an reading still works.",
+    "تم اكتشاف خيارات المطوّر/التصحيح. عُطّلت الإعلانات والقبلة عبر الإنترنت، والقراءة متاحة.",
+  ],
 };

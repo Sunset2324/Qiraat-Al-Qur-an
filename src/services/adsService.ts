@@ -1,6 +1,7 @@
 import axios from "axios";
 import { API_BASE_URL } from "../config";
 import { cachedRequest, MINUTE } from "../utils/apiCache";
+import { assertSensitiveAllowed, installGuard } from "../security/guard";
 
 export interface Iklan {
   id: string;
@@ -17,6 +18,7 @@ export interface Iklan {
 }
 
 const http = axios.create({ baseURL: API_BASE_URL, timeout: 15000 });
+installGuard(http);
 
 /** Hanya https yang boleh dibuka/ditampilkan, apa pun isi respons server. */
 const httpsOnly = (u: unknown) => typeof u === "string" && /^https:\/\//i.test(u);
@@ -29,6 +31,7 @@ const httpsOnly = (u: unknown) => typeof u === "string" && /^https:\/\//i.test(u
 export const getIklan = async (force = false): Promise<Iklan[]> => {
   const key = "iklan:list";
   const ambil = async () => {
+    await assertSensitiveAllowed(); // iklan dimatikan di mode terbatas
     const res = await http.get("/ads");
     const list: Iklan[] = Array.isArray(res.data?.data) ? res.data.data : [];
     return list.filter(
