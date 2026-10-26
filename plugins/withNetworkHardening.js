@@ -8,7 +8,18 @@ const { withAndroidManifest, withDangerousMod } = require("@expo/config-plugins"
 const fs = require("fs");
 const path = require("path");
 
+// Urutan sumber konfigurasi (yang pertama ada yang dipakai):
+//  1) env API_PINS="pinA=,pinB=" (+ API_PIN_HOST, API_PIN_EXPIRY)  -> cocok untuk EAS Environment Variables
+//  2) file security.config.json (boleh di-.gitignore; EAS tetap mengirimnya selama TIDAK ada di .easignore)
 function loadCfg(root) {
+  const envPins = (process.env.API_PINS || "").split(",").map((x) => x.trim()).filter(Boolean);
+  if (envPins.length) {
+    return {
+      host: process.env.API_PIN_HOST || "api.alqiraat.app",
+      pins: envPins,
+      expiration: process.env.API_PIN_EXPIRY || "",
+    };
+  }
   try {
     return JSON.parse(fs.readFileSync(path.join(root, "security.config.json"), "utf8"));
   } catch {
