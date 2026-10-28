@@ -1,0 +1,17 @@
+# Tidak dikirim ke server build EAS (mengecilkan upload; tidak dibutuhkan saat build)
+# File ini HARUS UTF-8. Jangan tambahkan baris lewat `echo >>` di PowerShell
+# (menghasilkan UTF-16 dan merusak file).
+.git
+node_modules
+data-source/
+*.docx
+*.zip
+*.apk
+*.aab
+file.txt
+play-service-account.json
+*.jks
+*.keystore
+.env
+.env.*
+scripts/

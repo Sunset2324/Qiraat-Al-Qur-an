@@ -1,0 +1,100 @@
+import { useCallback, useRef } from "react";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import { NOTIF_ARTWORK_URL } from "../config";
+
+// Format waktu dari detik ke "mm:ss"
+// (expo-audio pakai satuan detik, beda dengan expo-av yang pakai milidetik)
+const formatTime = (seconds: number) => {
+  const totalSeconds = Math.max(0, Math.floor(seconds || 0));
+  const minutes = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
+};
+
+/**
+ * Hook player audio tunggal (single-track): dipakai untuk audio full-surah
+ * dan untuk memutar satu ayat secara individual.
+ *
+ * Untuk mode "Ikuti Bacaan" (playlist ayat per ayat yang otomatis lanjut),
+ * pakai `useAyahPlaylist` di src/hooks/useAyahPlaylist.ts.
+ */
+export const useAudio = () => {
+  // Player dibuat sekali tanpa source awal (null), source-nya baru
+  // diisi/diganti lewat player.replace() setiap kali playAudio() dipanggil.
+  const player = useAudioPlayer(null, { updateInterval: 250 });
+  const status = useAudioPlayerStatus(player);
+
+  // Menandai apakah player ini pernah diisi source sama sekali,
+  // supaya "isLoading" tidak nyala terus sebelum user pernah menekan play.
+  const hasSourceRef = useRef(false);
+
+  // Mode audio global (background, silent mode) diatur sekali di app/_layout.tsx
+
+  const playAudio = useCallback(
+    (url: string, meta?: { title?: string; artist?: string; album?: string }) => {
+      hasSourceRef.current = true;
+      player.replace(url);
+      player.play();
+      // Kontrol media di notifikasi & lock screen
+      try {
+        player.setActiveForLockScreen(
+          true,
+          {
+            title: meta?.title ?? "Qiraat Al-Qur'an",
+            artist: meta?.artist ?? "Qiraat Al-Qur'an",
+            albumTitle: meta?.album ?? "Qiraat Al-Qur'an",
+            artworkUrl: NOTIF_ARTWORK_URL,
+          },
+          // Audio satu surah panjang: tampilkan tombol mundur/maju di notifikasi.
+          { showSeekBackward: true, showSeekForward: true }
+        );
+      } catch {}
+    },
+    [player]
+  );
+
+  const pauseAudio = useCallback(() => {
+    player.pause();
+  }, [player]);
+
+  const togglePlayPause = useCallback(() => {
+    if (status.playing) {
+      player.pause();
+    } else {
+      player.play();
+    }
+  }, [player, status.playing]);
+
+  const stopAudio = useCallback(() => {
+    player.pause();
+    player.seekTo(0);
+  }, [player]);
+
+  // Skip maju/mundur (dalam detik)
+  const seekBy = useCallback(
+    (seconds: number) => {
+      const newPosition = Math.max(
+        0,
+        Math.min(status.currentTime + seconds, status.duration || 0)
+      );
+      player.seekTo(newPosition);
+    },
+    [player, status.currentTime, status.duration]
+  );
+
+  return {
+    isPlaying: status.playing,
+    // "loading" = sudah pernah diminta play, tapi track belum siap / lagi buffering
+    isLoading: hasSourceRef.current && (!status.isLoaded || status.isBuffering),
+    position: status.currentTime,
+    duration: status.duration,
+    formattedPosition: formatTime(status.currentTime),
+    formattedDuration: formatTime(status.duration),
+    didJustFinish: status.didJustFinish,
+    playAudio,
+    pauseAudio,
+    togglePlayPause,
+    stopAudio,
+    seekBy,
+  };
+};
