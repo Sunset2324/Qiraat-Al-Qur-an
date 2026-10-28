@@ -1,6 +1,6 @@
 {
   "platforms": ["android"],
   "android": {
-    "modules": ["app.qiraat.alquran.appguard.AppGuardModule"]
+    "modules": ["expo.modules.appguard.AppGuardModule"]
   }
 }

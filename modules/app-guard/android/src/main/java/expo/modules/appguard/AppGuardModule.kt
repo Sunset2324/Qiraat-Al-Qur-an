@@ -1,4 +1,4 @@
-package app.qiraat.alquran.appguard
+package expo.modules.appguard
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
