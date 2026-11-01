@@ -22,7 +22,7 @@ const startsWithBasmala = (txt: string) =>
 /** Baca per halaman: halaman & isinya mengikuti mushaf (qiraat) yang dipilih. */
 export default function PageReaderScreen() {
   const { isDarkMode, theme } = useTheme();
-  const { t, language: lang, flip } = useLanguage();
+  const { t, language: lang, flip, isRTL } = useLanguage();
   const { width } = useWindowDimensions();
   const { page: pageParam, mushafId: mushafParam } = useLocalSearchParams();
 
@@ -101,7 +101,8 @@ export default function PageReaderScreen() {
     });
   }, []);
 
-  // Geser: ke kanan = halaman berikutnya (seperti membalik mushaf Arab), ke kiri = sebelumnya
+  // Mushaf dibaca dari kanan ke kiri: geser ke kanan = halaman berikutnya, ke kiri = sebelumnya.
+  // Tombol: "sebelumnya" di sisi kanan, "berikutnya" di sisi kiri (posisi fisik, tidak ikut bahasa).
   const swipe = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponderCapture: (_e, g) => {
@@ -154,7 +155,10 @@ export default function PageReaderScreen() {
       </View>
 
       {/* Bar pindah halaman */}
-      <View className={`flex-row items-center px-3 py-2 border-b ${theme.border}`}>
+      <View
+        className={`items-center px-3 py-2 border-b ${theme.border}`}
+        style={{ flexDirection: isRTL ? "row" : "row-reverse" }}
+      >
         <Pressable
           onPress={() => goToPage(pageNo - 1)}
           disabled={pageNo <= 1}
@@ -162,7 +166,7 @@ export default function PageReaderScreen() {
           hitSlop={8}
           className={`h-9 w-9 items-center justify-center rounded-full active:opacity-60 ${pageNo <= 1 ? "opacity-30" : ""}`}
         >
-          <ChevronLeft size={22} color={theme.iconColor} style={flip} />
+          <ChevronRight size={22} color={theme.iconColor} />
         </Pressable>
         <Pressable
           onPress={() => setShowJump(true)}
@@ -182,7 +186,7 @@ export default function PageReaderScreen() {
           hitSlop={8}
           className={`h-9 w-9 items-center justify-center rounded-full active:opacity-60 ${total != null && pageNo >= total ? "opacity-30" : ""}`}
         >
-          <ChevronRight size={22} color={theme.iconColor} style={flip} />
+          <ChevronLeft size={22} color={theme.iconColor} />
         </Pressable>
       </View>
     </>

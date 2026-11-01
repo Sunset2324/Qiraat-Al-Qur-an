@@ -50,7 +50,7 @@ type ReciterFilter = "all" | "ayah" | "surah";
 
 export default function SurahDetailScreen() {
   const { isDarkMode, theme } = useTheme();
-  const { t, language: lang, flip } = useLanguage();
+  const { t, language: lang, flip, isRTL } = useLanguage();
   const { nomor, mushafId: routeMushafId, ayat: routeAyat } = useLocalSearchParams();
 
   const [surahData, setSurahData] = useState<SuratDetail | null>(null);
@@ -635,7 +635,10 @@ export default function SurahDetailScreen() {
       )}
 
       {/* Bar pindah surah: sebelumnya / daftar semua surah / berikutnya */}
-      <View className={`flex-row items-center px-3 py-2 border-b ${theme.border}`}>
+      <View
+        className={`items-center px-3 py-2 border-b ${theme.border}`}
+        style={{ flexDirection: isRTL ? "row" : "row-reverse" }}
+      >
         <Pressable
           onPress={() => goToSurah(surahData.info.nomor - 1)}
           disabled={surahData.info.nomor <= 1}
@@ -644,7 +647,7 @@ export default function SurahDetailScreen() {
           hitSlop={8}
           className={`h-9 w-9 items-center justify-center rounded-full active:opacity-60 ${surahData.info.nomor <= 1 ? "opacity-30" : ""}`}
         >
-          <ChevronLeft size={22} color={theme.iconColor} style={flip} />
+          <ChevronRight size={22} color={theme.iconColor} />
         </Pressable>
         <Pressable
           onPress={() => setShowPicker(true)}
@@ -665,7 +668,7 @@ export default function SurahDetailScreen() {
           hitSlop={8}
           className={`h-9 w-9 items-center justify-center rounded-full active:opacity-60 ${surahData.info.nomor >= 114 ? "opacity-30" : ""}`}
         >
-          <ChevronRight size={22} color={theme.iconColor} style={flip} />
+          <ChevronLeft size={22} color={theme.iconColor} />
         </Pressable>
       </View>
 
@@ -986,7 +989,10 @@ export default function SurahDetailScreen() {
         </View>
 
         {/* Pindah surah: tombol (alternatif untuk geser layar) */}
-        <View className="flex-row items-center justify-between gap-3 px-6 pt-6">
+        <View
+          className="items-center justify-between gap-3 px-6 pt-6"
+          style={{ flexDirection: isRTL ? "row" : "row-reverse" }}
+        >
           <Pressable
             onPress={() => goToSurah(surahData.info.nomor - 1)}
             disabled={surahData.info.nomor <= 1}
@@ -994,7 +1000,7 @@ export default function SurahDetailScreen() {
             accessibilityLabel={t("prevSurah")}
             className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-2xl border ${theme.border} ${theme.bgCard} active:opacity-80 ${surahData.info.nomor <= 1 ? "opacity-40" : ""}`}
           >
-            <ArrowLeft size={18} color={theme.iconColor} style={flip} />
+            <ArrowRight size={18} color={theme.iconColor} />
             <Text className={`text-sm font-semibold ${theme.text}`}>{t("prevSurah")}</Text>
           </Pressable>
           <Pressable
@@ -1005,7 +1011,7 @@ export default function SurahDetailScreen() {
             className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-700 active:opacity-90 ${surahData.info.nomor >= 114 ? "opacity-40" : ""}`}
           >
             <Text className="text-sm font-semibold text-white">{t("nextSurah")}</Text>
-            <ArrowRight size={18} color="#fff" style={flip} />
+            <ArrowLeft size={18} color="#fff" />
           </Pressable>
         </View>
         <Text className={`text-center text-[11px] mt-3 ${theme.textMuted}`}>{t("swipeSurahHint")}</Text>

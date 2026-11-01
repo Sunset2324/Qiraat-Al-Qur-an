@@ -277,7 +277,7 @@ export default function MushafScreen() {
 
             {/* Pilih mode baca: per surah / per halaman */}
             <View className={`flex-row p-1 rounded-2xl border ${theme.border} ${theme.bgCard} mb-6`}>
-              {(["surah", "page"] as const).map((m) => (
+              {(["page", "surah"] as const).map((m) => (
                 <Pressable
                   key={m}
                   onPress={() => changeMode(m)}
