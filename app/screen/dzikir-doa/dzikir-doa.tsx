@@ -9,7 +9,8 @@ import { useState, useEffect, useMemo, ReactNode } from "react";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import { getDaftarDoa } from "../../../src/services/quranService";
-import { isBakdaShalat } from "../../../src/data/bakdaShalat";
+import { isBakdaShalat, isShalatSunnahDoa } from "../../../src/data/bakdaShalat";
+import { DOA_OFFLINE, DOA_OFFLINE_READY } from "../../../src/data/doaOffline";
 import { DZIKIR_SUNNAH, pick } from "../../../src/data/dzikirSunnah";
 
 interface DoaItem {
@@ -41,8 +42,9 @@ export default function DzikirDoaScreen() {
   const [activeFilter, setActiveFilter] = useState(tab === "bakda" ? "bakda" : "all");
   const [searchQuery, setSearchQuery] = useState("");
   
-  const [doaList, setDoaList] = useState<DoaItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Data EQuran.id dibundel di app (offline). Hanya kalau file datanya belum diisi, pakai API sebagai cadangan.
+  const [doaList, setDoaList] = useState<DoaItem[]>(DOA_OFFLINE_READY ? (DOA_OFFLINE as DoaItem[]) : []);
+  const [loading, setLoading] = useState(!DOA_OFFLINE_READY);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,6 +56,7 @@ export default function DzikirDoaScreen() {
   }, [tab]);
 
   const fetchData = async () => {
+    if (DOA_OFFLINE_READY) return;
     try {
       setLoading(true);
       setError(null);
@@ -102,16 +105,19 @@ export default function DzikirDoaScreen() {
   const filteredData = allItems
     .filter((item) => {
       const bakda = item.kat ? item.kat === "bakda" : isBakdaShalat(item);
+      const sunnahShalat = !item.kat && isShalatSunnahDoa(item); // istikharah / dhuha -> tab Sholat
       const itemTags = (item.tags || []).map(t => t.toLowerCase());
       
       const matchFilter =
         activeFilter === "bakda"
-          ? bakda || (!item.kat && itemTags.some(t => t.includes("bakda") || t.includes("sholat")))
+          ? bakda || (!item.kat && !sunnahShalat && itemTags.some(t => t.includes("bakda") || t.includes("sholat")))
           : !bakda && (
               activeFilter === "all" ||
               (item.kat
                 ? item.kat === activeFilter
-                : !!item.grup?.toLowerCase().includes(activeFilter) || itemTags.some(t => t.includes(activeFilter)))
+                : (activeFilter === "sholat" && sunnahShalat) ||
+                  !!item.grup?.toLowerCase().includes(activeFilter) ||
+                  itemTags.some(t => t.includes(activeFilter)))
             );
             
       const query = searchQuery.toLowerCase();

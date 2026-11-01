@@ -245,6 +245,9 @@ export const DICT: Record<string, Row> = {
   fBakda: ["Ba'da Shalat", "After Prayer", "بعد الصلاة"],
   fPrayer: ["Sholat", "Prayer", "الصلاة"],
   fDaily: ["Harian", "Daily", "يومية"],
+  copyDoa: ["Salin doa", "Copy du'a", "نسخ الدعاء"],
+  shareDoa: ["Bagikan doa", "Share du'a", "مشاركة الدعاء"],
+  copied: ["Tersalin ke clipboard", "Copied to clipboard", "تم النسخ إلى الحافظة"],
   searchDoa: ["Cari judul, arti, atau tagar...", "Search title, meaning or tag...", "ابحث بالعنوان أو المعنى أو الوسم..."],
   loadingDzikir: ["Memuat Dzikir & Doa...", "Loading Dhikr & Du'a...", "جارٍ تحميل الأذكار والأدعية..."],
   dzikirLoadFailed: [
@@ -552,5 +555,18 @@ export const DICT: Record<string, Row> = {
     "Lam syamsiyyah: lam pada ال tidak diucapkan, huruf sesudahnya bertasydid.",
     "Lam shamsiyyah: the lam of ال is not pronounced; the next letter is doubled.",
     "لام شمسية: لا تُنطق لام ال ويُشدَّد الحرف بعدها.",
+  ],
+  guardNetTitle: ["VPN / proxy terdeteksi", "VPN / proxy detected", "تم اكتشاف VPN / بروكسي"],
+  guardNetMsg: [
+    "Demi keamanan, matikan VPN atau proxy agar konten bisa dimuat.",
+    "For your security, turn off the VPN or proxy so content can load.",
+    "حفاظًا على أمانك، أوقف VPN أو البروكسي ليتم تحميل المحتوى.",
+  ],
+  guardRecheck: ["Cek ulang", "Re-check", "إعادة الفحص"],
+  guardRestrictedTitle: ["Mode terbatas", "Restricted mode", "وضع مقيَّد"],
+  guardRestrictedMsg: [
+    "Opsi pengembang/debugging aktif. Iklan dan arah kiblat online dinonaktifkan; membaca Al-Qur'an tetap bisa.",
+    "Developer options/debugging detected. Ads and online qibla lookup are disabled; Qur'an reading still works.",
+    "تم اكتشاف خيارات المطوّر/التصحيح. عُطّلت الإعلانات والقبلة عبر الإنترنت، والقراءة متاحة.",
   ],
 };

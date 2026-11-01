@@ -15,5 +15,12 @@ const POLA = new RegExp(
   "i"
 );
 
-export const isBakdaShalat = (item: DoaLike): boolean =>
-  POLA.test(`${item.judul ?? ""} ${item.grup ?? ""} ${(item.tags ?? []).join(" ")}`);
+// Doa yang berkaitan dengan shalat sunnah tertentu (istikharah, dhuha): masuk tab "Sholat",
+// bukan "Ba'da Shalat" (walau judulnya memuat kata "setelah shalat ...").
+const POLA_SHALAT_SUNNAH = /\b(?:istikh?a+rah?|istikharoh|dhuha+|duha+|dluha+)\b/i;
+
+const teks = (item: DoaLike) => `${item.judul ?? ""} ${item.grup ?? ""} ${(item.tags ?? []).join(" ")}`;
+
+export const isShalatSunnahDoa = (item: DoaLike): boolean => POLA_SHALAT_SUNNAH.test(teks(item));
+
+export const isBakdaShalat = (item: DoaLike): boolean => !isShalatSunnahDoa(item) && POLA.test(teks(item));

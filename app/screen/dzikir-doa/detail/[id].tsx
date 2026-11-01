@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Share } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
-import { ArrowLeft, Copy, Share2, Tag } from "lucide-react-native";
+import { ArrowLeft, Copy, Check, Share2, Tag } from "lucide-react-native";
+import * as Clipboard from "expo-clipboard";
 import { useTheme } from "../../../../src/context/ThemeContext";
 import { useLanguage } from "../../../../src/context/LanguageContext";
 import { getDetailDoa } from "../../../../src/services/quranService";
 import { ARABIC_FONT } from "../../../../src/constants/fonts";
 import DzikirCounter from "../../../../src/components/DzikirCounter";
 import { getLocalDzikir, isLocalDzikirId, pick } from "../../../../src/data/dzikirSunnah";
+import { DOA_OFFLINE_READY, getDoaOffline } from "../../../../src/data/doaOffline";
 
 const DZIKIR_RE = /dzikir|zikir|tasbih|tahmid|takbir|tahlil|istighfar|hauqalah|subhanallah|alhamdulillah|allahu akbar/i;
 
@@ -19,6 +21,7 @@ export default function DoaDetailScreen() {
   
   const [doa, setDoa] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetchDetail();
@@ -47,12 +50,47 @@ export default function DoaDetailScreen() {
         );
         return;
       }
+      // Data EQuran.id dibundel di app (offline); API hanya cadangan kalau data bundel belum diisi
+      const offline = DOA_OFFLINE_READY ? getDoaOffline(Number(id)) : null;
+      if (offline) {
+        setDoa(offline);
+        return;
+      }
       const data = await getDetailDoa(Number(id));
       setDoa(data);
     } catch (error) {
       console.error("Gagal memuat detail doa:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  /** Teks yang disalin / dibagikan: judul, Arab, latin, arti, sumber (kalau ada), nama app. */
+  const buildShareText = (): string => {
+    if (!doa) return "";
+    const parts = [String(doa.judul ?? "").trim(), "", String(doa.doa ?? "").trim()];
+    if (doa.latin) parts.push("", `"${String(doa.latin).trim()}"`);
+    if (doa.arti) parts.push("", `${t("meaningTitle")}:`, String(doa.arti).trim());
+    if (doa.sumber) parts.push("", t("sourceHadith", { src: doa.sumber }));
+    parts.push("", "— Qiraat Al-Qur'an");
+    return parts.join("\n");
+  };
+
+  const onCopy = async () => {
+    try {
+      await Clipboard.setStringAsync(buildShareText());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* gagal menyalin: tidak ada yang perlu dilakukan */
+    }
+  };
+
+  const onShare = async () => {
+    try {
+      await Share.share({ message: buildShareText() });
+    } catch {
+      /* dibatalkan / gagal: diabaikan */
     }
   };
 
@@ -72,10 +110,34 @@ export default function DoaDetailScreen() {
         </Pressable>
         <Text className={`text-base font-bold ${theme.text}`}>{t("doaDetail")}</Text>
         <View className="flex-row gap-4">
-          <Pressable className="p-1 active:opacity-70"><Copy size={22} color={theme.iconColor} /></Pressable>
-          <Pressable className="p-1 active:opacity-70"><Share2 size={22} color={theme.iconColor} /></Pressable>
+          <Pressable
+            onPress={onCopy}
+            accessibilityRole="button"
+            accessibilityLabel={t("copyDoa")}
+            hitSlop={8}
+            className="p-1 active:opacity-70"
+          >
+            {copied ? <Check size={22} color={isDarkMode ? "#34d399" : "#047857"} /> : <Copy size={22} color={theme.iconColor} />}
+          </Pressable>
+          <Pressable
+            onPress={onShare}
+            accessibilityRole="button"
+            accessibilityLabel={t("shareDoa")}
+            hitSlop={8}
+            className="p-1 active:opacity-70"
+          >
+            <Share2 size={22} color={theme.iconColor} />
+          </Pressable>
         </View>
       </View>
+
+      {copied && (
+        <View className={`mx-6 mt-3 px-4 py-2 rounded-xl ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"}`}>
+          <Text className={`text-xs font-semibold text-center ${isDarkMode ? "text-emerald-200" : "text-emerald-800"}`}>
+            {t("copied")}
+          </Text>
+        </View>
+      )}
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         <View className="px-6 pt-6 pb-4">
