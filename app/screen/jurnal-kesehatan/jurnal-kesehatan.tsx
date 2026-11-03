@@ -8,6 +8,8 @@ import { useLanguage } from "../../../src/context/LanguageContext";
 import MedisDisclaimer from "../../../src/components/MedisDisclaimer";
 import AdCard from "../../../src/components/AdCard";
 import { getIklan, Iklan } from "../../../src/services/adsService";
+import { GuardBlockedError, guardReasons } from "../../../src/security/guard";
+import { useSecurity } from "../../../src/context/SecurityContext";
 
 export default function JurnalKesehatanScreen() {
   const { isDarkMode, theme } = useTheme();
@@ -15,14 +17,17 @@ export default function JurnalKesehatanScreen() {
   const [iklan, setIklan] = useState<Iklan[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(false);
+  // null = tidak ada error; "net"/"restricted" = diblokir keamanan; "load" = gangguan jaringan/server
+  const [error, setError] = useState<null | "load" | "net" | "restricted">(null);
+  const { restricted, apiBlocked, recheck, status } = useSecurity();
 
   const muat = useCallback(async (force = false) => {
     try {
-      setError(false);
+      setError(null);
       setIklan(await getIklan(force));
-    } catch {
-      setError(true);
+    } catch (e) {
+      if (e instanceof GuardBlockedError) setError(e.code === "GUARD_NETWORK" ? "net" : "restricted");
+      else setError("load");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -32,6 +37,12 @@ export default function JurnalKesehatanScreen() {
   useEffect(() => {
     muat();
   }, [muat]);
+
+  // Kalau blokir keamanan baru saja hilang (VPN dimatikan, dll.), muat ulang otomatis.
+  useEffect(() => {
+    if (error === "net" || error === "restricted") muat(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restricted, apiBlocked]);
 
   const accent = isDarkMode ? "#34d399" : "#047857";
 
@@ -75,19 +86,36 @@ export default function JurnalKesehatanScreen() {
           ListHeaderComponent={<Text className={`text-sm leading-6 mb-4 ${theme.textMuted}`}>{t("journalIntro")}</Text>}
           ListEmptyComponent={
             <View className="items-center py-12 px-4">
-              <Text className={`text-center text-sm leading-6 ${theme.textMuted}`}>
-                {error ? t("adLoadFailed") : t("adEmpty")}
-              </Text>
+              {error === "net" || error === "restricted" ? (
+                <>
+                  <Text className={`text-center text-sm font-bold mb-1 ${theme.text}`}>
+                    {t(error === "net" ? "guardNetTitle" : "guardRestrictedTitle")}
+                  </Text>
+                  <Text className={`text-center text-sm leading-6 ${theme.textMuted}`}>
+                    {t(error === "net" ? "guardNetMsg" : "guardRestrictedMsg")}
+                  </Text>
+                  {guardReasons(status).length > 0 && (
+                    <Text className={`text-center text-xs mt-2 ${theme.textMuted}`}>
+                      {`[preview] ${guardReasons(status).join(", ")}`}
+                    </Text>
+                  )}
+                </>
+              ) : (
+                <Text className={`text-center text-sm leading-6 ${theme.textMuted}`}>
+                  {error ? t("adLoadFailed") : t("adEmpty")}
+                </Text>
+              )}
               {error && (
                 <Pressable
-                  onPress={() => {
+                  onPress={async () => {
                     setLoading(true);
+                    if (error === "net" || error === "restricted") await recheck(); // periksa ulang kondisi perangkat dulu
                     muat(true);
                   }}
                   accessibilityRole="button"
                   className="mt-4 px-5 py-3 rounded-2xl bg-emerald-700 active:opacity-90"
                 >
-                  <Text className="text-white font-bold">{t("retry")}</Text>
+                  <Text className="text-white font-bold">{t(error === "load" ? "retry" : "guardRecheck")}</Text>
                 </Pressable>
               )}
             </View>
