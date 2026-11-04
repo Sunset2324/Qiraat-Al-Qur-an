@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { View, Text, ScrollView, Pressable, ActivityIndicator, PanResponder, Dimensions, Alert, TextInput } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, PanResponder, Dimensions, Alert, TextInput, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { ArrowLeft, ArrowRight, Bookmark, Volume2, Play, Pause, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react-native";
@@ -12,8 +12,7 @@ import AudioPlayer from "../../../src/components/AudioPlayer";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import { reciterName, recitationLabel, rawiLabel } from "../../../src/i18n/qiraatI18n";
 import { saveLastRead, getLastReadAyah } from "../../../src/utils/readingHistory";
-import { QURAN_FONT } from "../../../src/constants/fonts";
-import TajweedText from "../../../src/components/TajweedText";
+import AyatCard from "../../../src/components/AyatCard";
 import TajweedLegend from "../../../src/components/TajweedLegend";
 import { TAJWEED_MUSHAF_ID } from "../../../src/utils/tajweedColor";
 
@@ -45,6 +44,11 @@ interface SuratDetail {
 }
 
 const RECITER_STORAGE_KEY = "selected_reciter_id";
+const SHOW_LATIN_KEY = "surah_show_latin";
+const SHOW_TRANSLATION_KEY = "surah_show_translation";
+// Jumlah kartu ayat yang dipasang di awal, lalu ditambah bertahap (surah panjang jadi tidak berat)
+const INITIAL_AYAH_BATCH = 12;
+const AYAH_BATCH_STEP = 16;
 
 type ReciterFilter = "all" | "ayah" | "surah";
 
@@ -52,6 +56,37 @@ export default function SurahDetailScreen() {
   const { isDarkMode, theme } = useTheme();
   const { t, language: lang, flip, isRTL } = useLanguage();
   const { nomor, mushafId: routeMushafId, ayat: routeAyat } = useLocalSearchParams();
+  const { width: winWidth } = useWindowDimensions();
+  const compact = winWidth < 360;
+  const gutter = compact ? 16 : 24;
+
+  // Preferensi tampilan baca (disimpan di perangkat)
+  const [showLatin, setShowLatin] = useState(true);
+  const [showTranslation, setShowTranslation] = useState(true);
+  useEffect(() => {
+    (async () => {
+      try {
+        const [l, tr] = await Promise.all([
+          AsyncStorage.getItem(SHOW_LATIN_KEY),
+          AsyncStorage.getItem(SHOW_TRANSLATION_KEY),
+        ]);
+        if (l === "0") setShowLatin(false);
+        if (tr === "0") setShowTranslation(false);
+      } catch {}
+    })();
+  }, []);
+  const toggleLatin = useCallback(() => {
+    setShowLatin((v) => {
+      AsyncStorage.setItem(SHOW_LATIN_KEY, v ? "0" : "1").catch(() => {});
+      return !v;
+    });
+  }, []);
+  const toggleTranslation = useCallback(() => {
+    setShowTranslation((v) => {
+      AsyncStorage.setItem(SHOW_TRANSLATION_KEY, v ? "0" : "1").catch(() => {});
+      return !v;
+    });
+  }, []);
 
   const [surahData, setSurahData] = useState<SuratDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -305,6 +340,45 @@ export default function SurahDetailScreen() {
   // true setelah user menandai ayat secara manual: scroll tidak menimpa pilihannya lagi
   const pinnedRef = useRef(false);
 
+  // Pemasangan kartu ayat bertahap
+  const [renderCount, setRenderCount] = useState(INITIAL_AYAH_BATCH);
+  const totalAyat = surahData?.ayat.length ?? 0;
+  const jumpTargetAyah = (() => {
+    const p = routeAyat ? parseInt(String(routeAyat), 10) : NaN;
+    return Number.isFinite(p) ? p : lastReadAyahNumber;
+  })();
+
+  // Reset saat pindah surah
+  const prevSurahNoRef = useRef<number | null>(null);
+  useEffect(() => {
+    const n = surahData?.info.nomor ?? null;
+    if (prevSurahNoRef.current != null && n !== prevSurahNoRef.current) {
+      setRenderCount(INITIAL_AYAH_BATCH);
+      ayahOffsetY.current = {};
+    }
+    if (n != null) prevSurahNoRef.current = n;
+  }, [surahData?.info.nomor]);
+
+  // Pastikan ayat tujuan (deep-link / terakhir dibaca / ayat aktif audio) sudah terpasang
+  useEffect(() => {
+    if (!surahData) return;
+    const idxOf = (n: number | null) => (n == null ? -1 : surahData.ayat.findIndex((a) => a.nomor === n));
+    const need = Math.max(idxOf(jumpTargetAyah), idxOf(activeAyahNumber)) + 6;
+    if (need > renderCount) setRenderCount(Math.min(totalAyat, need));
+  }, [surahData, jumpTargetAyah, activeAyahNumber, renderCount, totalAyat]);
+
+  // Tambah batch berikutnya setelah frame selesai (tidak memblokir scroll/sentuhan)
+  useEffect(() => {
+    if (!surahData || renderCount >= totalAyat) return;
+    const id = setTimeout(() => setRenderCount((c) => Math.min(totalAyat, c + AYAH_BATCH_STEP)), 80);
+    return () => clearTimeout(id);
+  }, [surahData, renderCount, totalAyat]);
+
+  const handleAyahLayout = useCallback((n: number, y: number) => {
+    ayahOffsetY.current[n] = y;
+  }, []);
+
+
   // Umpan balik singkat pas tombol bookmark ditekan
   const [justSaved, setJustSaved] = useState(false);
 
@@ -534,6 +608,12 @@ export default function SurahDetailScreen() {
     ayahPlaylist.playFrom(index);
   };
 
+  // Handler stabil untuk AyatCard (memo): selalu memanggil versi terbaru lewat ref
+  const cardActionsRef = useRef({ mark: (_n: number) => {}, play: (_n: number) => {} });
+  cardActionsRef.current = { mark: confirmMarkAyah, play: handlePlayAyat };
+  const handleCardMark = useCallback((n: number) => cardActionsRef.current.mark(n), []);
+  const handleCardPlay = useCallback((n: number) => cardActionsRef.current.play(n), []);
+
   // Toggle tombol "Ikuti Bacaan": mulai dari ayat 1, atau resume/pause
   // dari posisi terakhir kalau sudah pernah jalan.
   const handleToggleFollowMode = () => {
@@ -688,13 +768,13 @@ export default function SurahDetailScreen() {
         ref={scrollRef}
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 56 }}
         onScroll={handleScroll}
         scrollEventThrottle={200}
       >
 
         {/* 1. CHOOSE RECITER */}
-        <View className={`mx-6 mt-5 px-3 py-2.5 ${theme.bgCard} border ${theme.border} rounded-2xl`}>
+        <View style={{ marginHorizontal: gutter }} className={`mt-5 px-3 py-2.5 ${theme.bgCard} border ${theme.border} rounded-2xl`}>
           <View className="flex-row items-center justify-between gap-3">
             <Text className={`text-sm font-bold ${theme.text}`}>{t("pickReciter")}</Text>
             <Pressable
@@ -826,7 +906,7 @@ export default function SurahDetailScreen() {
         </View>
 
         {/* 2. INFORMASI SURAT + IKUTI BACAAN */}
-        <View className="px-6 mt-5 mb-3">
+        <View style={{ paddingHorizontal: gutter }} className="mt-5 mb-3">
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1">
               <Text className={`text-[11px] font-bold tracking-[2px] ${theme.textSecondary} mb-1`}>
@@ -872,14 +952,14 @@ export default function SurahDetailScreen() {
 
         {/* Keterangan warna tajwid (khusus mushaf Tajwid Berwarna) */}
         {String(activeMushafId) === TAJWEED_MUSHAF_ID && (
-          <View className="px-6">
+          <View style={{ paddingHorizontal: gutter }}>
             <TajweedLegend />
           </View>
         )}
 
         {/* 3. AUDIO PLAYER FULL SURAH */}
         {audioFullUrl ? (
-          <View className="px-6 mb-4">
+          <View style={{ paddingHorizontal: gutter }} className="mb-4">
             <AudioPlayer
               audioUrl={audioFullUrl}
               title={`Murottal Full: ${surahData.info.namaLatin}`}
@@ -891,7 +971,7 @@ export default function SurahDetailScreen() {
             />
           </View>
         ) : (
-          <View className="px-6 mb-4">
+          <View style={{ paddingHorizontal: gutter }} className="mb-4">
             <View className={`p-4 rounded-2xl border ${theme.border} ${theme.bgCard} items-center`}>
               <Text className={`text-sm ${theme.textMuted}`}>
                 {t("onlyPerAyah")}
@@ -902,96 +982,79 @@ export default function SurahDetailScreen() {
 
         {/* 4. AYAT-AYAT */}
         <View
-          className="px-6"
+          style={{ paddingHorizontal: gutter }}
           onLayout={(e) => { ayahListOffsetY.current = e.nativeEvent.layout.y; }}
         >
-          {surahData.ayat.map((ayat) => {
-            const isActive = activeAyahNumber === ayat.nomor;
-            const isPlayingThisAyat = isActive && ayahPlaylist.isPlaying;
-            const isLastRead = !isActive && lastReadAyahNumber === ayat.nomor;
-
-            return (
-              <View
-                key={ayat.nomor}
-                onLayout={(e) => { ayahOffsetY.current[ayat.nomor] = e.nativeEvent.layout.y; }}
-                className={`mb-4 rounded-2xl border p-4 ${
-                  isActive
-                    ? isDarkMode ? "border-emerald-600 bg-emerald-900/20" : "border-emerald-600 bg-emerald-50"
-                    : isLastRead
-                    ? isDarkMode ? "border-amber-700 bg-amber-900/10" : "border-amber-300 bg-amber-50"
+          {/* Pilihan tampilan baca: sembunyikan latin / terjemahan */}
+          <View className="flex-row flex-wrap items-center gap-2 mb-4">
+            {([
+              { key: "latin", on: showLatin, toggle: toggleLatin, label: t("readLatin") },
+              { key: "tr", on: showTranslation, toggle: toggleTranslation, label: t("readTranslation") },
+            ]).map((c) => (
+              <Pressable
+                key={c.key}
+                onPress={c.toggle}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: c.on }}
+                className={`px-3.5 py-2 rounded-full border active:opacity-80 ${
+                  c.on
+                    ? isDarkMode ? "bg-emerald-900/40 border-emerald-700" : "bg-emerald-50 border-emerald-300"
                     : `${theme.border} ${theme.bgCard}`
                 }`}
               >
-                {isLastRead && (
-                  <View className="flex-row items-center gap-1 mb-2 -mt-1">
-                    <Bookmark size={12} color={isDarkMode ? "#fbbf24" : "#b45309"} fill={isDarkMode ? "#fbbf24" : "#b45309"} />
-                    <Text className={`text-[11px] font-semibold ${isDarkMode ? "text-amber-400" : "text-amber-700"}`}>
-                      {t("lastReadMarker")}
-                    </Text>
-                  </View>
-                )}
-
-                <View className="flex-row items-center justify-between mb-4">
-                  <Pressable
-                    onPress={() => confirmMarkAyah(ayat.nomor)}
-                    accessibilityRole="button"
-                    accessibilityLabel={t("markAyahTitle")}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    className={`h-8 w-8 rounded-full ${isLastRead ? "bg-amber-200" : "bg-[#f5f0e1]"} items-center justify-center active:opacity-70`}
-                  >
-                    <Text className={`text-xs font-bold text-emerald-800`}>{ayat.nomor}</Text>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={() => handlePlayAyat(ayat.nomor)}
-                    disabled={!ayat.audio}
-                    className={`p-2 rounded-full ${isPlayingThisAyat ? "bg-emerald-600" : isDarkMode ? "bg-gray-700" : "bg-gray-200"} active:opacity-70 ${!ayat.audio ? "opacity-30" : ""}`}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Volume2 size={18} color={isPlayingThisAyat ? "#fff" : theme.iconColor} />
-                  </Pressable>
-                </View>
-
-                <View className="mb-3">
-                  <Text
-                    className={`text-3xl ${theme.text}`}
-                    style={{
-                      writingDirection: "rtl",
-                      textAlign: "right",
-                      lineHeight: 75,
-                      includeFontPadding: false,
-                      textAlignVertical: "center",
-                      fontFamily: QURAN_FONT,
-                    }}
-                  >
-                    {String(activeMushafId) === TAJWEED_MUSHAF_ID ? (
-                      <TajweedText text={ayat.teksArab} isDark={isDarkMode} />
-                    ) : (
-                      ayat.teksArab
-                    )}
-                  </Text>
-                </View>
-
-                {!!ayat.teksLatin && (
-                  <Text
-                    className={`text-xs italic leading-5 mb-1.5 ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`}
-                    style={{ textAlign: lang === "ar" ? "right" : "left" }}
-                  >
-                    {ayat.teksLatin}
-                  </Text>
-                )}
-                <Text className={`text-sm leading-6 ${theme.textMuted}`} style={{ textAlign: lang === "ar" ? "right" : "left" }}>
-                  {ayat.teksIndonesia}
+                <Text
+                  numberOfLines={1}
+                  className={`text-xs font-semibold ${c.on ? (isDarkMode ? "text-emerald-300" : "text-emerald-800") : theme.textMuted}`}
+                >
+                  {c.on ? "✓ " : ""}{c.label}
                 </Text>
-              </View>
+              </Pressable>
+            ))}
+          </View>
+
+          {surahData.ayat.slice(0, renderCount).map((ayat) => {
+            const isActive = activeAyahNumber === ayat.nomor;
+            return (
+              <AyatCard
+                key={ayat.nomor}
+                nomor={ayat.nomor}
+                teksArab={ayat.teksArab}
+                teksLatin={ayat.teksLatin}
+                teksIndonesia={ayat.teksIndonesia}
+                hasAudio={!!ayat.audio}
+                isActive={isActive}
+                isPlaying={isActive && ayahPlaylist.isPlaying}
+                isLastRead={!isActive && lastReadAyahNumber === ayat.nomor}
+                isDark={isDarkMode}
+                isTajweed={String(activeMushafId) === TAJWEED_MUSHAF_ID}
+                isArabicUi={lang === "ar"}
+                compact={compact}
+                showLatin={showLatin}
+                showTranslation={showTranslation}
+                borderClass={theme.border}
+                cardClass={theme.bgCard}
+                textClass={theme.text}
+                mutedClass={theme.textMuted}
+                iconColor={theme.iconColor}
+                lastReadLabel={t("lastReadMarker")}
+                markLabel={t("markAyahTitle")}
+                onLayoutY={handleAyahLayout}
+                onMark={handleCardMark}
+                onPlay={handleCardPlay}
+              />
             );
           })}
+          {renderCount < totalAyat && (
+            <View className="py-4 items-center">
+              <ActivityIndicator size="small" color={theme.iconColor} />
+            </View>
+          )}
         </View>
 
         {/* Pindah surah: tombol (alternatif untuk geser layar) */}
         <View
-          className="items-center justify-between gap-3 px-6 pt-6"
-          style={{ flexDirection: isRTL ? "row" : "row-reverse" }}
+          className="items-center justify-between gap-3 pt-6"
+          style={{ flexDirection: isRTL ? "row" : "row-reverse", paddingHorizontal: gutter }}
         >
           <Pressable
             onPress={() => goToSurah(surahData.info.nomor - 1)}
@@ -1001,7 +1064,7 @@ export default function SurahDetailScreen() {
             className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-2xl border ${theme.border} ${theme.bgCard} active:opacity-80 ${surahData.info.nomor <= 1 ? "opacity-40" : ""}`}
           >
             <ArrowRight size={18} color={theme.iconColor} />
-            <Text className={`text-sm font-semibold ${theme.text}`}>{t("prevSurah")}</Text>
+            <Text numberOfLines={1} className={`text-sm font-semibold flex-shrink ${theme.text}`}>{t("prevSurah")}</Text>
           </Pressable>
           <Pressable
             onPress={() => goToSurah(surahData.info.nomor + 1)}
@@ -1010,7 +1073,7 @@ export default function SurahDetailScreen() {
             accessibilityLabel={t("nextSurah")}
             className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-700 active:opacity-90 ${surahData.info.nomor >= 114 ? "opacity-40" : ""}`}
           >
-            <Text className="text-sm font-semibold text-white">{t("nextSurah")}</Text>
+            <Text numberOfLines={1} className="text-sm font-semibold text-white flex-shrink">{t("nextSurah")}</Text>
             <ArrowLeft size={18} color="#fff" />
           </Pressable>
         </View>

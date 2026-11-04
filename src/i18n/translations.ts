@@ -223,6 +223,8 @@ export const DICT: Record<string, Row> = {
   loadingReading: ["Memuat bacaan...", "Loading recitation...", "جارٍ تحميل التلاوة..."],
   tapRetry: ["{error} Ketuk untuk coba lagi.", "{error} Tap to retry.", "{error} اضغط لإعادة المحاولة."],
   lastReadMarker: ["Terakhir dibaca", "Last read", "آخر قراءة"],
+  readLatin: ["Latin", "Transliteration", "النطق"],
+  readTranslation: ["Terjemahan", "Translation", "الترجمة"],
   surahLoadFailed: [
     "Gagal memuat data surat. Pastikan koneksi internet aktif.",
     "Failed to load the surah. Please check your internet connection.",
