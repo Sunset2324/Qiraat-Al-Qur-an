@@ -3,7 +3,8 @@ import "../src/globals.css";
 
 import { Slot, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View, Text, TextInput, Platform, PermissionsAndroid, Alert } from "react-native";
+import { View, Text, TextInput, Platform, PermissionsAndroid, Alert, useWindowDimensions } from "react-native";
+import * as ScreenOrientation from "expo-screen-orientation";
 import { useEffect } from "react";
 import { setAudioModeAsync } from "expo-audio";
 import { useFonts, AmiriQuran_400Regular } from "@expo-google-fonts/amiri-quran";
@@ -60,6 +61,21 @@ function RootLayoutContent() {
   // ─────────────────────────────────────────────────────────
   // 🎵 KONFIGURASI AUDIO GLOBAL (Background & Notifikasi Media)
   // ─────────────────────────────────────────────────────────
+  // Orientasi: HP (sisi terpendek < 600 dp) dikunci portrait; tablet/foldable bebas rotasi
+  // (Android 16 mengabaikan kunci orientasi di layar besar, jadi tata letak harus siap berotasi).
+  const { width: winW, height: winH } = useWindowDimensions();
+  const isLargeScreen = Math.min(winW, winH) >= 600;
+  useEffect(() => {
+    (async () => {
+      try {
+        if (isLargeScreen) await ScreenOrientation.unlockAsync();
+        else await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+      } catch {
+        // gagal mengatur orientasi = biarkan default, jangan ganggu aplikasi
+      }
+    })();
+  }, [isLargeScreen]);
+
   useEffect(() => {
     const setupAudio = async () => {
       try {

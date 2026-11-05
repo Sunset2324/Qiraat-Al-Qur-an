@@ -4,7 +4,7 @@
     "slug": "qiraat-al-quran",
     "version": "1.0.3",
     "scheme": "qiraat-al-qur-an",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/logo.png",
     "userInterfaceStyle": "light",
     "assetBundlePatterns": [
@@ -32,6 +32,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      ["expo-build-properties", { "android": { "enableMinifyInReleaseBuilds": true, "enableShrinkResourcesInReleaseBuilds": true } }],
       [
         "expo-audio",
         {
