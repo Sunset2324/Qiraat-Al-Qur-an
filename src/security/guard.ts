@@ -35,8 +35,17 @@ let current: GuardStatus = SAFE;
 let inflight: Promise<GuardStatus> | null = null;
 const listeners = new Set<(s: GuardStatus) => void>();
 
+/**
+ * SAKLAR ANTI-DEBUGGING ("mode terbatas"): DIMATIKAN SEMENTARA (keputusan pemilik, 4 Nov 2026).
+ * Selama false, opsi pengembang/ADB/debugger/root/hooking/emulator TIDAK lagi membatasi fitur apa pun
+ * (iklan Jurnal Kesehatan, kiblat online). Pemeriksaan native tetap berjalan, jadi cukup ubah ke true
+ * untuk mengaktifkannya lagi setelah semuanya dirasa ideal. Blokir VPN/proxy (isApiBlocked) TIDAK terpengaruh.
+ */
+export const ANTI_DEBUG_ENABLED = false;
+
 export const isRestricted = (s: GuardStatus = current) =>
-  s.devOptions || s.adb || s.debugger || s.debuggableApp || s.root || s.hooked || s.emulator;
+  ANTI_DEBUG_ENABLED &&
+  (s.devOptions || s.adb || s.debugger || s.debuggableApp || s.root || s.hooked || s.emulator);
 
 /**
  * Alasan teknis (nama flag) hanya ditampilkan di build PREVIEW (eas.json: EXPO_PUBLIC_APP_VARIANT=preview).
