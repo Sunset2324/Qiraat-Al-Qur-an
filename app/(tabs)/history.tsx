@@ -8,7 +8,7 @@ import { useLanguage } from "../../src/context/LanguageContext";
 import { getHistoryList, type ReadingProgress } from "../../src/utils/readingHistory";
 import BatikPattern from "../../src/components/ui/BatikPattern";
 import { useIsTablet } from "../../src/hooks/useIsTablet";
-import { ARABIC_FONT } from "../../src/constants/fonts";
+import TabHeader from "../../src/components/ui/TabHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HistoryScreen() {
@@ -135,18 +135,13 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
-      {/* Header: batik + kaligrafi */}
-      <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 20 }}>
-        <BatikPattern cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
-        <View className="flex-row items-center justify-between">
-          <View className="flex-1 pr-3">
-            <Text className="text-xs font-bold tracking-[2px] text-emerald-100">{t("activityHistory")}</Text>
-            <Text className="text-2xl font-extrabold mt-1 text-white">{t("lastReadTitle")}</Text>
-          </View>
-          <Text style={{ fontFamily: ARABIC_FONT, fontSize: 32, lineHeight: 52, color: "#fde68a", marginRight: historyList.length > 0 ? 14 : 0 }}>
-            السجل
-          </Text>
-          {historyList.length > 0 && (
+      {/* Header ringkas: batik + kaligrafi */}
+      <TabHeader
+        tag={t("activityHistory")}
+        title={t("lastReadTitle")}
+        arabic="السجل"
+        right={
+          historyList.length > 0 ? (
             <Pressable
               onPress={handleClearHistory}
               accessibilityRole="button"
@@ -156,9 +151,9 @@ export default function HistoryScreen() {
             >
               <Trash2 size={20} color="#dc2626" />
             </Pressable>
-          )}
-        </View>
-      </View>
+          ) : undefined
+        }
+      />
 
       {/* Konten */}
       {loading ? (

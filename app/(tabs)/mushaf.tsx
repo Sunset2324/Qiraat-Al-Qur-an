@@ -7,9 +7,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useLanguage } from "../../src/context/LanguageContext";
 import { getDaftarSurah, getMushafPages, type MushafPagesSummary } from "../../src/services/quranService";
-import { QURAN_FONT, ARABIC_FONT } from "../../src/constants/fonts";
+import { QURAN_FONT } from "../../src/constants/fonts";
 import BatikPattern from "../../src/components/ui/BatikPattern";
 import { useIsTablet } from "../../src/hooks/useIsTablet";
+import TabHeader from "../../src/components/ui/TabHeader";
 import { getLastReadAyah } from "../../src/utils/readingHistory"; // Import utility baru
 
 interface SurahItem {
@@ -244,18 +245,7 @@ export default function MushafScreen() {
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
-      <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: gutter, paddingVertical: 20 }}>
-        <BatikPattern cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
-        <View className="flex-row items-center justify-between">
-          <View className="flex-1 pr-3">
-            <Text className="text-xs font-bold tracking-[2px] text-emerald-100">{t("greeting")}</Text>
-            <Text className="text-2xl font-extrabold text-white mt-1">{t("mushafLearn")}</Text>
-          </View>
-          <Text style={{ fontFamily: ARABIC_FONT, fontSize: isTablet ? 40 : 32, lineHeight: isTablet ? 68 : 56, color: "#fde68a" }}>
-            المصحف
-          </Text>
-        </View>
-      </View>
+      <TabHeader tag={t("greeting")} title={t("mushafLearn")} arabic="المصحف" />
 
       <FlatList
         key={`${viewMode}-${cols}`}
