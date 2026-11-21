@@ -1,10 +1,12 @@
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import { cachedRequest, DAY, HOUR } from '../utils/apiCache';
+import { installGuard } from '../security/guard';
 
 // Satu instance axios dengan timeout, supaya app tidak menggantung kalau
 // server (Vercel cold start) atau jaringan lambat.
 const http = axios.create({ baseURL: API_BASE_URL, timeout: 20000 });
+installGuard(http); // blokir panggilan saat VPN/proxy aktif
 
 // Ubah pesan error teknis jadi pesan yang bisa langsung ditampilkan ke pengguna.
 http.interceptors.response.use(

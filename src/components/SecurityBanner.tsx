@@ -3,13 +3,11 @@ import { View, Text, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ShieldAlert, X } from "lucide-react-native";
 import { useSecurity } from "../context/SecurityContext";
-import { guardReasons } from "../security/guard";
 import { useLanguage } from "../context/LanguageContext";
 
 /** Kartu peringatan melayang di atas layar. VPN/proxy = merah (tidak bisa ditutup); mode terbatas = kuning. */
 export default function SecurityBanner() {
-  const { apiBlocked, restricted, recheck, status } = useSecurity();
-  const reasons = guardReasons(status); // kosong di production
+  const { apiBlocked, restricted, recheck } = useSecurity();
   const { t, language } = useLanguage();
   const insets = useSafeAreaInsets();
   const [hidden, setHidden] = useState(false);
@@ -43,11 +41,6 @@ export default function SecurityBanner() {
           <Text style={{ color: "#fff", fontSize: 12, marginTop: 2, textAlign: rtl ? "right" : "left" }}>
             {t(danger ? "guardNetMsg" : "guardRestrictedMsg")}
           </Text>
-          {reasons.length > 0 && (
-            <Text style={{ color: "#fff", fontSize: 11, marginTop: 4, opacity: 0.9, textAlign: "left" }}>
-              {`[preview] ${reasons.join(", ")}`}
-            </Text>
-          )}
         </View>
         {danger ? (
           <Pressable onPress={recheck} hitSlop={8} accessibilityRole="button">
