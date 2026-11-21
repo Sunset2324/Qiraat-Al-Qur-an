@@ -1,10 +1,13 @@
-import { Tabs } from "expo-router";
+import { Tabs, router } from "expo-router";
 import { View, Pressable, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useLanguage } from "../../src/context/LanguageContext";
 import MiniPlayer from "../../src/components/MiniPlayer";
+import BatikPattern from "../../src/components/ui/BatikPattern";
+import { useIsTablet } from "../../src/hooks/useIsTablet";
+import { ARABIC_FONT } from "../../src/constants/fonts";
 
 const TAB_LABEL_KEY: Record<string, string> = {
   index: "tabHome",
@@ -19,6 +22,71 @@ const TAB_ICON: Record<string, [string, string]> = {
   history: ["time", "time-outline"],
   settings: ["settings", "settings-outline"],
 };
+
+function SideRail({ state, navigation }: any) {
+  const { isDarkMode } = useTheme();
+  const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const bg = isDarkMode ? "#0f0f0f" : "#065f46";
+
+  const items = [
+    ...state.routes.map((route: any, index: number) => ({
+      key: route.key,
+      label: t(TAB_LABEL_KEY[route.name] ?? route.name),
+      icon: TAB_ICON[route.name] ?? ["help-circle", "help-circle-outline"],
+      focused: state.index === index,
+      onPress: () => {
+        const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+        if (state.index !== index && !event.defaultPrevented) navigation.navigate(route.name);
+      },
+    })),
+  ];
+  // sisipkan "Mengajar" sebelum Pengaturan (indeks terakhir)
+  items.splice(items.length - 1, 0, {
+    key: "teach",
+    label: t("tabTeach"),
+    icon: ["school", "school-outline"],
+    focused: false,
+    onPress: () => router.push("/screen/mengajar/mengajar" as any),
+  });
+
+  return (
+    <View style={{ width: 108, backgroundColor: bg, paddingTop: Math.max(insets.top, 20), paddingBottom: Math.max(insets.bottom, 16), alignItems: "center", overflow: "hidden" }}>
+      <BatikPattern width={108} height={1400} cell={36} opacity={isDarkMode ? 0.06 : 0.14} />
+      <Text allowFontScaling={false} style={{ fontFamily: ARABIC_FONT, fontSize: 32, color: "#fde68a", marginBottom: 16, lineHeight: 52 }}>
+        قِرَاءَات
+      </Text>
+      {items.map((it: any) => (
+        <Pressable
+          key={it.key}
+          onPress={it.onPress}
+          accessibilityRole="button"
+          accessibilityState={{ selected: it.focused }}
+          accessibilityLabel={it.label}
+          className="items-center justify-center active:opacity-70"
+          style={{
+            width: 84,
+            height: 84,
+            borderRadius: 22,
+            marginBottom: 10,
+            backgroundColor: it.focused ? "#fffcf5" : "transparent",
+            // Pengaturan didorong ke bawah
+            ...(it.key === items[items.length - 1].key ? { marginTop: "auto" } : null),
+          }}
+        >
+          <Ionicons name={(it.focused ? it.icon[0] : it.icon[1]) as any} size={28} color={it.focused ? "#065f46" : "#d1fae5"} />
+          <Text
+            numberOfLines={1}
+            allowFontScaling={false}
+            style={{ fontSize: 13, marginTop: 6, fontWeight: it.focused ? "800" : "700", color: it.focused ? "#065f46" : "#d1fae5" }}
+          >
+            {it.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
 
 function CustomFooter({ state, navigation }: any) {
   const { isDarkMode, theme } = useTheme();
@@ -82,8 +150,12 @@ function CustomFooter({ state, navigation }: any) {
 }
 
 export default function TabLayout() {
+  const isTablet = useIsTablet();
   return (
-    <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <CustomFooter {...props} />}>
+    <Tabs
+      screenOptions={{ headerShown: false, tabBarPosition: isTablet ? "left" : "bottom" }}
+      tabBar={(props) => (isTablet ? <SideRail {...props} /> : <CustomFooter {...props} />)}
+    >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="mushaf" />
       <Tabs.Screen name="history" />

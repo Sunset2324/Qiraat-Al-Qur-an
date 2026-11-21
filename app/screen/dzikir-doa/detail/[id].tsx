@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Share } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
-import { ArrowLeft, Copy, Share2, Tag } from "lucide-react-native";
+import { ArrowLeft, Copy, Check, Share2, Tag } from "lucide-react-native";
+import * as Clipboard from "expo-clipboard";
 import { useTheme } from "../../../../src/context/ThemeContext";
 import { useLanguage } from "../../../../src/context/LanguageContext";
+import BatikPattern from "../../../../src/components/ui/BatikPattern";
+import { useIsTablet } from "../../../../src/hooks/useIsTablet";
 import { getDetailDoa } from "../../../../src/services/quranService";
 import { ARABIC_FONT } from "../../../../src/constants/fonts";
 import DzikirCounter from "../../../../src/components/DzikirCounter";
 import { getLocalDzikir, isLocalDzikirId, pick } from "../../../../src/data/dzikirSunnah";
+import { DOA_OFFLINE_READY, getDoaOffline } from "../../../../src/data/doaOffline";
 
 const DZIKIR_RE = /dzikir|zikir|tasbih|tahmid|takbir|tahlil|istighfar|hauqalah|subhanallah|alhamdulillah|allahu akbar/i;
 
@@ -16,9 +20,12 @@ export default function DoaDetailScreen() {
   const { isDarkMode, theme } = useTheme();
   const { t, flip, language } = useLanguage();
   const { id } = useLocalSearchParams();
+  const isTablet = useIsTablet();
+  const pad = isTablet ? 40 : 24;
   
   const [doa, setDoa] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetchDetail();
@@ -47,12 +54,47 @@ export default function DoaDetailScreen() {
         );
         return;
       }
+      // Data EQuran.id dibundel di app (offline); API hanya cadangan kalau data bundel belum diisi
+      const offline = DOA_OFFLINE_READY ? getDoaOffline(Number(id)) : null;
+      if (offline) {
+        setDoa(offline);
+        return;
+      }
       const data = await getDetailDoa(Number(id));
       setDoa(data);
     } catch (error) {
       console.error("Gagal memuat detail doa:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  /** Teks yang disalin / dibagikan: judul, Arab, latin, arti, sumber (kalau ada), nama app. */
+  const buildShareText = (): string => {
+    if (!doa) return "";
+    const parts = [String(doa.judul ?? "").trim(), "", String(doa.doa ?? "").trim()];
+    if (doa.latin) parts.push("", `"${String(doa.latin).trim()}"`);
+    if (doa.arti) parts.push("", `${t("meaningTitle")}:`, String(doa.arti).trim());
+    if (doa.sumber) parts.push("", t("sourceHadith", { src: doa.sumber }));
+    parts.push("", "— Qiraat Al-Qur'an");
+    return parts.join("\n");
+  };
+
+  const onCopy = async () => {
+    try {
+      await Clipboard.setStringAsync(buildShareText());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* gagal menyalin: tidak ada yang perlu dilakukan */
+    }
+  };
+
+  const onShare = async () => {
+    try {
+      await Share.share({ message: buildShareText() });
+    } catch {
+      /* dibatalkan / gagal: diabaikan */
     }
   };
 
@@ -66,18 +108,50 @@ export default function DoaDetailScreen() {
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
-      <View className={`flex-row items-center justify-between px-6 py-4 border-b ${theme.border}`}>
-        <Pressable onPress={() => router.back()} className="p-1 active:opacity-70">
-          <ArrowLeft size={24} color={theme.iconColor} style={flip} />
+      <View className={`${theme.bgHeader} flex-row items-center justify-between overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 14 }}>
+        <BatikPattern width={1200} height={90} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel={t("back")}
+          className="items-center justify-center rounded-full active:opacity-70"
+          style={{ width: 48, height: 48, backgroundColor: "rgba(255,255,255,0.16)" }}
+        >
+          <ArrowLeft size={22} color="#fff" style={flip} />
         </Pressable>
-        <Text className={`text-base font-bold ${theme.text}`}>{t("doaDetail")}</Text>
-        <View className="flex-row gap-4">
-          <Pressable className="p-1 active:opacity-70"><Copy size={22} color={theme.iconColor} /></Pressable>
-          <Pressable className="p-1 active:opacity-70"><Share2 size={22} color={theme.iconColor} /></Pressable>
+        <Text className="text-lg font-extrabold text-white">{t("doaDetail")}</Text>
+        <View className="flex-row gap-3">
+          <Pressable
+            onPress={onCopy}
+            accessibilityRole="button"
+            accessibilityLabel={t("copyDoa")}
+            className="items-center justify-center rounded-full active:opacity-70"
+            style={{ width: 48, height: 48, backgroundColor: "rgba(255,255,255,0.16)" }}
+          >
+            {copied ? <Check size={22} color="#fde68a" /> : <Copy size={22} color="#fff" />}
+          </Pressable>
+          <Pressable
+            onPress={onShare}
+            accessibilityRole="button"
+            accessibilityLabel={t("shareDoa")}
+            className="items-center justify-center rounded-full active:opacity-70"
+            style={{ width: 48, height: 48, backgroundColor: "rgba(255,255,255,0.16)" }}
+          >
+            <Share2 size={22} color="#fff" />
+          </Pressable>
         </View>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      {copied && (
+        <View className={`mx-6 mt-3 px-4 py-2 rounded-xl ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"}`}>
+          <Text className={`text-xs font-semibold text-center ${isDarkMode ? "text-emerald-200" : "text-emerald-800"}`}>
+            {t("copied")}
+          </Text>
+        </View>
+      )}
+
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40, alignItems: "center" }}>
+        <View style={{ width: "100%", maxWidth: 860 }}>
         <View className="px-6 pt-6 pb-4">
           <View className="flex-row items-center gap-2 mb-2">
             <View className={`px-3 py-1 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"}`}>
@@ -92,10 +166,11 @@ export default function DoaDetailScreen() {
         </View>
 
         <View className="px-6 mb-6">
-          <View className={`p-6 rounded-3xl ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fffcf5]"} border ${theme.border} items-center`}>
+          <View className={`p-6 rounded-3xl overflow-hidden ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fffcf5]"} border ${theme.border} items-center`}>
+            <BatikPattern width={900} height={600} color={isDarkMode ? "#34d399" : "#047857"} cell={56} opacity={0.07} strokeWidth={1.4} />
             <Text 
-              className={`text-3xl leading-[50px] text-center ${theme.text}`}
-              style={{ fontFamily: ARABIC_FONT, textAlign: "right" }}
+              className={`${theme.text}`}
+              style={{ fontFamily: ARABIC_FONT, textAlign: "right", writingDirection: "rtl", fontSize: isTablet ? 40 : 30, lineHeight: isTablet ? 76 : 56 }}
             >
               {doa.doa}
             </Text>
@@ -174,6 +249,7 @@ export default function DoaDetailScreen() {
             </View>
           </View>
         )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

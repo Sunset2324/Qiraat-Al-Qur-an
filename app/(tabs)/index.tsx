@@ -1,11 +1,16 @@
+import { useCallback, useState } from "react";
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Image, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { FileText, CloudSun, MapPin } from "lucide-react-native";
+import { router, useFocusEffect } from "expo-router";
+import { FileText, CloudSun, MapPin, GraduationCap } from "lucide-react-native";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useLanguage } from "../../src/context/LanguageContext";
 import { useJadwalHariIni, formatCountdown } from "../../src/hooks/useJadwalHariIni";
 import { formatClock, formatHijri } from "../../src/utils/dateFormat";
+import { getHistoryList, ReadingProgress } from "../../src/utils/readingHistory";
+import BatikPattern from "../../src/components/ui/BatikPattern";
+import { useIsTablet } from "../../src/hooks/useIsTablet";
+import { ARABIC_FONT } from "../../src/constants/fonts";
 
 export default function DashboardScreen() {
   const { isDarkMode, theme } = useTheme();
@@ -13,9 +18,32 @@ export default function DashboardScreen() {
   const { width } = useWindowDimensions();
   const { lokasi, ready, loading, error, next, now } = useJadwalHariIni();
 
+  const isTablet = useIsTablet();
   // Kartu fitur: 2 kolom di HP, 3 kolom di layar lebar (tablet)
   const cols = width >= 700 ? 3 : 2;
   const cardW = `${Math.floor(100 / cols) - 2}%` as const;
+
+  // Bacaan terakhir untuk kartu "Lanjutkan membaca"
+  const [last, setLast] = useState<ReadingProgress | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      getHistoryList().then((l) => alive && setLast(l[0] ?? null));
+      return () => {
+        alive = false;
+      };
+    }, [])
+  );
+  const hour = now.getHours();
+  const greetKey = hour < 11 ? "greetMorning" : hour < 15 ? "greetDay" : hour < 18 ? "greetEvening" : "greetNight";
+  const goLast = () =>
+    last
+      ? router.push({
+          pathname: "/screen/surah/[nomor]",
+          params: { nomor: String(last.surahNomor), mushafId: last.mushafId, ayat: String(last.ayatNomor) },
+        } as any)
+      : router.push("/(tabs)/mushaf" as any);
+  const pct = last && last.totalAyat ? Math.min(100, Math.round((last.ayatNomor / last.totalAyat) * 100)) : 0;
 
   const hijri = formatHijri(now, locale);
   const goPicker = () => router.push("/screen/jadwal-shalat/jadwal-shalat");
@@ -28,6 +56,8 @@ export default function DashboardScreen() {
     { key: "thibbun", label: t("featThibbun"), icon: require("../../assets/icons/thibbun-nabawi.png"), route: "/screen/thibbun-nabawi/thibbun-nabawi" },
   ] as const;
 
+  const pad = isTablet ? 40 : 24;
+
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
       <ScrollView
@@ -36,8 +66,9 @@ export default function DashboardScreen() {
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* 1. HEADER: Jam & Adzan */}
-        <View className={`${theme.bgHeader} rounded-b-[40px] px-6 pt-6 pb-24 relative overflow-hidden`}>
+        <View className={`${theme.bgHeader} rounded-b-[40px] pt-6 pb-24 relative overflow-hidden`} style={{ paddingHorizontal: pad }}>
           <View className={`absolute -right-10 -top-10 h-40 w-40 ${isDarkMode ? "bg-emerald-900" : "bg-emerald-700"} rounded-full opacity-50`} />
+          <BatikPattern width={isTablet ? 1200 : width} height={260} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
 
           <View className="flex-row justify-between items-start mb-4">
             <View className="flex-1 pr-3">
@@ -50,7 +81,9 @@ export default function DashboardScreen() {
                   {lokasi ? lokasi.kota : t("chooseLocation")}
                 </Text>
               </Pressable>
-              <Text className="text-4xl font-bold mt-1 tracking-tight text-white">{formatClock(now, locale)}</Text>
+              <Text style={{ fontFamily: ARABIC_FONT, fontSize: 28, lineHeight: 46, color: "#fde68a", marginTop: 4 }}>السلام عليكم</Text>
+              <Text className="text-sm font-semibold text-white">{t(greetKey)}</Text>
+              <Text className="font-bold mt-1 tracking-tight text-white" style={{ fontSize: isTablet ? 56 : 36 }}>{formatClock(now, locale)}</Text>
               {!!hijri && (
                 <Text className={`text-xs mt-1 ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>{hijri}</Text>
               )}
@@ -91,7 +124,35 @@ export default function DashboardScreen() {
         </View>
 
         {/* 2. MAIN CONTENT */}
-        <View className="flex-1 px-6 -mt-16">
+        <View className="flex-1 -mt-16" style={{ paddingHorizontal: pad }}>
+          {/* Lanjutkan membaca */}
+          <Pressable
+            onPress={goLast}
+            accessibilityRole="button"
+            accessibilityLabel={t("continueReading")}
+            className={`${theme.bgCard} rounded-3xl border ${theme.border} p-5 mb-4 shadow-sm active:opacity-90 overflow-hidden`}
+            style={{ minHeight: 120 }}
+          >
+            <Text className={`text-sm font-bold mb-2 ${theme.textSecondary}`}>{t("continueReading")}</Text>
+            {last ? (
+              <>
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-1 pr-3">
+                    <Text className={`text-2xl font-extrabold ${theme.text}`} numberOfLines={1}>{last.namaLatin}</Text>
+                    <Text className={`text-sm mt-0.5 ${theme.textSecondary}`}>
+                      {t("verseOfTotal", { a: last.ayatNomor, n: last.totalAyat })}
+                    </Text>
+                  </View>
+                </View>
+                <View className={`h-2.5 rounded-full mt-4 ${isDarkMode ? "bg-gray-700" : "bg-[#e9dfc2]"}`}>
+                  <View className="h-2.5 rounded-full bg-emerald-600" style={{ width: `${pct}%` }} />
+                </View>
+              </>
+            ) : (
+              <Text className={`text-base ${theme.text}`}>{t("noReadingYet")}</Text>
+            )}
+          </Pressable>
+
           <Pressable
             onPress={() => router.push("/screen/jurnal-kesehatan/jurnal-kesehatan" as any)}
             className={`${theme.bgCard} rounded-3xl border ${theme.border} py-6 flex-row items-center justify-center gap-3 mb-8 shadow-sm active:opacity-90`}
@@ -121,6 +182,20 @@ export default function DashboardScreen() {
                 </Text>
               </Pressable>
             ))}
+            {isTablet && (
+              <Pressable
+                onPress={() => router.push("/screen/mengajar/mengajar" as any)}
+                accessibilityRole="button"
+                accessibilityLabel={t("teachTitle")}
+                style={{ width: cardW, minHeight: 112 }}
+                className={`${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center justify-center mb-4 shadow-sm active:opacity-90`}
+              >
+                <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
+                  <GraduationCap size={28} color={theme.iconColor} />
+                </View>
+                <Text numberOfLines={2} className={`font-bold text-sm text-center ${theme.text}`}>{t("teachTitle")}</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </ScrollView>

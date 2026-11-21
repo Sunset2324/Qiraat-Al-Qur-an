@@ -3,9 +3,11 @@ import "../src/globals.css";
 
 import { Slot, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View, Text, TextInput, Platform, PermissionsAndroid } from "react-native";
+import { View, Text, TextInput, Platform, PermissionsAndroid, Alert, useWindowDimensions } from "react-native";
+import * as ScreenOrientation from "expo-screen-orientation";
 import { useEffect } from "react";
 import { setAudioModeAsync } from "expo-audio";
+import { useIsTablet } from "../src/hooks/useIsTablet";
 import { useFonts, AmiriQuran_400Regular } from "@expo-google-fonts/amiri-quran";
 import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
 import { LanguageProvider } from "../src/context/LanguageContext";
@@ -26,13 +28,32 @@ configureReanimatedLogger({
   strict: false, 
 });
 
+// Hanya build PREVIEW: tampilkan error JS yang tak tertangkap (mis. di event handler / promise) sebagai
+// peringatan di layar, alih-alih app langsung tertutup. Production tetap memakai perilaku bawaan.
+declare const ErrorUtils: any;
+if (IS_PREVIEW && typeof ErrorUtils !== "undefined" && !(globalThis as any).__previewErrHandler) {
+  (globalThis as any).__previewErrHandler = true;
+  ErrorUtils.setGlobalHandler((e: any, isFatal?: boolean) => {
+    try {
+      Alert.alert(
+        `[preview] ${isFatal ? "FATAL" : "error"}`,
+        `${e?.name ?? "Error"}: ${e?.message ?? String(e)}\n\n${String(e?.stack ?? "").split("\n").slice(0, 8).join("\n")}`
+      );
+    } catch {
+      /* abaikan */
+    }
+  });
+}
+
 // Mini player di luar tab (di dalam tab, dia ditaruh di atas tab bar oleh app/(tabs)/_layout.tsx).
 // Disembunyikan hanya di splash. Layar surah juga menampilkannya.
 function GlobalMiniPlayer() {
   const segments = useSegments() as string[];
   const { session } = usePlayer();
+  const isTablet = useIsTablet();
   if (!session) return null;
-  if (segments.length === 0 || segments[0] === "(tabs)") return null;
+  // HP: pemutar mini ada di tab bar bawah. Tablet: tab bar jadi sidebar, jadi tampil di sini.
+  if (segments.length === 0 || (segments[0] === "(tabs)" && !isTablet)) return null;
   return <MiniPlayer withSafeBottom />;
 }
 
@@ -42,6 +63,21 @@ function RootLayoutContent() {
   // ─────────────────────────────────────────────────────────
   // 🎵 KONFIGURASI AUDIO GLOBAL (Background & Notifikasi Media)
   // ─────────────────────────────────────────────────────────
+  // Orientasi: HP (sisi terpendek < 600 dp) dikunci portrait; tablet/foldable bebas rotasi
+  // (Android 16 mengabaikan kunci orientasi di layar besar, jadi tata letak harus siap berotasi).
+  const { width: winW, height: winH } = useWindowDimensions();
+  const isLargeScreen = Math.min(winW, winH) >= 600;
+  useEffect(() => {
+    (async () => {
+      try {
+        if (isLargeScreen) await ScreenOrientation.unlockAsync();
+        else await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+      } catch {
+        // gagal mengatur orientasi = biarkan default, jangan ganggu aplikasi
+      }
+    })();
+  }, [isLargeScreen]);
+
   useEffect(() => {
     const setupAudio = async () => {
       try {
@@ -77,7 +113,9 @@ function RootLayoutContent() {
       {/* Tablet/layar lebar: konten dibatasi 720 dp dan di tengah, HP tetap penuh */}
       <View className="flex-1" style={{ width: "100%", maxWidth: 720, alignSelf: "center" }}>
         <View className="flex-1">
-          <Slot />
+          <ErrorBoundary>
+            <Slot />
+          </ErrorBoundary>
         </View>
         <GlobalMiniPlayer />
       </View>

@@ -8,11 +8,15 @@ import { useLanguage } from "../../../src/context/LanguageContext";
 import { TAJWEED_CAT_KEY } from "../../../src/i18n/translations";
 import { TAJWEED_DATA, KATEGORI_TAJWEED } from "../../../src/data/tajweed";
 import { ARABIC_FONT } from "../../../src/constants/fonts";
+import BatikPattern from "../../../src/components/ui/BatikPattern";
+import { useIsTablet } from "../../../src/hooks/useIsTablet";
 
 export default function TajweedScreen() {
   const { isDarkMode, theme } = useTheme();
   const { t, flip } = useLanguage();
   const catLabel = (k: string) => (TAJWEED_CAT_KEY[k] ? t(TAJWEED_CAT_KEY[k]) : k);
+  const isTablet = useIsTablet();
+  const pad = isTablet ? 40 : 24;
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -36,25 +40,35 @@ export default function TajweedScreen() {
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={["top"]}>
       {/* HEADER */}
-      <View className={`flex-row items-center justify-between px-4 py-4 border-b ${theme.border}`}>
-        <Pressable onPress={() => router.back()} className="h-11 w-11 items-center justify-center rounded-full active:opacity-70">
-          <ArrowLeft size={24} color={theme.iconColor} style={flip} />
-        </Pressable>
-        <View className="items-center flex-1">
-          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>{t("lessonTag")}</Text>
-          <Text className={`text-base font-bold ${theme.text}`}>{t("featTajweed")}</Text>
+      <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 18 }}>
+        <BatikPattern width={1200} height={100} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+        <View className="flex-row items-center">
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel={t("back")}
+            className="items-center justify-center rounded-full active:opacity-70"
+            style={{ width: 48, height: 48, backgroundColor: "rgba(255,255,255,0.16)" }}
+          >
+            <ArrowLeft size={22} color="#fff" style={flip} />
+          </Pressable>
+          <View className="flex-1 ml-4">
+            <Text className="text-xs font-bold tracking-[2px] text-emerald-100">{t("lessonTag")}</Text>
+            <Text className="text-xl font-extrabold text-white">{t("featTajweed")}</Text>
+          </View>
+          <Text style={{ fontFamily: ARABIC_FONT, fontSize: 30, lineHeight: 50, color: "#fde68a" }}>أحكام التجويد</Text>
         </View>
-        <View className="w-11" />
       </View>
 
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ padding: 24, paddingBottom: 60 }}
+        contentContainerStyle={{ padding: pad, paddingBottom: 60, alignItems: "center" }}
       >
+        <View style={{ width: "100%", maxWidth: 860 }}>
         {/* Search Bar */}
-        <View className={`flex-row items-center px-4 py-3 rounded-2xl border ${theme.border} ${theme.bgCard} mb-6`}>
+        <View className={`flex-row items-center px-5 rounded-full border ${theme.border} ${theme.bgCard} mb-6`} style={{ height: 52 }}>
           <Search size={20} color={mutedColor} />
           <TextInput
             placeholder={t("searchTajweed")}
@@ -72,7 +86,8 @@ export default function TajweedScreen() {
         </View>
 
         {/* Info Card */}
-        <View className={`p-5 rounded-2xl border ${theme.border} ${theme.bgCard} mb-6`}>
+        <View className={`p-5 rounded-3xl overflow-hidden border ${theme.border} ${theme.bgCard} mb-6`}>
+          <BatikPattern width={900} height={300} color={accent} cell={56} opacity={0.07} strokeWidth={1.4} />
           <View className="flex-row items-center gap-3 mb-2">
             <BookOpen size={20} color={accent} />
             <Text className={`text-sm font-bold ${theme.text}`}>{t("aboutTajweed")}</Text>
@@ -90,11 +105,14 @@ export default function TajweedScreen() {
               <Pressable
                 key={cat ?? "all"}
                 onPress={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full mr-2 border ${
-                  aktif ? "bg-emerald-600 border-emerald-600" : `${theme.bgCard} ${theme.border}`
+                accessibilityRole="button"
+                accessibilityState={{ selected: aktif }}
+                style={{ height: 48, justifyContent: "center" }}
+                className={`px-6 rounded-full mr-2 border ${
+                  aktif ? "bg-emerald-800 border-emerald-800" : `${theme.bgCard} ${theme.border}`
                 }`}
               >
-                <Text className={`text-xs font-medium ${aktif ? "text-white" : theme.text}`}>
+                <Text className={`text-sm font-medium ${aktif ? "text-white" : theme.text}`}>
                   {cat ? catLabel(cat) : t("all")}
                 </Text>
               </Pressable>
@@ -111,10 +129,11 @@ export default function TajweedScreen() {
           <Pressable
             key={item.id}
             onPress={() => router.push(`/screen/tajweed/${item.id}`)}
-            className={`mb-4 p-5 rounded-2xl border ${theme.border} ${theme.bgCard} active:opacity-90`}
+            accessibilityRole="button"
+            className={`mb-4 p-5 rounded-3xl border ${theme.border} ${theme.bgCard} active:opacity-90`}
           >
             <View className="flex-row items-start gap-4">
-              <View className={`p-3 rounded-xl ${isDarkMode ? "bg-emerald-900/30" : "bg-emerald-100"}`}>
+              <View className={`h-14 w-14 items-center justify-center rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"}`}>
                 {item.kategori === "Mad" ? (
                   <BookOpen size={24} color={accent} />
                 ) : (
@@ -126,7 +145,7 @@ export default function TajweedScreen() {
                   {catLabel(item.kategori)}
                 </Text>
                 <View className="flex-row items-center justify-between mb-2">
-                  <Text className={`text-base font-bold flex-1 ${theme.text}`}>{item.judul}</Text>
+                  <Text className={`text-base font-extrabold flex-1 ${theme.text}`}>{item.judul}</Text>
                   <Text className={`text-base ${theme.text}`} style={{ fontFamily: ARABIC_FONT }}>
                     {item.arab}
                   </Text>
@@ -151,6 +170,7 @@ export default function TajweedScreen() {
             <Text className={`mt-4 text-center ${theme.textMuted}`}>{t("noResults")}</Text>
           </View>
         )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

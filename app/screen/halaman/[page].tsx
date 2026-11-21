@@ -11,9 +11,15 @@ import { useTheme } from "../../../src/context/ThemeContext";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import { getMushafPage, getMushafPages, type MushafPageData } from "../../../src/services/quranService";
 import { QURAN_FONT } from "../../../src/constants/fonts";
+import BatikPattern from "../../../src/components/ui/BatikPattern";
+import { useIsTablet } from "../../../src/hooks/useIsTablet";
 import TajweedText from "../../../src/components/TajweedText";
 import TajweedLegend from "../../../src/components/TajweedLegend";
 import { TAJWEED_MUSHAF_ID } from "../../../src/utils/tajweedColor";
+
+const PAGE_SIZE_KEY = "page_arab_size";
+const SCALES = [0.85, 1, 1.2, 1.4, 1.65];
+const SCALE_LABELS = ["XS", "S", "M", "L", "XL"];
 
 const toArabicDigits = (n: number) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[Number(d)]);
 const startsWithBasmala = (txt: string) =>
@@ -22,7 +28,7 @@ const startsWithBasmala = (txt: string) =>
 /** Baca per halaman: halaman & isinya mengikuti mushaf (qiraat) yang dipilih. */
 export default function PageReaderScreen() {
   const { isDarkMode, theme } = useTheme();
-  const { t, language: lang, flip } = useLanguage();
+  const { t, language: lang, flip, isRTL } = useLanguage();
   const { width } = useWindowDimensions();
   const { page: pageParam, mushafId: mushafParam } = useLocalSearchParams();
 
@@ -37,9 +43,27 @@ export default function PageReaderScreen() {
   const [showJump, setShowJump] = useState(false);
   const [jumpText, setJumpText] = useState("");
   const [retryKey, setRetryKey] = useState(0);
+  const isTablet = useIsTablet();
+  const pad = isTablet ? 40 : 24;
+  const [sizeIdx, setSizeIdx] = useState(1);
+  useEffect(() => {
+    AsyncStorage.getItem(PAGE_SIZE_KEY)
+      .then((v) => {
+        const n = v == null ? NaN : Number(v);
+        if (Number.isInteger(n) && n >= 0 && n < SCALES.length) setSizeIdx(n);
+      })
+      .catch(() => {});
+  }, []);
+  const changeSize = (d: number) =>
+    setSizeIdx((v) => {
+      const n = Math.max(0, Math.min(SCALES.length - 1, v + d));
+      if (n !== v) AsyncStorage.setItem(PAGE_SIZE_KEY, String(n)).catch(() => {});
+      return n;
+    });
 
   // Ukuran teks mengikuti lebar layar (HP kecil -> tablet)
-  const fontSize = width >= 900 ? 34 : width >= 700 ? 30 : width < 360 ? 22 : 26;
+  const baseSize = width >= 900 ? 38 : width >= 700 ? 32 : width < 360 ? 22 : 26;
+  const fontSize = Math.round(baseSize * SCALES[sizeIdx]);
   const lineHeight = Math.round(fontSize * 2.1);
 
   const scrollRef = useRef<ScrollView>(null);
@@ -101,7 +125,8 @@ export default function PageReaderScreen() {
     });
   }, []);
 
-  // Geser: ke kanan = halaman berikutnya (seperti membalik mushaf Arab), ke kiri = sebelumnya
+  // Mushaf dibaca dari kanan ke kiri: geser ke kanan = halaman berikutnya, ke kiri = sebelumnya.
+  // Tombol: "sebelumnya" di sisi kanan, "berikutnya" di sisi kiri (posisi fisik, tidak ikut bahasa).
   const swipe = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponderCapture: (_e, g) => {
@@ -134,56 +159,103 @@ export default function PageReaderScreen() {
   const accent = isDarkMode ? "#34d399" : "#047857";
   const hasData = !!data && data.page === pageNo;
 
+  const circleBtn = { width: 48, height: 48, backgroundColor: "rgba(255,255,255,0.16)" } as const;
+  const atStart = pageNo <= 1;
+  const atEnd = total != null && pageNo >= total;
+  const sizeBtn = (disabled: boolean) =>
+    `items-center justify-center active:opacity-60 ${disabled ? "opacity-30" : ""}`;
+
   const header = (
     <>
-      <View className={`flex-row items-center justify-between px-4 py-4 border-b ${theme.border}`}>
-        <Pressable
-          onPress={handleBack}
-          className="h-11 w-11 items-center justify-center rounded-full active:opacity-70"
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 14 }}>
+        <BatikPattern width={1400} height={90} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+        <View className="flex-row items-center">
+          <Pressable
+            onPress={handleBack}
+            accessibilityRole="button"
+            accessibilityLabel={t("back")}
+            className="items-center justify-center rounded-full active:opacity-70"
+            style={circleBtn}
+          >
+            <ArrowLeft size={22} color="#fff" style={flip} />
+          </Pressable>
+          <View className="flex-1 ml-4">
+            <Text className="text-xs font-bold tracking-[2px] text-emerald-100">{t("viewByPage").toUpperCase()}</Text>
+            <Text className="text-lg font-extrabold text-white" numberOfLines={1}>
+              {hasData && data!.juz ? t("juzN", { n: data!.juz }) : t("pageTitle")}
+            </Text>
+          </View>
+        <View
+          accessibilityRole="adjustable"
+          accessibilityLabel={t("arabSizeLabel")}
+          className="items-center rounded-full"
+          style={{ height: 48, paddingHorizontal: 2, flexDirection: "row", backgroundColor: "rgba(255,255,255,0.16)" }}
         >
-          <ArrowLeft size={24} color={theme.iconColor} style={flip} />
-        </Pressable>
-        <View className="items-center flex-1">
-          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>{t("viewByPage").toUpperCase()}</Text>
-          <Text className={`text-base font-bold ${theme.text}`}>
-            {hasData && data!.juz ? t("juzN", { n: data!.juz }) : t("pageTitle")}
-          </Text>
+          <Pressable
+            onPress={() => changeSize(-1)}
+            disabled={sizeIdx === 0}
+            accessibilityRole="button"
+            accessibilityLabel={t("arabSmaller")}
+            className={sizeBtn(sizeIdx === 0)}
+            style={{ width: 44, height: 44 }}
+          >
+            <Text className={`text-base font-extrabold text-white`}>A−</Text>
+          </Pressable>
+          {isTablet && (
+            <Text className={`text-xs font-bold text-center text-emerald-100`} style={{ minWidth: 24 }}>
+              {SCALE_LABELS[sizeIdx]}
+            </Text>
+          )}
+          <Pressable
+            onPress={() => changeSize(1)}
+            disabled={sizeIdx === SCALES.length - 1}
+            accessibilityRole="button"
+            accessibilityLabel={t("arabLarger")}
+            className={sizeBtn(sizeIdx === SCALES.length - 1)}
+            style={{ width: 44, height: 44 }}
+          >
+            <Text className={`text-xl font-extrabold text-white`}>A+</Text>
+          </Pressable>
         </View>
-        <View className="w-11" />
+        </View>
       </View>
 
-      {/* Bar pindah halaman */}
-      <View className={`flex-row items-center px-3 py-2 border-b ${theme.border}`}>
-        <Pressable
-          onPress={() => goToPage(pageNo - 1)}
-          disabled={pageNo <= 1}
-          accessibilityRole="button"
-          hitSlop={8}
-          className={`h-9 w-9 items-center justify-center rounded-full active:opacity-60 ${pageNo <= 1 ? "opacity-30" : ""}`}
-        >
-          <ChevronLeft size={22} color={theme.iconColor} style={flip} />
-        </Pressable>
-        <Pressable
-          onPress={() => setShowJump(true)}
-          accessibilityRole="button"
-          accessibilityLabel={t("jumpToPage")}
-          className={`flex-1 mx-2 flex-row items-center justify-center gap-2 py-2 rounded-full border ${theme.border} ${theme.bgCard} active:opacity-70`}
-        >
-          <Text className={`text-sm font-bold ${theme.text}`} numberOfLines={1}>
-            {total != null ? t("pageOf", { n: pageNo, total }) : `${t("pageTitle")} ${pageNo}`}
-          </Text>
-          <ChevronDown size={16} color={theme.iconColor} />
-        </Pressable>
-        <Pressable
-          onPress={() => goToPage(pageNo + 1)}
-          disabled={total != null && pageNo >= total}
-          accessibilityRole="button"
-          hitSlop={8}
-          className={`h-9 w-9 items-center justify-center rounded-full active:opacity-60 ${total != null && pageNo >= total ? "opacity-30" : ""}`}
-        >
-          <ChevronRight size={22} color={theme.iconColor} style={flip} />
-        </Pressable>
+      {/* Bar pindah halaman + ukuran teks */}
+      <View className={`border-b ${theme.border}`} style={{ paddingHorizontal: pad, paddingVertical: 10, alignItems: "center" }}>
+        <View style={{ width: "100%", maxWidth: 820, alignItems: "center", flexDirection: isRTL ? "row" : "row-reverse", gap: 8 }}>
+          <Pressable
+            onPress={() => goToPage(pageNo - 1)}
+            disabled={atStart}
+            accessibilityRole="button"
+            accessibilityLabel={t("prevPage")}
+            className={`items-center justify-center rounded-full border ${theme.border} ${theme.bgCard} active:opacity-60 ${atStart ? "opacity-30" : ""}`}
+            style={{ width: 48, height: 48 }}
+          >
+            <ChevronRight size={22} color={theme.iconColor} />
+          </Pressable>
+          <Pressable
+            onPress={() => setShowJump(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t("jumpToPage")}
+            className={`flex-1 flex-row items-center justify-center gap-2 rounded-full border ${theme.border} ${theme.bgCard} active:opacity-70`}
+            style={{ height: 48 }}
+          >
+            <Text className={`text-sm font-extrabold ${theme.text}`} numberOfLines={1}>
+              {total != null ? t("pageOf", { n: pageNo, total }) : `${t("pageTitle")} ${pageNo}`}
+            </Text>
+            <ChevronDown size={16} color={theme.iconColor} />
+          </Pressable>
+          <Pressable
+            onPress={() => goToPage(pageNo + 1)}
+            disabled={atEnd}
+            accessibilityRole="button"
+            accessibilityLabel={t("nextPage")}
+            className={`items-center justify-center rounded-full border ${theme.border} ${theme.bgCard} active:opacity-60 ${atEnd ? "opacity-30" : ""}`}
+            style={{ width: 48, height: 48 }}
+          >
+            <ChevronLeft size={22} color={theme.iconColor} />
+          </Pressable>
+        </View>
       </View>
     </>
   );
@@ -192,7 +264,7 @@ export default function PageReaderScreen() {
     <Modal visible={showJump} transparent animationType="fade" onRequestClose={() => setShowJump(false)}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1">
         <Pressable className="flex-1 bg-black/50 justify-center px-6" onPress={() => setShowJump(false)}>
-          <Pressable className={`rounded-2xl border p-5 ${theme.border} ${theme.bgCard}`} onPress={() => {}}>
+          <Pressable className={`self-center w-full rounded-3xl border p-6 ${theme.border} ${theme.bgCard}`} style={{ maxWidth: 440 }} onPress={() => {}}>
             <View className="flex-row items-center justify-between mb-3">
               <Text className={`text-base font-bold ${theme.text}`}>{t("jumpToPage")}</Text>
               <Pressable onPress={() => setShowJump(false)} hitSlop={10}>
@@ -208,11 +280,13 @@ export default function PageReaderScreen() {
               placeholder={t("pageNumberHint", { total: total ?? "…" })}
               placeholderTextColor={theme.mutedColor}
               onSubmitEditing={submitJump}
-              className={`px-4 py-3 rounded-xl border text-base ${theme.border} ${theme.text}`}
+              className={`px-5 rounded-full border text-base ${theme.border} ${theme.text}`}
+              style={{ height: 52 }}
             />
             <Pressable
               onPress={submitJump}
-              className="mt-4 py-3 rounded-xl bg-emerald-700 items-center active:opacity-90"
+              className="mt-4 rounded-full bg-emerald-800 items-center justify-center active:opacity-90"
+              style={{ height: 52 }}
             >
               <Text className="text-white font-bold">{t("openBtn")}</Text>
             </Pressable>
@@ -257,8 +331,9 @@ export default function PageReaderScreen() {
           ref={scrollRef}
           className="flex-1"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ padding: 20, paddingBottom: 60 }}
+          contentContainerStyle={{ padding: pad, paddingBottom: 60, alignItems: "center" }}
         >
+          <View style={{ width: "100%", maxWidth: 820 }}>
           {String(mushafId) === TAJWEED_MUSHAF_ID && <TajweedLegend />}
           {data!.segments.map((seg, si) => {
             const first = seg.ayat[0]?.teksArab ?? "";
@@ -268,17 +343,16 @@ export default function PageReaderScreen() {
               <View key={`${seg.surah.nomor}-${si}`} className="mb-6">
                 {seg.startsSurah && (
                   <View
-                    className={`mb-3 px-4 py-4 rounded-2xl border items-center ${
-                      isDarkMode ? "border-emerald-700 bg-emerald-900/20" : "border-emerald-600 bg-emerald-50"
-                    }`}
+                    className={`mb-4 px-5 py-5 rounded-3xl overflow-hidden items-center ${isDarkMode ? "bg-emerald-900" : "bg-emerald-800"}`}
                   >
-                    <Text className={`text-2xl ${theme.text}`} style={{ fontFamily: QURAN_FONT }}>
+                    <BatikPattern width={1000} height={260} cell={42} opacity={0.14} />
+                    <Text style={{ fontFamily: QURAN_FONT, fontSize: isTablet ? 40 : 32, lineHeight: isTablet ? 70 : 58, color: "#fde68a" }}>
                       {seg.surah.nama}
                     </Text>
-                    <Text className={`text-sm font-bold mt-1 ${isDarkMode ? "text-emerald-400" : "text-emerald-800"}`}>
+                    <Text className="text-base font-extrabold mt-1 text-white">
                       {seg.surah.nomor}. {seg.surah.namaLatin}
                     </Text>
-                    <Text className={`text-xs mt-0.5 ${theme.textMuted}`}>
+                    <Text className="text-xs mt-1 text-emerald-100 text-center">
                       {seg.surah.arti} • {t("pageStartsHere", { n: seg.surah.jumlahAyat })} •{" "}
                       {seg.surah.tempatTurun === "Mekah" ? t("makkiyah") : t("madaniyah")}
                     </Text>
@@ -295,7 +369,14 @@ export default function PageReaderScreen() {
                 )}
 
                 {/* Teks mengalir seperti halaman mushaf, nomor ayat di ujung tiap ayat */}
-                <View className={`px-4 py-3 rounded-2xl border ${theme.border} ${theme.bgCard}`}>
+                <View
+                  className={`rounded-3xl border ${theme.border} ${isDarkMode ? "bg-[#242424]" : "bg-[#fffcf5]"}`}
+                  style={{ padding: isTablet ? 8 : 5 }}
+                >
+                <View
+                  className={`rounded-2xl border ${isDarkMode ? "border-emerald-900" : "border-[#e8dcb5]"}`}
+                  style={{ paddingHorizontal: isTablet ? 32 : 16, paddingVertical: isTablet ? 24 : 12 }}
+                >
                   <Text
                     style={{
                       fontFamily: QURAN_FONT,
@@ -322,6 +403,7 @@ export default function PageReaderScreen() {
                     ))}
                   </Text>
                 </View>
+                </View>
 
                 {showTranslation && (
                   <View className="mt-3">
@@ -331,7 +413,7 @@ export default function PageReaderScreen() {
                           <Text className={`text-[10px] font-bold ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>{a.nomor}</Text>
                         </View>
                         <Text
-                          className={`flex-1 text-sm leading-6 ${theme.textMuted}`}
+                          className={`flex-1 ${isTablet ? "text-base leading-7" : "text-sm leading-6"} ${theme.textSecondary}`}
                           style={{ textAlign: lang === "ar" ? "right" : "left" }}
                         >
                           {a.teksIndonesia}
@@ -346,12 +428,15 @@ export default function PageReaderScreen() {
 
           <Pressable
             onPress={() => setShowTranslation((v) => !v)}
-            className={`py-3 rounded-2xl border items-center active:opacity-80 ${theme.border} ${theme.bgCard}`}
+            accessibilityRole="button"
+            style={{ minHeight: 52 }}
+            className={`rounded-full border items-center justify-center active:opacity-80 ${theme.border} ${theme.bgCard}`}
           >
             <Text className={`text-sm font-semibold ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>
               {showTranslation ? t("hideTranslation") : t("showTranslation")}
             </Text>
           </Pressable>
+          </View>
         </ScrollView>
       </View>
       {jumpModal}
