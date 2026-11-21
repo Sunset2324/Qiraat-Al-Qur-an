@@ -1,4 +1,5 @@
 import React from "react";
+import { Platform } from "react-native";
 import Svg, { Defs, Pattern, G, Ellipse, Circle, Rect } from "react-native-svg";
 
 type Props = {
@@ -24,8 +25,9 @@ export default function BatikPattern({ width, height, color = "#fde68a", opacity
       height={height}
       pointerEvents="none"
       style={{ position: "absolute", left: 0, top: 0, opacity }}
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
+      {...(Platform.OS === "web"
+        ? { "aria-hidden": true }
+        : { accessibilityElementsHidden: true, importantForAccessibility: "no-hide-descendants" as const })}
     >
       <Defs>
         <Pattern id={id} width={cell} height={cell} patternUnits="userSpaceOnUse">

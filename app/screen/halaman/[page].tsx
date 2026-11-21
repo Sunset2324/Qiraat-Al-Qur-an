@@ -10,7 +10,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import { getMushafPage, getMushafPages, type MushafPageData } from "../../../src/services/quranService";
-import { QURAN_FONT, ARABIC_FONT } from "../../../src/constants/fonts";
+import { QURAN_FONT } from "../../../src/constants/fonts";
 import BatikPattern from "../../../src/components/ui/BatikPattern";
 import { useIsTablet } from "../../../src/hooks/useIsTablet";
 import TajweedText from "../../../src/components/TajweedText";
@@ -164,7 +164,6 @@ export default function PageReaderScreen() {
   const atEnd = total != null && pageNo >= total;
   const sizeBtn = (disabled: boolean) =>
     `items-center justify-center active:opacity-60 ${disabled ? "opacity-30" : ""}`;
-  const sizeText = `${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`;
 
   const header = (
     <>
@@ -186,9 +185,38 @@ export default function PageReaderScreen() {
               {hasData && data!.juz ? t("juzN", { n: data!.juz }) : t("pageTitle")}
             </Text>
           </View>
-          <Text style={{ fontFamily: ARABIC_FONT, fontSize: 28, lineHeight: 48, color: "#fde68a" }}>
-            {toArabicDigits(pageNo)}
-          </Text>
+        <View
+          accessibilityRole="adjustable"
+          accessibilityLabel={t("arabSizeLabel")}
+          className="items-center rounded-full"
+          style={{ height: 48, paddingHorizontal: 2, flexDirection: "row", backgroundColor: "rgba(255,255,255,0.16)" }}
+        >
+          <Pressable
+            onPress={() => changeSize(-1)}
+            disabled={sizeIdx === 0}
+            accessibilityRole="button"
+            accessibilityLabel={t("arabSmaller")}
+            className={sizeBtn(sizeIdx === 0)}
+            style={{ width: 44, height: 44 }}
+          >
+            <Text className={`text-base font-extrabold text-white`}>A−</Text>
+          </Pressable>
+          {isTablet && (
+            <Text className={`text-xs font-bold text-center text-emerald-100`} style={{ minWidth: 24 }}>
+              {SCALE_LABELS[sizeIdx]}
+            </Text>
+          )}
+          <Pressable
+            onPress={() => changeSize(1)}
+            disabled={sizeIdx === SCALES.length - 1}
+            accessibilityRole="button"
+            accessibilityLabel={t("arabLarger")}
+            className={sizeBtn(sizeIdx === SCALES.length - 1)}
+            style={{ width: 44, height: 44 }}
+          >
+            <Text className={`text-xl font-extrabold text-white`}>A+</Text>
+          </Pressable>
+        </View>
         </View>
       </View>
 
@@ -227,38 +255,6 @@ export default function PageReaderScreen() {
           >
             <ChevronLeft size={22} color={theme.iconColor} />
           </Pressable>
-          <View
-            accessibilityRole="adjustable"
-            accessibilityLabel={t("arabSizeLabel")}
-            className={`items-center rounded-full border ${theme.border} ${theme.bgCard}`}
-            style={{ height: 48, paddingHorizontal: 2, flexDirection: "row" }}
-          >
-            <Pressable
-              onPress={() => changeSize(-1)}
-              disabled={sizeIdx === 0}
-              accessibilityRole="button"
-              accessibilityLabel={t("arabSmaller")}
-              className={sizeBtn(sizeIdx === 0)}
-              style={{ width: 44, height: 44 }}
-            >
-              <Text className={`text-base font-extrabold ${sizeText}`}>A−</Text>
-            </Pressable>
-            {isTablet && (
-              <Text className={`text-xs font-bold text-center ${theme.textSecondary}`} style={{ minWidth: 24 }}>
-                {SCALE_LABELS[sizeIdx]}
-              </Text>
-            )}
-            <Pressable
-              onPress={() => changeSize(1)}
-              disabled={sizeIdx === SCALES.length - 1}
-              accessibilityRole="button"
-              accessibilityLabel={t("arabLarger")}
-              className={sizeBtn(sizeIdx === SCALES.length - 1)}
-              style={{ width: 44, height: 44 }}
-            >
-              <Text className={`text-xl font-extrabold ${sizeText}`}>A+</Text>
-            </Pressable>
-          </View>
         </View>
       </View>
     </>
