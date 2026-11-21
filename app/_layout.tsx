@@ -15,6 +15,7 @@ import { PlayerProvider, usePlayer } from "../src/context/PlayerContext";
 import MiniPlayer from "../src/components/MiniPlayer";
 import SecurityBanner from "../src/components/SecurityBanner";
 import { SecurityProvider } from "../src/context/SecurityContext";
+import ErrorBoundary, { IS_PREVIEW } from "../src/components/ErrorBoundary";
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
 
 // Batasi pembesaran font sistem agar layout tidak pecah di HP dengan font scale besar
@@ -110,8 +111,8 @@ function RootLayoutContent() {
     <View className={`flex-1 ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fbf8ef]"}`}>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
       <SecurityBanner />
-      {/* Tablet/layar lebar: konten dibatasi 720 dp dan di tengah, HP tetap penuh */}
-      <View className="flex-1" style={{ width: "100%", maxWidth: 720, alignSelf: "center" }}>
+      {/* Tablet/layar lebar: konten dibatasi 1180 dp dan di tengah, HP tetap penuh */}
+      <View className="flex-1" style={{ width: "100%", maxWidth: 1180, alignSelf: "center" }}>
         <View className="flex-1">
           <ErrorBoundary>
             <Slot />

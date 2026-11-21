@@ -946,7 +946,7 @@ export default function SurahDetailScreen() {
           style={{ marginHorizontal: gutter, paddingHorizontal: 20, paddingVertical: 18, borderRadius: 26 }}
           className={`mt-5 mb-3 overflow-hidden ${isDarkMode ? "bg-emerald-900" : "bg-emerald-800"}`}
         >
-          <BatikPattern width={1000} height={260} cell={42} opacity={0.14} />
+          <BatikPattern cell={42} opacity={0.14} />
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1">
               <Text className={`text-[11px] font-bold tracking-[2px] text-emerald-100 mb-1`}>

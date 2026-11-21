@@ -168,7 +168,7 @@ export default function PageReaderScreen() {
   const header = (
     <>
       <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 14 }}>
-        <BatikPattern width={1400} height={90} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+        <BatikPattern cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
         <View className="flex-row items-center">
           <Pressable
             onPress={handleBack}
@@ -345,7 +345,7 @@ export default function PageReaderScreen() {
                   <View
                     className={`mb-4 px-5 py-5 rounded-3xl overflow-hidden items-center ${isDarkMode ? "bg-emerald-900" : "bg-emerald-800"}`}
                   >
-                    <BatikPattern width={1000} height={260} cell={42} opacity={0.14} />
+                    <BatikPattern cell={42} opacity={0.14} />
                     <Text style={{ fontFamily: QURAN_FONT, fontSize: isTablet ? 40 : 32, lineHeight: isTablet ? 70 : 58, color: "#fde68a" }}>
                       {seg.surah.nama}
                     </Text>

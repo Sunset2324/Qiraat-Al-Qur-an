@@ -164,7 +164,7 @@ export default function DzikirDoaScreen() {
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
       <View>
         <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 18 }}>
-          <BatikPattern width={1200} height={100} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+          <BatikPattern cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
           <View className="flex-row items-center">
             <Pressable
               onPress={() => router.back()}

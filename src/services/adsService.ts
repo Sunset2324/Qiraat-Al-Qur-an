@@ -1,7 +1,7 @@
 import axios from "axios";
 import { API_BASE_URL } from "../config";
 import { cachedRequest, MINUTE } from "../utils/apiCache";
-import { assertSensitiveAllowed, installGuard } from "../security/guard";
+import { assertSensitiveAllowed, installGuard, GuardBlockedError } from "../security/guard";
 
 export interface Iklan {
   id: string;
@@ -65,16 +65,26 @@ async function ambilDariServer(): Promise<Iklan[]> {
  */
 export const getIklan = async (force = false): Promise<Iklan[]> => {
   const key = "iklan:list";
-  const ambil = async () => {
-    await assertSensitiveAllowed(); // iklan dimatikan di mode terbatas
-    const res = await http.get("/ads");
-    const list: Iklan[] = Array.isArray(res.data?.data) ? res.data.data : [];
-    return list.filter(
-      (a) => a && a.id && a.title && a.surah > 0 && a.ayat > 0 && httpsOnly(a.imageUrl) && httpsOnly(a.productUrl)
-    );
-  };
-  if (force) return ambil();
-  return cachedRequest<Iklan[]>(key, ambil, { ttlMs: 30 * MINUTE, group: "iklan", maxEntries: 1 }).catch(() => {
+  // Disaring lagi di sini: cache lokal/offline bisa memuat iklan yang sudah lewat masa tayangnya.
+  if (force) return (await ambilDariServer()).filter(belumKedaluwarsa);
+  try {
+    let dariServer = false;
+    const hasil = (
+      await cachedRequest<Iklan[]>(
+        key,
+        async () => {
+          const l = await ambilDariServer();
+          dariServer = true;
+          return l;
+        },
+        { ttlMs: 30 * MINUTE, group: "iklan", maxEntries: 1 }
+      )
+    ).filter(belumKedaluwarsa);
+    if (hasil.length > 0 || dariServer) return hasil;
+    // data berasal dari cache dan kosong/semua kedaluwarsa: periksa server langsung supaya iklan baru tidak tertunda
+    return (await ambilDariServer()).filter(belumKedaluwarsa);
+  } catch (e) {
+    if (e instanceof GuardBlockedError) throw e;
     throw new Error("ads_unavailable");
   }
 };

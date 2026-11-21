@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, FlatList, Pressable, ActivityIndicator, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { ArrowLeft, Leaf } from "lucide-react-native";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import MedisDisclaimer from "../../../src/components/MedisDisclaimer";
@@ -10,10 +8,11 @@ import AdCard from "../../../src/components/AdCard";
 import { getIklan, Iklan } from "../../../src/services/adsService";
 import { GuardBlockedError, guardReasons } from "../../../src/security/guard";
 import { useSecurity } from "../../../src/context/SecurityContext";
+import BatikHeader from "../../../src/components/ui/BatikHeader";
 
 export default function JurnalKesehatanScreen() {
   const { isDarkMode, theme } = useTheme();
-  const { t, flip } = useLanguage();
+  const { t } = useLanguage();
   const [iklan, setIklan] = useState<Iklan[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -48,19 +47,7 @@ export default function JurnalKesehatanScreen() {
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={["top"]}>
-      <View className="flex-row items-center gap-3 px-6 pt-4 pb-3">
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel={t("back")}
-          hitSlop={10}
-          className={`p-2 rounded-full ${theme.bgCard} border ${theme.border}`}
-        >
-          <ArrowLeft size={20} color={theme.iconColor} style={flip} />
-        </Pressable>
-        <Text className={`flex-1 text-xl font-bold ${theme.text}`}>{t("healthJournal")}</Text>
-        <Leaf size={22} color={accent} />
-      </View>
+      <BatikHeader tag={t("healthTag")} title={t("healthJournal")} arabic="الصحة" />
 
       {loading ? (
         <View className="flex-1 items-center justify-center">

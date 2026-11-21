@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Image, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
-import { FileText, CloudSun, MapPin, GraduationCap } from "lucide-react-native";
+import { FileText, CloudSun, MapPin, GraduationCap, BookMarked } from "lucide-react-native";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useLanguage } from "../../src/context/LanguageContext";
 import { useJadwalHariIni, formatCountdown } from "../../src/hooks/useJadwalHariIni";
@@ -48,13 +48,15 @@ export default function DashboardScreen() {
   const hijri = formatHijri(now, locale);
   const goPicker = () => router.push("/screen/jadwal-shalat/jadwal-shalat");
 
-  const FEATURES = [
+  type Feature = { key: string; label: string; route: string; icon?: any; Icon?: typeof BookMarked };
+  const FEATURES: Feature[] = [
     { key: "qiraat", label: t("featQiraat"), icon: require("../../assets/icons/qiraat.png"), route: "/screen/qiraat/qiraat" },
     { key: "dzikir", label: t("featDzikir"), icon: require("../../assets/icons/dzikir&doa.png"), route: "/screen/dzikir-doa/dzikir-doa" },
     { key: "prayer", label: t("featPrayer"), icon: require("../../assets/icons/jadwal-shalat.png"), route: "/screen/jadwal-shalat/jadwal-shalat" },
     { key: "tajweed", label: t("featTajweed"), icon: require("../../assets/icons/tajweed.png"), route: "/screen/tajweed/tajweed" },
     { key: "thibbun", label: t("featThibbun"), icon: require("../../assets/icons/thibbun-nabawi.png"), route: "/screen/thibbun-nabawi/thibbun-nabawi" },
-  ] as const;
+    { key: "ebook", label: t("featEbook"), Icon: BookMarked, route: "/screen/ebook/ebook" },
+  ];
 
   const pad = isTablet ? 40 : 24;
 
@@ -68,7 +70,7 @@ export default function DashboardScreen() {
         {/* 1. HEADER: Jam & Adzan */}
         <View className={`${theme.bgHeader} rounded-b-[40px] pt-6 pb-24 relative overflow-hidden`} style={{ paddingHorizontal: pad }}>
           <View className={`absolute -right-10 -top-10 h-40 w-40 ${isDarkMode ? "bg-emerald-900" : "bg-emerald-700"} rounded-full opacity-50`} />
-          <BatikPattern width={isTablet ? 1200 : width} height={260} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+          <BatikPattern cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
 
           <View className="flex-row justify-between items-start mb-4">
             <View className="flex-1 pr-3">
@@ -175,7 +177,11 @@ export default function DashboardScreen() {
                 className={`${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center justify-center mb-4 shadow-sm active:opacity-90`}
               >
                 <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
-                  <Image source={f.icon} style={{ width: 28, height: 28 }} resizeMode="contain" />
+                  {f.Icon ? (
+                    <f.Icon size={28} color={theme.iconColor} />
+                  ) : (
+                    <Image source={f.icon} style={{ width: 28, height: 28 }} resizeMode="contain" />
+                  )}
                 </View>
                 <Text numberOfLines={2} className={`font-bold text-sm text-center ${theme.text}`}>
                   {f.label}

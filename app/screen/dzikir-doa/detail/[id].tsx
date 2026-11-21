@@ -109,7 +109,7 @@ export default function DoaDetailScreen() {
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
       <View className={`${theme.bgHeader} flex-row items-center justify-between overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 14 }}>
-        <BatikPattern width={1200} height={90} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+        <BatikPattern cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
@@ -167,7 +167,7 @@ export default function DoaDetailScreen() {
 
         <View className="px-6 mb-6">
           <View className={`p-6 rounded-3xl overflow-hidden ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fffcf5]"} border ${theme.border} items-center`}>
-            <BatikPattern width={900} height={600} color={isDarkMode ? "#34d399" : "#047857"} cell={56} opacity={0.07} strokeWidth={1.4} />
+            <BatikPattern color={isDarkMode ? "#34d399" : "#047857"} cell={56} opacity={0.07} strokeWidth={1.4} />
             <Text 
               className={`${theme.text}`}
               style={{ fontFamily: ARABIC_FONT, textAlign: "right", writingDirection: "rtl", fontSize: isTablet ? 40 : 30, lineHeight: isTablet ? 76 : 56 }}

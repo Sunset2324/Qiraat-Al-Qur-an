@@ -1,17 +1,18 @@
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, BookOpen } from "lucide-react-native";
+import { BookOpen } from "lucide-react-native";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import MedisDisclaimer from "../../../src/components/MedisDisclaimer";
 import { ARABIC_FONT } from "../../../src/constants/fonts";
 import { getTemaById, JUDUL_BUKU } from "../../../src/data/thibbunNabawi";
 import { useAyatTema } from "../../../src/hooks/useAyatTema";
+import BatikHeader from "../../../src/components/ui/BatikHeader";
 
 export default function ThibbunNabawiDetailScreen() {
   const { isDarkMode, theme } = useTheme();
-  const { t, flip } = useLanguage();
+  const { t } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const tema = getTemaById(String(id));
   const hasil = useAyatTema(tema?.surah ?? null, tema?.ayat ?? null);
@@ -19,17 +20,11 @@ export default function ThibbunNabawiDetailScreen() {
   const accent = isDarkMode ? "#34d399" : "#047857";
 
   const Header = (
-    <View className={`flex-row items-center px-4 py-4 border-b ${theme.border}`}>
-      <Pressable onPress={() => router.back()} className="h-11 w-11 items-center justify-center rounded-full active:opacity-70">
-        <ArrowLeft size={24} color={theme.iconColor} style={flip} />
-      </Pressable>
-      <View className="items-center flex-1">
-        <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>
-          {(tema ? t("cat_" + tema.kategoriId) : t("featThibbun")).toUpperCase()}
-        </Text>
-      </View>
-      <View className="w-11" />
-    </View>
+    <BatikHeader
+      tag={(tema ? t("cat_" + tema.kategoriId) : t("healthTag")).toUpperCase()}
+      title={t("featThibbun")}
+      arabic="الطب النبوي"
+    />
   );
 
   if (!tema) {
