@@ -17,6 +17,8 @@ export interface AyatCardProps {
   isTajweed: boolean;
   isArabicUi: boolean;
   compact: boolean;
+  /** pengali ukuran teks Arab (A−/A+), 1 = standar */
+  arabScale?: number;
   showLatin: boolean;
   showTranslation: boolean;
   // Class tema berupa string (primitif) supaya React.memo bisa membandingkan murah
@@ -41,8 +43,9 @@ function AyatCardBase(p: AyatCardProps) {
     ? p.isDark ? "border-amber-700 bg-amber-900/10" : "border-amber-300 bg-amber-50"
     : `${p.borderClass} ${p.cardClass}`;
 
-  const arabFont = p.compact ? 26 : 30;
-  const arabLine = p.compact ? 64 : 76;
+  const scale = p.arabScale ?? 1;
+  const arabFont = Math.round((p.compact ? 26 : 30) * scale);
+  const arabLine = Math.round((p.compact ? 64 : 76) * scale);
   const align = p.isArabicUi ? "right" : "left";
 
   return (

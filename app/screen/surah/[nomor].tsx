@@ -12,6 +12,9 @@ import AudioPlayer from "../../../src/components/AudioPlayer";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import { reciterName, recitationLabel, rawiLabel } from "../../../src/i18n/qiraatI18n";
 import { saveLastRead, getLastReadAyah } from "../../../src/utils/readingHistory";
+import SurahSidePanel from "../../../src/components/SurahSidePanel";
+import BatikPattern from "../../../src/components/ui/BatikPattern";
+import { ARABIC_FONT } from "../../../src/constants/fonts";
 import AyatCard from "../../../src/components/AyatCard";
 import TajweedLegend from "../../../src/components/TajweedLegend";
 import { TAJWEED_MUSHAF_ID } from "../../../src/utils/tajweedColor";
@@ -46,6 +49,11 @@ interface SuratDetail {
 const RECITER_STORAGE_KEY = "selected_reciter_id";
 const SHOW_LATIN_KEY = "surah_show_latin";
 const SHOW_TRANSLATION_KEY = "surah_show_translation";
+const ARAB_SIZE_KEY = "surah_arab_size";
+// Langkah ukuran teks Arab (pengali): XS, S, M (standar), L, XL
+const ARAB_SCALES = [0.85, 1, 1.25, 1.5, 1.85];
+const ARAB_SIZE_LABELS = ["XS", "S", "M", "L", "XL"];
+const ARAB_SIZE_DEFAULT = 1;
 // Jumlah kartu ayat yang dipasang di awal, lalu ditambah bertahap (surah panjang jadi tidak berat)
 const INITIAL_AYAH_BATCH = 12;
 const AYAH_BATCH_STEP = 16;
@@ -58,18 +66,32 @@ export default function SurahDetailScreen() {
   const { nomor, mushafId: routeMushafId, ayat: routeAyat } = useLocalSearchParams();
   const { width: winWidth } = useWindowDimensions();
   const compact = winWidth < 360;
-  const gutter = compact ? 16 : 24;
+  // Tablet lebar: dua panel (daftar surah di kiri, bacaan di kanan)
+  const twoPane = winWidth >= 900;
+  const paneW = twoPane ? Math.min(340, Math.round(winWidth * 0.28)) : 0;
+  const gutter = compact ? 16 : twoPane ? 40 : 24;
 
   // Preferensi tampilan baca (disimpan di perangkat)
   const [showLatin, setShowLatin] = useState(true);
   const [showTranslation, setShowTranslation] = useState(true);
+  const [arabSize, setArabSize] = useState(ARAB_SIZE_DEFAULT);
+  const changeArabSize = useCallback((delta: number) => {
+    setArabSize((v) => {
+      const n = Math.max(0, Math.min(ARAB_SCALES.length - 1, v + delta));
+      if (n !== v) AsyncStorage.setItem(ARAB_SIZE_KEY, String(n)).catch(() => {});
+      return n;
+    });
+  }, []);
   useEffect(() => {
     (async () => {
       try {
-        const [l, tr] = await Promise.all([
+        const [l, tr, sz] = await Promise.all([
           AsyncStorage.getItem(SHOW_LATIN_KEY),
           AsyncStorage.getItem(SHOW_TRANSLATION_KEY),
+          AsyncStorage.getItem(ARAB_SIZE_KEY),
         ]);
+        const szN = sz == null ? NaN : Number(sz);
+        if (Number.isInteger(szN) && szN >= 0 && szN < ARAB_SCALES.length) setArabSize(szN);
         if (l === "0") setShowLatin(false);
         if (tr === "0") setShowTranslation(false);
       } catch {}
@@ -714,7 +736,20 @@ export default function SurahDetailScreen() {
         </Pressable>
       )}
 
-      {/* Bar pindah surah: sebelumnya / daftar semua surah / berikutnya */}
+      <View className="flex-1" style={{ flexDirection: "row" }}>
+      {twoPane && (
+        <SurahSidePanel
+          width={paneW}
+          currentNomor={surahData.info.nomor}
+          playingNomor={player.session?.surah ?? null}
+          onSelect={(n) => {
+            if (n !== surahData.info.nomor) goToSurah(n);
+          }}
+        />
+      )}
+      <View className="flex-1">
+      {/* Bar pindah surah: sebelumnya / daftar semua surah / berikutnya (HP; di tablet diganti panel kiri) */}
+      {!twoPane && (
       <View
         className={`items-center px-3 py-2 border-b ${theme.border}`}
         style={{ flexDirection: isRTL ? "row" : "row-reverse" }}
@@ -751,6 +786,7 @@ export default function SurahDetailScreen() {
           <ChevronLeft size={22} color={theme.iconColor} />
         </Pressable>
       </View>
+      )}
 
       <SurahPickerSheet
         visible={showPicker}
@@ -906,14 +942,19 @@ export default function SurahDetailScreen() {
         </View>
 
         {/* 2. INFORMASI SURAT + IKUTI BACAAN */}
-        <View style={{ paddingHorizontal: gutter }} className="mt-5 mb-3">
+        <View
+          style={{ marginHorizontal: gutter, paddingHorizontal: 20, paddingVertical: 18, borderRadius: 26 }}
+          className={`mt-5 mb-3 overflow-hidden ${isDarkMode ? "bg-emerald-900" : "bg-emerald-800"}`}
+        >
+          <BatikPattern width={1000} height={260} cell={42} opacity={0.14} />
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1">
-              <Text className={`text-[11px] font-bold tracking-[2px] ${theme.textSecondary} mb-1`}>
+              <Text className={`text-[11px] font-bold tracking-[2px] text-emerald-100 mb-1`}>
                 {t("surahHeader", { n: String(surahData.info.nomor), type: surahData.info.tempatTurun === "Mekah" ? t("makkiyahCaps") : t("madaniyahCaps") })}
               </Text>
-              <Text className={`text-2xl font-bold ${theme.text}`}>{surahData.info.namaLatin}</Text>
-              <Text className={`text-sm ${theme.textMuted}`}>{surahData.info.arti} • {surahData.info.jumlahAyat} {t("versesWord")}</Text>
+              <Text style={{ fontFamily: ARABIC_FONT, fontSize: 40, lineHeight: 66, color: "#fde68a" }}>{surahData.info.nama}</Text>
+              <Text className="text-2xl font-bold text-white">{surahData.info.namaLatin}</Text>
+              <Text className="text-sm text-emerald-100">{surahData.info.arti} • {surahData.info.jumlahAyat} {t("versesWord")}</Text>
             </View>
 
             <Pressable
@@ -922,24 +963,24 @@ export default function SurahDetailScreen() {
               accessibilityRole="button"
               className={`flex-row items-center gap-1.5 px-4 py-2.5 rounded-full active:opacity-80 ${
                 !hasPerAyahAudio
-                  ? isDarkMode ? "bg-gray-800" : "bg-gray-200"
-                  : ayahPlaylist.isPlaying ? "bg-emerald-600" : "bg-emerald-700"
+                  ? "bg-white/20"
+                  : ayahPlaylist.isPlaying ? "bg-amber-300" : "bg-amber-400"
               }`}
             >
               {hasPerAyahAudio ? (
-                ayahPlaylist.isPlaying ? <Pause size={14} color="#fff" /> : <Play size={14} color="#fff" />
+                ayahPlaylist.isPlaying ? <Pause size={14} color="#022c22" /> : <Play size={14} color="#022c22" />
               ) : null}
-              <Text className={`text-xs font-bold ${hasPerAyahAudio ? "text-white" : theme.textMuted}`}>
+              <Text className={`text-xs font-bold ${hasPerAyahAudio ? "text-emerald-950" : "text-emerald-100"}`}>
                 {t("followAlong")}
               </Text>
             </Pressable>
           </View>
 
-          <Text className={`text-[11px] mt-2 ${isDarkMode ? "text-emerald-400/80" : "text-emerald-700/80"}`}>
+          <Text className={`text-[11px] mt-2 text-emerald-100`}>
             📜 {surahData.info.mushafAktif} • 🎙️ {reciterName(reciterAktifName, lang)} {isPerAyahActive ? t("syncAyah") : t("perSurahLabel")}
           </Text>
           {!hasPerAyahAudio && (
-            <Text className={`text-[11px] mt-1 ${theme.textMuted}`}>{t("noPerAyah")}</Text>
+            <Text className={`text-[11px] mt-1 text-emerald-100`}>{t("noPerAyah")}</Text>
           )}
           {!!surahData.info.ayatTidakLengkap?.length && (
             <View className="mt-2 px-3 py-2 rounded-xl bg-amber-500/15">
@@ -987,6 +1028,38 @@ export default function SurahDetailScreen() {
         >
           {/* Pilihan tampilan baca: sembunyikan latin / terjemahan */}
           <View className="flex-row flex-wrap items-center gap-2 mb-4">
+            <View
+              accessibilityRole="adjustable"
+              accessibilityLabel={t("arabSizeLabel")}
+              className={`flex-row items-center rounded-full border ${theme.border} ${theme.bgCard}`}
+              style={{ height: 44, paddingHorizontal: 4 }}
+            >
+              <Pressable
+                onPress={() => changeArabSize(-1)}
+                disabled={arabSize === 0}
+                accessibilityRole="button"
+                accessibilityLabel={t("arabSmaller")}
+                hitSlop={4}
+                className={`items-center justify-center active:opacity-60 ${arabSize === 0 ? "opacity-30" : ""}`}
+                style={{ width: 44, height: 44 }}
+              >
+                <Text className={`text-base font-extrabold ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>A−</Text>
+              </Pressable>
+              <Text className={`text-xs font-bold text-center ${theme.textMuted}`} style={{ minWidth: 28 }}>
+                {ARAB_SIZE_LABELS[arabSize]}
+              </Text>
+              <Pressable
+                onPress={() => changeArabSize(1)}
+                disabled={arabSize === ARAB_SCALES.length - 1}
+                accessibilityRole="button"
+                accessibilityLabel={t("arabLarger")}
+                hitSlop={4}
+                className={`items-center justify-center active:opacity-60 ${arabSize === ARAB_SCALES.length - 1 ? "opacity-30" : ""}`}
+                style={{ width: 44, height: 44 }}
+              >
+                <Text className={`text-xl font-extrabold ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>A+</Text>
+              </Pressable>
+            </View>
             {([
               { key: "latin", on: showLatin, toggle: toggleLatin, label: t("readLatin") },
               { key: "tr", on: showTranslation, toggle: toggleTranslation, label: t("readTranslation") },
@@ -1029,6 +1102,7 @@ export default function SurahDetailScreen() {
                 isTajweed={String(activeMushafId) === TAJWEED_MUSHAF_ID}
                 isArabicUi={lang === "ar"}
                 compact={compact}
+                arabScale={ARAB_SCALES[arabSize]}
                 showLatin={showLatin}
                 showTranslation={showTranslation}
                 borderClass={theme.border}
@@ -1079,6 +1153,8 @@ export default function SurahDetailScreen() {
         </View>
         <Text className={`text-center text-[11px] mt-3 ${theme.textMuted}`}>{t("swipeSurahHint")}</Text>
       </ScrollView>
+      </View>
+      </View>
       </View>
     </SafeAreaView>
   );

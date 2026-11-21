@@ -7,11 +7,15 @@ import { useLanguage } from "../../../src/context/LanguageContext";
 import { TAJWEED_CAT_KEY } from "../../../src/i18n/translations";
 import { TAJWEED_DATA, getTajweedById } from "../../../src/data/tajweed";
 import { ARABIC_FONT } from "../../../src/constants/fonts";
+import BatikPattern from "../../../src/components/ui/BatikPattern";
+import { useIsTablet } from "../../../src/hooks/useIsTablet";
 
 export default function TajweedDetailScreen() {
   const { isDarkMode, theme } = useTheme();
   const { t, flip } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const isTablet = useIsTablet();
+  const pad = isTablet ? 40 : 24;
   const rule = getTajweedById(String(id));
 
   const accent = isDarkMode ? "#34d399" : "#047857";
@@ -20,17 +24,28 @@ export default function TajweedDetailScreen() {
   const next = idx >= 0 && idx < TAJWEED_DATA.length - 1 ? TAJWEED_DATA[idx + 1] : null;
 
   const Header = (
-    <View className={`flex-row items-center px-4 py-4 border-b ${theme.border}`}>
-      <Pressable onPress={() => router.back()} className="h-11 w-11 items-center justify-center rounded-full active:opacity-70">
-        <ArrowLeft size={24} color={theme.iconColor} style={flip} />
-      </Pressable>
-      <View className="items-center flex-1">
-        <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>
-          {rule ? (TAJWEED_CAT_KEY[rule.kategori] ? t(TAJWEED_CAT_KEY[rule.kategori]) : rule.kategori).toUpperCase() : t("featTajweed").toUpperCase()}
-        </Text>
-        <Text className={`text-base font-bold ${theme.text}`}>{rule ? rule.judul : t("notFound")}</Text>
+    <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 14 }}>
+      <BatikPattern width={1200} height={90} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+      <View className="flex-row items-center">
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel={t("back")}
+          className="items-center justify-center rounded-full active:opacity-70"
+          style={{ width: 48, height: 48, backgroundColor: "rgba(255,255,255,0.16)" }}
+        >
+          <ArrowLeft size={22} color="#fff" style={flip} />
+        </Pressable>
+        <View className="flex-1 ml-4">
+          <Text className="text-xs font-bold tracking-[2px] text-emerald-100">
+            {rule ? (TAJWEED_CAT_KEY[rule.kategori] ? t(TAJWEED_CAT_KEY[rule.kategori]) : rule.kategori).toUpperCase() : t("featTajweed").toUpperCase()}
+          </Text>
+          <Text className="text-lg font-extrabold text-white" numberOfLines={1}>{rule ? rule.judul : t("notFound")}</Text>
+        </View>
+        {rule ? (
+          <Text style={{ fontFamily: ARABIC_FONT, fontSize: 28, lineHeight: 48, color: "#fde68a" }}>{rule.arab}</Text>
+        ) : null}
       </View>
-      <View className="w-11" />
     </View>
   );
 
@@ -51,10 +66,12 @@ export default function TajweedDetailScreen() {
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={["top"]}>
       {Header}
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingBottom: 60 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: pad, paddingBottom: 60, alignItems: "center" }}>
+        <View style={{ width: "100%", maxWidth: 860 }}>
         {/* Judul Arab */}
-        <View className={`items-center p-6 rounded-2xl border ${theme.border} ${theme.bgCard} mb-5`}>
-          <Text className={`text-3xl mb-2 ${theme.text}`} style={{ fontFamily: ARABIC_FONT, textAlign: "center" }}>
+        <View className={`items-center p-6 rounded-3xl overflow-hidden border ${theme.border} ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fffcf5]"} mb-5`}>
+          <BatikPattern width={900} height={400} color={accent} cell={56} opacity={0.07} strokeWidth={1.4} />
+          <Text className={`text-4xl mb-2 ${theme.text}`} style={{ fontFamily: ARABIC_FONT, textAlign: "center" }}>
             {rule.arab}
           </Text>
           <Text className={`text-sm ${theme.textMuted} text-center`}>{rule.ringkas}</Text>
@@ -64,7 +81,7 @@ export default function TajweedDetailScreen() {
         {(rule.huruf || rule.durasi) && (
           <View className="flex-row gap-3 mb-5">
             {rule.huruf ? (
-              <View className={`flex-1 p-4 rounded-2xl border ${theme.border} ${theme.bgCard}`}>
+              <View className={`flex-1 p-4 rounded-3xl border ${theme.border} ${theme.bgCard}`}>
                 <View className="flex-row items-center gap-2 mb-2">
                   <Type size={16} color={accent} />
                   <Text className={`text-xs font-bold ${theme.textSecondary}`}>{t("lettersCaps")}</Text>
@@ -75,7 +92,7 @@ export default function TajweedDetailScreen() {
               </View>
             ) : null}
             {rule.durasi ? (
-              <View className={`flex-1 p-4 rounded-2xl border ${theme.border} ${theme.bgCard}`}>
+              <View className={`flex-1 p-4 rounded-3xl border ${theme.border} ${theme.bgCard}`}>
                 <View className="flex-row items-center gap-2 mb-2">
                   <Timer size={16} color={accent} />
                   <Text className={`text-xs font-bold ${theme.textSecondary}`}>{t("durationCaps")}</Text>
@@ -93,7 +110,7 @@ export default function TajweedDetailScreen() {
         {/* Contoh */}
         <Text className={`text-sm font-bold mb-3 ${theme.text}`}>{t("examples")}</Text>
         {rule.contoh.map((c, i) => (
-          <View key={i} className={`p-4 rounded-2xl border ${theme.border} ${theme.bgCard} mb-3`}>
+          <View key={i} className={`p-4 rounded-3xl border ${theme.border} ${theme.bgCard} mb-3`}>
             <Text className={`text-2xl ${theme.text}`} style={{ fontFamily: ARABIC_FONT, textAlign: "right", lineHeight: 44 }}>
               {c.arab}
             </Text>
@@ -114,7 +131,8 @@ export default function TajweedDetailScreen() {
           <Pressable
             disabled={!prev}
             onPress={() => prev && router.replace(`/screen/tajweed/${prev.id}`)}
-            className={`flex-1 flex-row items-center p-3 rounded-2xl border ${theme.border} ${theme.bgCard} ${prev ? "active:opacity-80" : "opacity-30"}`}
+            style={{ minHeight: 52 }}
+            className={`flex-1 flex-row items-center px-4 py-3 rounded-3xl border ${theme.border} ${theme.bgCard} ${prev ? "active:opacity-80" : "opacity-30"}`}
           >
             <ChevronLeft size={18} color={theme.iconColor} style={flip} />
             <Text numberOfLines={1} className={`flex-1 ml-1 text-xs font-semibold ${theme.text}`}>
@@ -124,13 +142,15 @@ export default function TajweedDetailScreen() {
           <Pressable
             disabled={!next}
             onPress={() => next && router.replace(`/screen/tajweed/${next.id}`)}
-            className={`flex-1 flex-row items-center p-3 rounded-2xl border ${theme.border} ${theme.bgCard} ${next ? "active:opacity-80" : "opacity-30"}`}
+            style={{ minHeight: 52 }}
+            className={`flex-1 flex-row items-center px-4 py-3 rounded-3xl border ${theme.border} ${theme.bgCard} ${next ? "active:opacity-80" : "opacity-30"}`}
           >
             <Text numberOfLines={1} className={`flex-1 mr-1 text-xs font-semibold text-right ${theme.text}`}>
               {next ? next.judul : "—"}
             </Text>
             <ChevronRight size={18} color={theme.iconColor} style={flip} />
           </Pressable>
+        </View>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -6,6 +6,8 @@ import { ArrowLeft, Copy, Check, Share2, Tag } from "lucide-react-native";
 import * as Clipboard from "expo-clipboard";
 import { useTheme } from "../../../../src/context/ThemeContext";
 import { useLanguage } from "../../../../src/context/LanguageContext";
+import BatikPattern from "../../../../src/components/ui/BatikPattern";
+import { useIsTablet } from "../../../../src/hooks/useIsTablet";
 import { getDetailDoa } from "../../../../src/services/quranService";
 import { ARABIC_FONT } from "../../../../src/constants/fonts";
 import DzikirCounter from "../../../../src/components/DzikirCounter";
@@ -18,6 +20,8 @@ export default function DoaDetailScreen() {
   const { isDarkMode, theme } = useTheme();
   const { t, flip, language } = useLanguage();
   const { id } = useLocalSearchParams();
+  const isTablet = useIsTablet();
+  const pad = isTablet ? 40 : 24;
   
   const [doa, setDoa] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -104,29 +108,36 @@ export default function DoaDetailScreen() {
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
-      <View className={`flex-row items-center justify-between px-6 py-4 border-b ${theme.border}`}>
-        <Pressable onPress={() => router.back()} className="p-1 active:opacity-70">
-          <ArrowLeft size={24} color={theme.iconColor} style={flip} />
+      <View className={`${theme.bgHeader} flex-row items-center justify-between overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 14 }}>
+        <BatikPattern width={1200} height={90} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel={t("back")}
+          className="items-center justify-center rounded-full active:opacity-70"
+          style={{ width: 48, height: 48, backgroundColor: "rgba(255,255,255,0.16)" }}
+        >
+          <ArrowLeft size={22} color="#fff" style={flip} />
         </Pressable>
-        <Text className={`text-base font-bold ${theme.text}`}>{t("doaDetail")}</Text>
-        <View className="flex-row gap-4">
+        <Text className="text-lg font-extrabold text-white">{t("doaDetail")}</Text>
+        <View className="flex-row gap-3">
           <Pressable
             onPress={onCopy}
             accessibilityRole="button"
             accessibilityLabel={t("copyDoa")}
-            hitSlop={8}
-            className="p-1 active:opacity-70"
+            className="items-center justify-center rounded-full active:opacity-70"
+            style={{ width: 48, height: 48, backgroundColor: "rgba(255,255,255,0.16)" }}
           >
-            {copied ? <Check size={22} color={isDarkMode ? "#34d399" : "#047857"} /> : <Copy size={22} color={theme.iconColor} />}
+            {copied ? <Check size={22} color="#fde68a" /> : <Copy size={22} color="#fff" />}
           </Pressable>
           <Pressable
             onPress={onShare}
             accessibilityRole="button"
             accessibilityLabel={t("shareDoa")}
-            hitSlop={8}
-            className="p-1 active:opacity-70"
+            className="items-center justify-center rounded-full active:opacity-70"
+            style={{ width: 48, height: 48, backgroundColor: "rgba(255,255,255,0.16)" }}
           >
-            <Share2 size={22} color={theme.iconColor} />
+            <Share2 size={22} color="#fff" />
           </Pressable>
         </View>
       </View>
@@ -139,7 +150,8 @@ export default function DoaDetailScreen() {
         </View>
       )}
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40, alignItems: "center" }}>
+        <View style={{ width: "100%", maxWidth: 860 }}>
         <View className="px-6 pt-6 pb-4">
           <View className="flex-row items-center gap-2 mb-2">
             <View className={`px-3 py-1 rounded-full ${isDarkMode ? "bg-emerald-900" : "bg-emerald-100"}`}>
@@ -154,10 +166,11 @@ export default function DoaDetailScreen() {
         </View>
 
         <View className="px-6 mb-6">
-          <View className={`p-6 rounded-3xl ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fffcf5]"} border ${theme.border} items-center`}>
+          <View className={`p-6 rounded-3xl overflow-hidden ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fffcf5]"} border ${theme.border} items-center`}>
+            <BatikPattern width={900} height={600} color={isDarkMode ? "#34d399" : "#047857"} cell={56} opacity={0.07} strokeWidth={1.4} />
             <Text 
-              className={`text-3xl leading-[50px] text-center ${theme.text}`}
-              style={{ fontFamily: ARABIC_FONT, textAlign: "right" }}
+              className={`${theme.text}`}
+              style={{ fontFamily: ARABIC_FONT, textAlign: "right", writingDirection: "rtl", fontSize: isTablet ? 40 : 30, lineHeight: isTablet ? 76 : 56 }}
             >
               {doa.doa}
             </Text>
@@ -236,6 +249,7 @@ export default function DoaDetailScreen() {
             </View>
           </View>
         )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

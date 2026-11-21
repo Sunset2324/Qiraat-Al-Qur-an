@@ -2,15 +2,21 @@ import { useState, useCallback } from "react";
 import { View, Text, FlatList, Pressable, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
-import { Clock, BookOpen, Trash2 } from "lucide-react-native";
+import { Clock, Trash2 } from "lucide-react-native";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useLanguage } from "../../src/context/LanguageContext";
 import { getHistoryList, type ReadingProgress } from "../../src/utils/readingHistory";
+import BatikPattern from "../../src/components/ui/BatikPattern";
+import { useIsTablet } from "../../src/hooks/useIsTablet";
+import { ARABIC_FONT } from "../../src/constants/fonts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HistoryScreen() {
   const { isDarkMode, theme } = useTheme();
   const { t, locale } = useLanguage();
+  const isTablet = useIsTablet();
+  const pad = isTablet ? 40 : 24;
+  const cols = isTablet ? 2 : 1;
   const [historyList, setHistoryList] = useState<ReadingProgress[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -82,44 +88,73 @@ export default function HistoryScreen() {
     });
   };
 
-  const renderHistoryItem = ({ item }: { item: ReadingProgress }) => (
-    <Pressable
-      onPress={() => handleOpenHistory(item)}
-      className={`p-4 rounded-2xl border ${theme.border} ${theme.bgCard} mb-3 flex-row items-center active:opacity-90`}
-    >
-      <View className={`h-12 w-12 rounded-xl ${isDarkMode ? "bg-emerald-900/30" : "bg-emerald-100"} items-center justify-center mr-4`}>
-        <BookOpen size={24} color={isDarkMode ? "#34d399" : "#047857"} />
+  const renderHistoryItem = ({ item }: { item: ReadingProgress }) => {
+    const pct = item.totalAyat ? Math.min(100, Math.round((item.ayatNomor / item.totalAyat) * 100)) : 0;
+    return (
+      <View style={{ flex: 1 / cols, padding: cols > 1 ? 6 : 0, marginBottom: cols > 1 ? 0 : 12 }}>
+        <Pressable
+          onPress={() => handleOpenHistory(item)}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.namaLatin}, ${t("ayahN", { n: item.ayatNomor })}`}
+          className={`p-4 rounded-3xl border ${theme.border} ${theme.bgCard} active:opacity-90`}
+          style={{ minHeight: 104 }}
+        >
+          <View className="flex-row items-center">
+            {/* nomor surah dalam belah ketupat, selaras motif batik */}
+            <View
+              style={{ width: 44, height: 44, borderRadius: 12, transform: [{ rotate: "45deg" }], marginHorizontal: 6, marginRight: 18 }}
+              className={`items-center justify-center ${isDarkMode ? "bg-emerald-800" : "bg-emerald-700"}`}
+            >
+              <Text style={{ transform: [{ rotate: "-45deg" }] }} className="text-white text-base font-extrabold">
+                {item.surahNomor}
+              </Text>
+            </View>
+            <View className="flex-1">
+              <Text numberOfLines={1} className={`text-lg font-extrabold ${theme.text}`}>{item.namaLatin}</Text>
+              <Text className={`text-sm ${theme.textSecondary}`}>
+                {t("ayahN", { n: item.ayatNomor })}{item.totalAyat ? ` / ${item.totalAyat}` : ""}
+              </Text>
+              <Text numberOfLines={1} className={`text-xs mt-0.5 ${theme.textMuted}`}>
+                {item.mushafName || t("mushafN", { n: item.mushafId })}
+              </Text>
+            </View>
+          </View>
+          {!!item.totalAyat && (
+            <View className={`h-2 rounded-full mt-3 ${isDarkMode ? "bg-gray-700" : "bg-[#e9dfc2]"}`}>
+              <View className="h-2 rounded-full bg-emerald-600" style={{ width: `${pct}%` }} />
+            </View>
+          )}
+          <View className="flex-row items-center mt-2">
+            <Clock size={12} color={theme.mutedColor} />
+            <Text className={`text-xs ml-1.5 ${theme.textMuted}`}>{formatDate(item.timestamp)}</Text>
+          </View>
+        </Pressable>
       </View>
-      
-      <View className="flex-1">
-        <Text className={`text-base font-bold ${theme.text}`}>
-          {item.namaLatin} <Text className={`text-sm font-normal ${theme.textMuted}`}>({t("ayahN", { n: item.ayatNomor })})</Text>
-        </Text>
-        <Text className={`text-xs ${theme.textMuted} mt-1`}>
-           {item.mushafName || t("mushafN", { n: item.mushafId })}
-        </Text>
-        <View className="flex-row items-center mt-1">
-          <Clock size={10} color={theme.mutedColor} />
-          <Text className={`text-[10px] ml-1 ${theme.textMuted}`}>
-            {formatDate(item.timestamp)}
-          </Text>
-        </View>
-      </View>
-    </Pressable>
-  );
+    );
+  };
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
-      {/* Header */}
-      <View className={`px-6 pt-6 pb-4 border-b ${theme.border}`}>
+      {/* Header: batik + kaligrafi */}
+      <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 20 }}>
+        <BatikPattern width={1200} height={130} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
         <View className="flex-row items-center justify-between">
-          <View>
-            <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>{t("activityHistory")}</Text>
-            <Text className={`text-2xl font-bold mt-1 ${theme.text}`}>{t("lastReadTitle")}</Text>
+          <View className="flex-1 pr-3">
+            <Text className="text-xs font-bold tracking-[2px] text-emerald-100">{t("activityHistory")}</Text>
+            <Text className="text-2xl font-extrabold mt-1 text-white">{t("lastReadTitle")}</Text>
           </View>
+          <Text style={{ fontFamily: ARABIC_FONT, fontSize: 32, lineHeight: 52, color: "#fde68a", marginRight: historyList.length > 0 ? 14 : 0 }}>
+            السجل
+          </Text>
           {historyList.length > 0 && (
-            <Pressable onPress={handleClearHistory} className="p-2 rounded-full border border-red-500/30 bg-red-500/10">
-              <Trash2 size={18} color="#ef4444" />
+            <Pressable
+              onPress={handleClearHistory}
+              accessibilityRole="button"
+              accessibilityLabel={t("clearHistoryTitle")}
+              className="items-center justify-center rounded-full bg-white/90"
+              style={{ width: 48, height: 48 }}
+            >
+              <Trash2 size={20} color="#dc2626" />
             </Pressable>
           )}
         </View>
@@ -133,8 +168,9 @@ export default function HistoryScreen() {
         </View>
       ) : historyList.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">
-          <View className={`h-20 w-20 rounded-full ${isDarkMode ? "bg-emerald-900/30" : "bg-emerald-100"} items-center justify-center mb-4`}>
-            <Clock size={32} color={isDarkMode ? "#34d399" : "#047857"} />
+          <View className={`h-28 w-28 rounded-full overflow-hidden ${isDarkMode ? "bg-emerald-900/30" : "bg-emerald-100"} items-center justify-center mb-4`}>
+            <BatikPattern width={112} height={112} color={isDarkMode ? "#34d399" : "#047857"} cell={28} opacity={0.35} />
+            <Clock size={36} color={isDarkMode ? "#34d399" : "#047857"} />
           </View>
           <Text className={`text-lg font-bold text-center ${theme.text}`}>{t("noHistory")}</Text>
           <Text className={`text-sm text-center mt-2 ${theme.textMuted}`}>
@@ -143,10 +179,12 @@ export default function HistoryScreen() {
         </View>
       ) : (
         <FlatList
+          key={cols}
+          numColumns={cols}
           data={historyList}
           keyExtractor={(item, index) => `${item.surahNomor}-${item.mushafId}-${index}`}
           renderItem={renderHistoryItem}
-          contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+          contentContainerStyle={{ padding: pad - (cols > 1 ? 6 : 0), paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
         />
       )}

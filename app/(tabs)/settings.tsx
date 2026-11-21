@@ -10,6 +10,9 @@ import {
 import { useTheme } from "../../src/context/ThemeContext";
 import { useLanguage } from "../../src/context/LanguageContext";
 import { clearApiCache } from "../../src/utils/apiCache";
+import BatikPattern from "../../src/components/ui/BatikPattern";
+import { useIsTablet } from "../../src/hooks/useIsTablet";
+import { ARABIC_FONT } from "../../src/constants/fonts";
 import { WEBSITE_URL, CONTACT_EMAIL } from "../../src/config";
 
 // Buka tautan (https / mailto) di aplikasi luar; kalau gagal, tampilkan alamatnya
@@ -24,6 +27,8 @@ const openLink = async (url: string, title: string, fallbackText: string) => {
 export default function SettingsScreen() {
   const { isDarkMode, toggleTheme, theme } = useTheme();
   const { language, setLanguage, t, flip } = useLanguage();
+  const isTablet = useIsTablet();
+  const pad = isTablet ? 40 : 24;
   
   const [adhanNotification, setAdhanNotification] = useState(true);
   const [autoPlay, setAutoPlay] = useState(false);
@@ -47,18 +52,22 @@ export default function SettingsScreen() {
   const SettingItem = ({ icon: Icon, label, value, onPress, rightElement }: any) => (
     <Pressable 
       onPress={onPress} 
-      className={`flex-row items-center justify-between py-4 border-b ${theme.border} active:opacity-70`}
+      className={`flex-row items-center justify-between border-b ${theme.border} active:opacity-70`}
+      style={{ minHeight: isTablet ? 72 : 60 }}
+      accessibilityRole={onPress ? "button" : undefined}
     >
       <View className="flex-row items-center gap-3 flex-1">
-        <Icon size={20} color={theme.iconColor} />
+        <View className={`h-10 w-10 rounded-full items-center justify-center ${isDarkMode ? "bg-emerald-900/40" : "bg-emerald-100"}`}>
+          <Icon size={20} color={isDarkMode ? "#34d399" : "#047857"} />
+        </View>
         <Text 
-          className={`text-sm flex-1 ${theme.text}`}
+          className={`${isTablet ? "text-base" : "text-sm"} font-semibold flex-1 ${theme.text}`}
           style={{ writingDirection: language === 'ar' ? 'rtl' : 'ltr' }}
         >
           {label}
         </Text>
       </View>
-      {rightElement || (value ? <Text className={`text-sm ${theme.textMuted}`}>{value}</Text> : null)}
+      {rightElement || (value ? <Text className={`${isTablet ? "text-base" : "text-sm"} ${theme.textMuted}`}>{value}</Text> : null)}
     </Pressable>
   );
 
@@ -77,20 +86,33 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
-      {/* Header */}
-      <View className={`flex-row items-center justify-center px-6 py-4 border-b ${theme.border}`}>
-        <Pressable onPress={() => router.back()} className="absolute left-6 p-2">
-          <ArrowLeft size={22} color={theme.iconColor} style={flip} />
-        </Pressable>
-        <Text className={`text-lg font-bold tracking-[2px] ${theme.text}`}>{t('settings').toUpperCase()}</Text>
+      {/* Header: batik + kaligrafi */}
+      <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 18 }}>
+        <BatikPattern width={1200} height={120} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+        <View className="flex-row items-center">
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel={t('back')}
+            className="items-center justify-center rounded-full"
+            style={{ width: 48, height: 48, backgroundColor: "rgba(255,255,255,0.16)" }}
+          >
+            <ArrowLeft size={22} color="#fff" style={flip} />
+          </Pressable>
+          <View className="flex-1 ml-4">
+            <Text className="text-white text-xl font-extrabold">{t('settings')}</Text>
+          </View>
+          <Text style={{ fontFamily: ARABIC_FONT, fontSize: 32, lineHeight: 52, color: "#fde68a" }}>الإعدادات</Text>
+        </View>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
+        <View style={isTablet ? { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", paddingHorizontal: pad - 12 } : undefined}>
         
         {/* THEME & UMUM */}
-        <View className="px-6 pt-6">
-          <Text className={`text-xs font-bold uppercase tracking-wider mb-3 ${theme.textMuted}`}>{t('general')}</Text>
-          <View className={`rounded-xl border ${theme.border} ${theme.bgCard} px-4`}>
+        <View className={isTablet ? "pt-6" : "px-6 pt-6"} style={isTablet ? { width: "50%", paddingHorizontal: 12 } : undefined}>
+          <Text className={`text-xs font-extrabold uppercase tracking-wider mb-3 ml-2 ${theme.textMuted}`}>{t('general')}</Text>
+          <View className={`rounded-3xl border ${theme.border} ${theme.bgCard} px-5`}>
             <SettingItem 
               icon={isDarkMode ? Moon : Sun} 
               label={t('darkMode')} 
@@ -113,9 +135,9 @@ export default function SettingsScreen() {
         </View>
 
         {/* AUDIO & PEMUTARAN */}
-        <View className="px-6 pt-6">
-          <Text className={`text-xs font-bold uppercase tracking-wider mb-3 ${theme.textMuted}`}>{t('audioPlayback')}</Text>
-          <View className={`rounded-xl border ${theme.border} ${theme.bgCard} px-4`}>
+        <View className={isTablet ? "pt-6" : "px-6 pt-6"} style={isTablet ? { width: "50%", paddingHorizontal: 12 } : undefined}>
+          <Text className={`text-xs font-extrabold uppercase tracking-wider mb-3 ml-2 ${theme.textMuted}`}>{t('audioPlayback')}</Text>
+          <View className={`rounded-3xl border ${theme.border} ${theme.bgCard} px-5`}>
             <SettingItem 
               icon={Play} 
               label={t('autoPlayNext')} 
@@ -144,9 +166,9 @@ export default function SettingsScreen() {
         </View>
 
         {/* NOTIFIKASI & JADWAL SHALAT */}
-        <View className="px-6 pt-6">
-          <Text className={`text-xs font-bold uppercase tracking-wider mb-3 ${theme.textMuted}`}>{t('notificationPrayer')}</Text>
-          <View className={`rounded-xl border ${theme.border} ${theme.bgCard} px-4`}>
+        <View className={isTablet ? "pt-6" : "px-6 pt-6"} style={isTablet ? { width: "50%", paddingHorizontal: 12 } : undefined}>
+          <Text className={`text-xs font-extrabold uppercase tracking-wider mb-3 ml-2 ${theme.textMuted}`}>{t('notificationPrayer')}</Text>
+          <View className={`rounded-3xl border ${theme.border} ${theme.bgCard} px-5`}>
             <SettingItem 
               icon={Bell} 
               label={t('adhanNotification')} 
@@ -169,9 +191,9 @@ export default function SettingsScreen() {
         </View>
 
         {/* TENTANG APLIKASI */}
-        <View className="px-6 pt-6 pb-6">
-          <Text className={`text-xs font-bold uppercase tracking-wider mb-3 ${theme.textMuted}`}>{t('about')}</Text>
-          <View className={`rounded-xl border ${theme.border} ${theme.bgCard} px-4`}>
+        <View className={isTablet ? "pt-6 pb-6" : "px-6 pt-6 pb-6"} style={isTablet ? { width: "50%", paddingHorizontal: 12 } : undefined}>
+          <Text className={`text-xs font-extrabold uppercase tracking-wider mb-3 ml-2 ${theme.textMuted}`}>{t('about')}</Text>
+          <View className={`rounded-3xl border ${theme.border} ${theme.bgCard} px-5`}>
             <SettingItem 
               icon={Info} 
               label={t('appVersion')} 
@@ -190,10 +212,12 @@ export default function SettingsScreen() {
             />
           </View>
         </View>
+        </View>
       </ScrollView>
 
       {/* FOOTER */}
-      <View className={`absolute bottom-0 left-0 right-0 ${theme.footerBg || 'bg-emerald-800'} px-6 py-5`}>
+      <View className={`absolute bottom-0 left-0 right-0 ${theme.footerBg || 'bg-emerald-800'} px-6 py-5 overflow-hidden`}>
+        <BatikPattern width={1200} height={140} cell={42} opacity={0.12} />
         <Text className="text-white text-center text-sm font-bold mb-3 tracking-wider">{t('aboutUs')}</Text>
         <View className="flex-row items-center justify-center gap-8">
           <Pressable

@@ -7,6 +7,7 @@ import { View, Text, TextInput, Platform, PermissionsAndroid, Alert, useWindowDi
 import * as ScreenOrientation from "expo-screen-orientation";
 import { useEffect } from "react";
 import { setAudioModeAsync } from "expo-audio";
+import { useIsTablet } from "../src/hooks/useIsTablet";
 import { useFonts, AmiriQuran_400Regular } from "@expo-google-fonts/amiri-quran";
 import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
 import { LanguageProvider } from "../src/context/LanguageContext";
@@ -50,8 +51,10 @@ if (IS_PREVIEW && typeof ErrorUtils !== "undefined" && !(globalThis as any).__pr
 function GlobalMiniPlayer() {
   const segments = useSegments() as string[];
   const { session } = usePlayer();
+  const isTablet = useIsTablet();
   if (!session) return null;
-  if (segments.length === 0 || segments[0] === "(tabs)") return null;
+  // HP: pemutar mini ada di tab bar bawah. Tablet: tab bar jadi sidebar, jadi tampil di sini.
+  if (segments.length === 0 || (segments[0] === "(tabs)" && !isTablet)) return null;
   return <MiniPlayer withSafeBottom />;
 }
 
@@ -108,8 +111,8 @@ function RootLayoutContent() {
     <View className={`flex-1 ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fbf8ef]"}`}>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
       <SecurityBanner />
-      {/* Tablet/layar lebar: konten dibatasi 720 dp dan di tengah, HP tetap penuh */}
-      <View className="flex-1" style={{ width: "100%", maxWidth: 720, alignSelf: "center" }}>
+      {/* Tablet/layar lebar: konten dibatasi 1180 dp dan di tengah, HP tetap penuh */}
+      <View className="flex-1" style={{ width: "100%", maxWidth: 1180, alignSelf: "center" }}>
         <View className="flex-1">
           <ErrorBoundary>
             <Slot />
