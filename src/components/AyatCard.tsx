@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { View, Text, Pressable } from "react-native";
 import { Bookmark, Volume2 } from "lucide-react-native";
-import { QURAN_FONT } from "../constants/fonts";
+import { quranTextStyle } from "../constants/fonts";
 import TajweedText from "./TajweedText";
 
 export interface AyatCardProps {
@@ -44,8 +44,6 @@ function AyatCardBase(p: AyatCardProps) {
     : `${p.borderClass} ${p.cardClass}`;
 
   const scale = p.arabScale ?? 1;
-  const arabFont = Math.round((p.compact ? 26 : 30) * scale);
-  const arabLine = Math.round((p.compact ? 64 : 76) * scale);
   const align = p.isArabicUi ? "right" : "left";
 
   return (
@@ -86,15 +84,7 @@ function AyatCardBase(p: AyatCardProps) {
 
       <Text
         className={p.textClass}
-        style={{
-          writingDirection: "rtl",
-          textAlign: "right",
-          fontSize: arabFont,
-          lineHeight: arabLine,
-          includeFontPadding: false,
-          textAlignVertical: "center",
-          fontFamily: QURAN_FONT,
-        }}
+        style={quranTextStyle(p.compact)}
       >
         {p.isTajweed ? <TajweedText text={p.teksArab} isDark={p.isDark} /> : p.teksArab}
       </Text>

@@ -6,7 +6,7 @@ import { BookOpen, Check, Star } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { getMushafList } from "../../../src/services/quranService";
-import { ARABIC_FONT } from "../../../src/constants/fonts";
+import { quranTextStyle } from "../../../src/constants/fonts";
 import BatikPattern from "../../../src/components/ui/BatikPattern";
 import BatikHeader from "../../../src/components/ui/BatikHeader";
 import { useIsTablet } from "../../../src/hooks/useIsTablet";
@@ -35,6 +35,8 @@ export default function QiraatScreen() {
   const pad = isTablet ? 40 : 24;
   const cols = winW >= 800 ? 2 : 1;
   const accent = isDarkMode ? "#34d399" : "#047857";
+  // Teks Arab memakai font & ukuran yang sama dengan ayat Al-Qur'an (lihat quranTextStyle)
+  const arab = { ...quranTextStyle(winW < 360), color: accent };
   const [mushafList, setMushafList] = useState<MushafItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMushafId, setSelectedMushafId] = useState<string>("");
@@ -148,11 +150,15 @@ export default function QiraatScreen() {
           {active ? <Check size={14} color={isDarkMode ? "#022c22" : "#fff"} /> : null}
         </View>
         <View className="flex-1 py-2">
-          <Text numberOfLines={2} className={`text-sm font-semibold ${active ? (isDarkMode ? "text-emerald-300" : "text-emerald-900") : theme.text}`}>
+          <Text
+            numberOfLines={lang === "ar" ? undefined : 2}
+            className={`text-sm font-semibold ${active ? (isDarkMode ? "text-emerald-300" : "text-emerald-900") : theme.text}`}
+            style={lang === "ar" ? quranTextStyle(winW < 360) : undefined}
+          >
             {mushafTitle(m, lang)}
           </Text>
           {!!m.name && m.name !== mushafTitle(m, lang) && (
-            <Text numberOfLines={1} className={theme.textMuted} style={{ fontFamily: ARABIC_FONT, writingDirection: "rtl", fontSize: 14, lineHeight: 26 }}>
+            <Text className={theme.text} style={quranTextStyle(winW < 360)}>
               {m.name}
             </Text>
           )}
@@ -167,17 +173,13 @@ export default function QiraatScreen() {
     return (
       <View className={`pt-3 ${nomor === 2 ? `mt-3 border-t ${theme.border}` : ""}`}>
         <Text className={`text-[11px] font-bold ${theme.textMuted}`}>{t("rawiN", { n: nomor })}</Text>
-        <Text numberOfLines={2} className={`text-base font-extrabold ${theme.text}`}>{r.label[lang]}</Text>
-        <View className="flex-row items-center gap-2">
-          <Text numberOfLines={2} className={`flex-1 text-xs ${theme.textMuted}`}>
-            {t("tariqVia", { t: lang === "ar" ? r.tariq.ar : r.tariq.latin })}
-          </Text>
-          {lang !== "ar" && (
-            <Text numberOfLines={1} style={{ fontFamily: ARABIC_FONT, fontSize: 17, lineHeight: 30, color: accent }}>
-              {r.label.ar}
-            </Text>
-          )}
-        </View>
+        {lang !== "ar" && (
+          <Text numberOfLines={2} className={`text-base font-extrabold ${theme.text}`}>{r.label[lang]}</Text>
+        )}
+        <Text style={arab}>{r.label.ar}</Text>
+        <Text numberOfLines={2} className={`text-xs ${theme.textMuted}`}>
+          {t("tariqVia", { t: lang === "ar" ? r.tariq.ar : r.tariq.latin })}
+        </Text>
         {options.length > 0 ? (
           options.map((m) => <MushafOption key={m.id} m={m} />)
         ) : (
@@ -214,10 +216,8 @@ export default function QiraatScreen() {
                 <Text className="text-[11px] font-extrabold text-emerald-950">{t("qiraatPopularTag")}</Text>
               </View>
             </View>
-            <Text className={`text-xl font-extrabold ${theme.text}`}>{hafsh.label[lang]}</Text>
-            {lang !== "ar" && (
-              <Text style={{ fontFamily: ARABIC_FONT, fontSize: 24, lineHeight: 42, color: accent }}>{hafsh.label.ar}</Text>
-            )}
+            {lang !== "ar" && <Text className={`text-xl font-extrabold ${theme.text}`}>{hafsh.label[lang]}</Text>}
+            <Text style={arab}>{hafsh.label.ar}</Text>
             <Text className={`text-xs ${theme.textMuted}`}>
               {asim.nama[lang]} · {t("tariqVia", { t: lang === "ar" ? hafsh.tariq.ar : hafsh.tariq.latin })}
             </Text>
@@ -228,10 +228,8 @@ export default function QiraatScreen() {
           </View>
 
           {/* 2. QIRAAT SAB'AH: 7 imam berurutan, 2 rawi masing-masing */}
-          <View className="flex-row items-end justify-between mb-1">
-            <Text className={`text-lg font-extrabold ${theme.text}`}>{t("qiraatSabahTitle")}</Text>
-            <Text style={{ fontFamily: ARABIC_FONT, fontSize: 20, lineHeight: 36, color: accent }}>القراءات السبع</Text>
-          </View>
+          {lang !== "ar" && <Text className={`text-lg font-extrabold ${theme.text}`}>{t("qiraatSabahTitle")}</Text>}
+          <Text style={arab}>القراءات السبع</Text>
           <Text className={`text-sm leading-6 mb-4 ${theme.textSecondary}`}>{t("qiraatSabahDesc")}</Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", marginHorizontal: -6 }}>
@@ -246,17 +244,15 @@ export default function QiraatScreen() {
                       <Text className={`text-base font-extrabold ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>{imam.urutan}</Text>
                     </View>
                     <View className="flex-1">
-                      <Text numberOfLines={2} className={`text-base font-extrabold ${theme.text}`}>{imam.nama[lang]}</Text>
+                      {lang !== "ar" && (
+                        <Text numberOfLines={2} className={`text-base font-extrabold ${theme.text}`}>{imam.nama[lang]}</Text>
+                      )}
                       <Text className={`text-xs ${theme.textMuted}`}>
                         {imam.kota[lang]} · {t("diedYear", { y: imam.wafat })}
                       </Text>
                     </View>
-                    {lang !== "ar" && (
-                      <Text numberOfLines={1} style={{ fontFamily: ARABIC_FONT, fontSize: 20, lineHeight: 36, color: accent, maxWidth: "38%" }}>
-                        {imam.nama.ar}
-                      </Text>
-                    )}
                   </View>
+                  <Text style={arab}>{imam.nama.ar}</Text>
                   <RawiRow r={imam.rawi[0]} nomor={1} />
                   <RawiRow r={imam.rawi[1]} nomor={2} />
                 </View>
