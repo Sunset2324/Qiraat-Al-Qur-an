@@ -86,7 +86,7 @@ export default function MengajarScreen() {
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={["top"]}>
       <View className={`${theme.bgHeader} px-6 py-4 flex-row items-center overflow-hidden`}>
-        <BatikPattern width={1200} height={90} cell={42} opacity={0.14} />
+        <BatikPattern cell={42} opacity={0.14} />
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
@@ -126,7 +126,7 @@ export default function MengajarScreen() {
             <View
               style={{ borderRadius: 32, borderWidth: 1.5, borderColor: sand, backgroundColor: cardBg, minHeight: wide ? 420 : 320, alignItems: "center", justifyContent: "center", padding: 24, overflow: "hidden" }}
             >
-              <BatikPattern width={900} height={520} color={isDarkMode ? "#34d399" : "#047857"} cell={56} opacity={0.07} strokeWidth={1.4} />
+              <BatikPattern color={isDarkMode ? "#34d399" : "#047857"} cell={56} opacity={0.07} strokeWidth={1.4} />
               <Text style={{ fontSize: 15, fontWeight: "800", color: isDarkMode ? "#fbbf24" : "#b45309", letterSpacing: 1, marginBottom: 6 }}>{rule.judul}</Text>
               <Text
                 style={{ fontFamily: ARABIC_FONT, fontSize: SIZES[size].px, lineHeight: SIZES[size].px * 1.9, textAlign: "center", color: isDarkMode ? "#f3f4f6" : "#022c22", writingDirection: "rtl" }}

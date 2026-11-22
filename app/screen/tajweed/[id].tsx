@@ -25,7 +25,7 @@ export default function TajweedDetailScreen() {
 
   const Header = (
     <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 14 }}>
-      <BatikPattern width={1200} height={90} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+      <BatikPattern cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
       <View className="flex-row items-center">
         <Pressable
           onPress={() => router.back()}
@@ -70,7 +70,7 @@ export default function TajweedDetailScreen() {
         <View style={{ width: "100%", maxWidth: 860 }}>
         {/* Judul Arab */}
         <View className={`items-center p-6 rounded-3xl overflow-hidden border ${theme.border} ${isDarkMode ? "bg-[#1a1a1a]" : "bg-[#fffcf5]"} mb-5`}>
-          <BatikPattern width={900} height={400} color={accent} cell={56} opacity={0.07} strokeWidth={1.4} />
+          <BatikPattern color={accent} cell={56} opacity={0.07} strokeWidth={1.4} />
           <Text className={`text-4xl mb-2 ${theme.text}`} style={{ fontFamily: ARABIC_FONT, textAlign: "center" }}>
             {rule.arab}
           </Text>

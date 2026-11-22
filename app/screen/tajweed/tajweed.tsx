@@ -41,7 +41,7 @@ export default function TajweedScreen() {
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={["top"]}>
       {/* HEADER */}
       <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 18 }}>
-        <BatikPattern width={1200} height={100} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+        <BatikPattern cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
         <View className="flex-row items-center">
           <Pressable
             onPress={() => router.back()}
@@ -87,7 +87,7 @@ export default function TajweedScreen() {
 
         {/* Info Card */}
         <View className={`p-5 rounded-3xl overflow-hidden border ${theme.border} ${theme.bgCard} mb-6`}>
-          <BatikPattern width={900} height={300} color={accent} cell={56} opacity={0.07} strokeWidth={1.4} />
+          <BatikPattern color={accent} cell={56} opacity={0.07} strokeWidth={1.4} />
           <View className="flex-row items-center gap-3 mb-2">
             <BookOpen size={20} color={accent} />
             <Text className={`text-sm font-bold ${theme.text}`}>{t("aboutTajweed")}</Text>

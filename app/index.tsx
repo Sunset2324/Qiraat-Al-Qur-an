@@ -4,6 +4,8 @@ import { DoorOpen, Globe } from "lucide-react-native";
 import { router } from "expo-router";
 import { useTheme } from "../src/context/ThemeContext";
 import { useLanguage } from "../src/context/LanguageContext";
+import BatikPattern from "../src/components/ui/BatikPattern";
+import { QURAN_FONT } from "../src/constants/fonts";
 
 export default function BismillahScreen() {
   const { isDarkMode, theme } = useTheme();
@@ -23,11 +25,7 @@ export default function BismillahScreen() {
   return (
     <View className={`flex-1 ${theme.bg} px-7 pt-12`}>
       {/* Background Decoration */}
-      <View className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none">
-        <View className={`absolute -top-20 -right-20 rounded-full border ${theme.border}/30`} style={{ width: 280, height: 280 }} />
-        <View className={`absolute top-40 -right-10 rounded-full border ${theme.border}/20`} style={{ width: 180, height: 180 }} />
-        <View className={`absolute -top-10 -left-10 rounded-full border ${theme.border}/30`} style={{ width: 200, height: 200 }} />
-      </View>
+      <BatikPattern color={isDarkMode ? "#34d399" : "#047857"} cell={56} opacity={isDarkMode ? 0.06 : 0.07} strokeWidth={1.4} />
 
       {/* Header */}
       <View className="flex-row items-center justify-between">
@@ -60,7 +58,10 @@ export default function BismillahScreen() {
         <Text className={`text-center text-xs font-medium tracking-[2px] ${theme.text}`}>
           {t("startWithAllah")}
         </Text>
-        <Text className={`text-center text-3xl leading-[52px] ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`}>
+        <Text
+          className={`text-center ${isDarkMode ? "text-emerald-400" : "text-emerald-700"}`}
+          style={{ fontFamily: QURAN_FONT, fontSize: 32, lineHeight: 60 }}
+        >
           بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
         </Text>
         <Text className={`max-w-[280px] text-center text-sm leading-6 ${theme.textMuted}`}>

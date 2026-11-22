@@ -245,7 +245,7 @@ export default function MushafScreen() {
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
       <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: gutter, paddingVertical: 20 }}>
-        <BatikPattern width={1600} height={110} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+        <BatikPattern cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
         <View className="flex-row items-center justify-between">
           <View className="flex-1 pr-3">
             <Text className="text-xs font-bold tracking-[2px] text-emerald-100">{t("greeting")}</Text>
@@ -330,7 +330,7 @@ export default function MushafScreen() {
             {lastRead ? (
               <View className="mb-6">
                 <View className={`p-6 rounded-3xl overflow-hidden ${isDarkMode ? "bg-emerald-900" : "bg-emerald-800"}`}>
-                  <BatikPattern width={1200} height={300} cell={42} opacity={0.14} />
+                  <BatikPattern cell={42} opacity={0.14} />
                   <Text className={`text-xs font-bold tracking-[2px] ${isDarkMode ? "text-emerald-300" : "text-emerald-100"} mb-2`}>
                     {t("continueLearning")}
                   </Text>
@@ -378,7 +378,7 @@ export default function MushafScreen() {
               <View className="mb-6">
                 {lastPage ? (
                   <View className={`p-5 rounded-3xl overflow-hidden ${isDarkMode ? "bg-emerald-900" : "bg-emerald-800"}`}>
-                    <BatikPattern width={1200} height={300} cell={42} opacity={0.14} />
+                    <BatikPattern cell={42} opacity={0.14} />
                     <Text className={`text-xs font-bold tracking-[2px] ${isDarkMode ? "text-emerald-300" : "text-emerald-100"} mb-2`}>
                       {t("continueLearning")}
                     </Text>

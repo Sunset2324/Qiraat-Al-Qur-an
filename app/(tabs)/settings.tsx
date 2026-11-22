@@ -88,7 +88,7 @@ export default function SettingsScreen() {
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
       {/* Header: batik + kaligrafi */}
       <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 18 }}>
-        <BatikPattern width={1200} height={120} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+        <BatikPattern cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
         <View className="flex-row items-center">
           <Pressable
             onPress={() => router.back()}
@@ -217,7 +217,7 @@ export default function SettingsScreen() {
 
       {/* FOOTER */}
       <View className={`absolute bottom-0 left-0 right-0 ${theme.footerBg || 'bg-emerald-800'} px-6 py-5 overflow-hidden`}>
-        <BatikPattern width={1200} height={140} cell={42} opacity={0.12} />
+        <BatikPattern cell={42} opacity={0.12} />
         <Text className="text-white text-center text-sm font-bold mb-3 tracking-wider">{t('aboutUs')}</Text>
         <View className="flex-row items-center justify-center gap-8">
           <Pressable

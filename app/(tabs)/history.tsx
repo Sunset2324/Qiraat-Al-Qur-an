@@ -137,7 +137,7 @@ export default function HistoryScreen() {
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
       {/* Header: batik + kaligrafi */}
       <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 20 }}>
-        <BatikPattern width={1200} height={130} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+        <BatikPattern cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
         <View className="flex-row items-center justify-between">
           <View className="flex-1 pr-3">
             <Text className="text-xs font-bold tracking-[2px] text-emerald-100">{t("activityHistory")}</Text>
