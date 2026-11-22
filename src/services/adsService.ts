@@ -1,7 +1,7 @@
 import axios from "axios";
 import { API_BASE_URL } from "../config";
 import { cachedRequest, MINUTE } from "../utils/apiCache";
-import { assertSensitiveAllowed, installGuard } from "../security/guard";
+import { assertSensitiveAllowed, installGuard, GuardBlockedError } from "../security/guard";
 
 export interface Iklan {
   id: string;
@@ -65,16 +65,10 @@ async function ambilDariServer(): Promise<Iklan[]> {
  */
 export const getIklan = async (force = false): Promise<Iklan[]> => {
   const key = "iklan:list";
-  const ambil = async () => {
-    await assertSensitiveAllowed(); // iklan dimatikan di mode terbatas
-    const res = await http.get("/ads");
-    const list: Iklan[] = Array.isArray(res.data?.data) ? res.data.data : [];
-    return list.filter(
-      (a) => a && a.id && a.title && a.surah > 0 && a.ayat > 0 && httpsOnly(a.imageUrl) && httpsOnly(a.productUrl)
-    );
-  };
+  const ambil = ambilDariServer;
   if (force) return ambil();
-  return cachedRequest<Iklan[]>(key, ambil, { ttlMs: 30 * MINUTE, group: "iklan", maxEntries: 1 }).catch(() => {
+  return cachedRequest<Iklan[]>(key, ambil, { ttlMs: 30 * MINUTE, group: "iklan", maxEntries: 1 }).catch((e) => {
+    if (e instanceof GuardBlockedError) throw e;
     throw new Error("ads_unavailable");
-  }
+  });
 };
