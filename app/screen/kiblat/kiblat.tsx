@@ -1,16 +1,17 @@
 import { View, Text, ScrollView, Pressable, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useIsFocused } from "expo-router";
-import { ArrowLeft, RefreshCw, Compass, Navigation } from "lucide-react-native";
+import { useIsFocused } from "expo-router";
+import { RefreshCw, Compass, Navigation } from "lucide-react-native";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import { useQibla } from "../../../src/hooks/useQibla";
 import QiblaCompass, { ALIGN_TOLERANCE } from "../../../src/components/QiblaCompass";
 import { angleDiff } from "../../../src/utils/qibla";
+import BatikHeader from "../../../src/components/ui/BatikHeader";
 
 export default function KiblatScreen() {
   const { isDarkMode, theme } = useTheme();
-  const { t, flip, locale } = useLanguage();
+  const { t, locale } = useLanguage();
   const { width } = useWindowDimensions();
   const focused = useIsFocused();
   const q = useQibla(focused);
@@ -44,15 +45,21 @@ export default function KiblatScreen() {
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={["top"]}>
-      <View className={`flex-row items-center px-6 py-4 border-b ${theme.border}`}>
-        <Pressable onPress={() => router.back()} className="p-2 mr-2">
-          <ArrowLeft size={24} color={theme.iconColor} style={flip} />
-        </Pressable>
-        <Text className={`text-xl font-bold flex-1 ${theme.text}`}>{t("qiblaTitle")}</Text>
-        <Pressable onPress={q.refresh} hitSlop={10} accessibilityLabel={t("qiblaRefresh")} className="p-2">
-          <RefreshCw size={20} color={theme.iconColor} />
-        </Pressable>
-      </View>
+      <BatikHeader
+        title={t("qiblaTitle")}
+        arabic="القبلة"
+        right={
+          <Pressable
+            onPress={q.refresh}
+            accessibilityRole="button"
+            accessibilityLabel={t("qiblaRefresh")}
+            className="items-center justify-center rounded-full active:opacity-70"
+            style={{ width: 48, height: 48, backgroundColor: "rgba(255,255,255,0.16)" }}
+          >
+            <RefreshCw size={20} color="#fff" />
+          </Pressable>
+        }
+      />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingBottom: 48 }}>
         <View className="items-center mb-6">

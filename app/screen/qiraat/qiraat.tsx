@@ -111,7 +111,7 @@ export default function QiraatScreen() {
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={["top"]}>
       <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 18 }}>
-        <BatikPattern width={1400} height={100} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+        <BatikPattern cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
         <View className="flex-row items-center">
           <Pressable
             onPress={() => router.back()}
@@ -137,7 +137,7 @@ export default function QiraatScreen() {
       >
         <View style={{ width: "100%", maxWidth: 1000 }}>
         <View className={`p-5 rounded-3xl overflow-hidden border ${theme.border} ${theme.bgCard} mb-6`}>
-          <BatikPattern width={1000} height={300} color={isDarkMode ? "#34d399" : "#047857"} cell={56} opacity={0.07} strokeWidth={1.4} />
+          <BatikPattern color={isDarkMode ? "#34d399" : "#047857"} cell={56} opacity={0.07} strokeWidth={1.4} />
           <View className="flex-row items-center gap-3 mb-2">
             <BookOpen size={20} color={isDarkMode ? "#34d399" : "#047857"} />
             <Text className={`text-sm font-extrabold ${theme.text}`}>{t("aboutMushaf")}</Text>

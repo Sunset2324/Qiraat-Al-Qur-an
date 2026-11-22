@@ -173,7 +173,7 @@ export default function JadwalShalatScreen() {
       }`}
       style={{ minHeight: isTablet ? 76 : 68 }}
     >
-      {isNext && <BatikPattern width={800} height={90} cell={36} opacity={0.14} />}
+      {isNext && <BatikPattern cell={36} opacity={0.14} />}
       <View className="flex-row items-center gap-3 flex-1">
         <Clock size={22} color={isNext ? "#fde68a" : theme.iconColor} />
         <Text className={`text-lg font-extrabold ${isNext ? "text-white" : theme.text}`}>{nama}</Text>
@@ -192,7 +192,7 @@ export default function JadwalShalatScreen() {
   // Kartu utama: lokasi, hitung mundur, kompas kiblat
   const heroCard = (
     <View className="rounded-3xl overflow-hidden bg-emerald-800 p-6">
-      <BatikPattern width={1000} height={320} cell={42} opacity={0.14} />
+      <BatikPattern cell={42} opacity={0.14} />
       <Pressable
         onPress={() => setPickerBuka(true)}
         accessibilityRole="button"
@@ -303,7 +303,7 @@ export default function JadwalShalatScreen() {
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
       {/* Header: batik + kaligrafi */}
       <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: gut, paddingVertical: 18 }}>
-        <BatikPattern width={1200} height={100} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+        <BatikPattern cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
         <View className="flex-row items-center">
           <Pressable
             onPress={() => router.back()}

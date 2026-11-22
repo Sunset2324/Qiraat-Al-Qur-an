@@ -12,7 +12,6 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
 import java.net.InetSocketAddress
-import java.net.NetworkInterface
 import java.net.Socket
 
 /**
@@ -131,31 +130,30 @@ class AppGuardModule : Module() {
   }
 
   // ---------- jaringan ----------
+  // Hanya menilai kondisi yang BENAR-BENAR aktif saat ini (bukan menebak dari nama antarmuka
+  // atau jaringan lama): ini menghindari salah-blokir pengguna sah.
+
+  /** VPN aktif = jaringan default yang sedang dipakai bertransport VPN. */
   private fun vpn(ctx: Context) = safe {
     val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-    var found = false
-    @Suppress("DEPRECATION")
-    val nets = cm.allNetworks.toMutableList()
-    cm.activeNetwork?.let { nets.add(it) }
-    for (n in nets) {
-      val caps = cm.getNetworkCapabilities(n) ?: continue
-      if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
-        !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-      ) { found = true; break }
-    }
-    if (!found) {
-      // cadangan: antarmuka tunnel yang aktif (tun0, ppp0, wg0, ...)
-      found = NetworkInterface.getNetworkInterfaces()?.toList()?.any {
-        it.isUp && listOf("tun", "ppp", "tap", "wg", "ipsec").any { p -> it.name.startsWith(p) }
-      } == true
-    }
-    found
+    val net = cm.activeNetwork ?: return@safe false
+    val caps = cm.getNetworkCapabilities(net) ?: return@safe false
+    caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
   }
 
+  /**
+   * Proxy aktif = proxy global sistem (properti JVM), atau proxy yang terpasang di jaringan
+   * default yang BUKAN seluler. Proxy bawaan APN operator (seluler) tidak dihitung karena
+   * umum dan sah; proxy MITM untuk menyadap lalu lintas lazimnya dipasang lewat Wi-Fi.
+   */
   private fun proxy(ctx: Context) = safe {
-    val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     val sys = !System.getProperty("http.proxyHost").isNullOrBlank() ||
       !System.getProperty("https.proxyHost").isNullOrBlank()
-    sys || cm.defaultProxy != null
+    if (sys) return@safe true
+    val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val net = cm.activeNetwork ?: return@safe false
+    val caps = cm.getNetworkCapabilities(net)
+    val cellular = caps?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true
+    !cellular && cm.getLinkProperties(net)?.httpProxy != null
   }
 }

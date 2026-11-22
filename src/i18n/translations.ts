@@ -48,7 +48,11 @@ export const DICT: Record<string, Row> = {
   tabTeach:["Mengajar", "Teach", "التعليم"],
   continueReading: ["Lanjutkan membaca", "Continue reading", "تابع القراءة"],
   verseOfTotal: ["Ayat {a} dari {n}", "Verse {a} of {n}", "الآية {a} من {n}"],
-  noReadingYet: ["Belum ada bacaan. Mulai dari Mushaf.", "Nothing read yet. Start from Mushaf.", "لا توجد قراءة بعد. ابدأ من المصحف."],
+  noReadingYet: [
+    "Belum ada bacaan. Yuk mulai satu ayat dari Mushaf.",
+    "Nothing read yet. Let's start with one verse from the Mushaf.",
+    "لا توجد قراءة بعد. لنبدأ بآية واحدة من المصحف.",
+  ],
   greetMorning: ["Selamat pagi", "Good morning", "صباح الخير"],
   greetDay: ["Selamat siang", "Good afternoon", "طاب يومك"],
   greetEvening: ["Selamat sore", "Good evening", "مساء الخير"],
@@ -80,6 +84,15 @@ export const DICT: Record<string, Row> = {
     "اختر مدينتك لمواقيت دقيقة",
   ],
   healthJournal: ["Jurnal Kesehatan", "Health Journal", "مفكرة الصحة"],
+  featEbook: ["eBook", "eBook", "الكتب الإلكترونية"],
+  ebookTag: ["PUSTAKA", "LIBRARY", "المكتبة"],
+  ebookSoonTitle: ["Rak bukunya sedang kami siapkan", "We're preparing the bookshelf", "نُجهّز رفّ الكتب"],
+  ebookSoonMsg: [
+    "Insya Allah, kumpulan eBook bacaan Islami akan hadir di sini. Sambil menunggu, yuk lanjutkan tilawahmu.",
+    "God willing, a collection of Islamic eBooks will be here soon. Meanwhile, let's continue your recitation.",
+    "إن شاء الله ستتوفر هنا مجموعة من الكتب الإسلامية قريبًا. وحتى ذلك الحين، تابع تلاوتك.",
+  ],
+  ebookGoRead: ["Lanjut membaca Al-Qur'an", "Continue reading the Qur'an", "تابع قراءة القرآن"],
   journalIntro: [
     "Kutipan ayat dari Thibbun Nabawi bersama produk herbal pilihan Ataubah Center.",
     "Verses from Thibbun Nabawi alongside selected herbal products from Ataubah Center.",

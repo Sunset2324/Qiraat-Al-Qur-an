@@ -4,7 +4,7 @@ import { router, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useCallback } from "react";
 import {
-  ArrowLeft, Moon, Sun, Globe, Headphones, Play, 
+  Moon, Sun, Globe, Headphones, Play, 
   Bell, MapPin, Info, Mail, RotateCcw, X, Check
 } from "lucide-react-native";
 import { useTheme } from "../../src/context/ThemeContext";
@@ -12,7 +12,7 @@ import { useLanguage } from "../../src/context/LanguageContext";
 import { clearApiCache } from "../../src/utils/apiCache";
 import BatikPattern from "../../src/components/ui/BatikPattern";
 import { useIsTablet } from "../../src/hooks/useIsTablet";
-import { ARABIC_FONT } from "../../src/constants/fonts";
+import TabHeader from "../../src/components/ui/TabHeader";
 import { WEBSITE_URL, CONTACT_EMAIL } from "../../src/config";
 
 // Buka tautan (https / mailto) di aplikasi luar; kalau gagal, tampilkan alamatnya
@@ -26,7 +26,7 @@ const openLink = async (url: string, title: string, fallbackText: string) => {
 
 export default function SettingsScreen() {
   const { isDarkMode, toggleTheme, theme } = useTheme();
-  const { language, setLanguage, t, flip } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const isTablet = useIsTablet();
   const pad = isTablet ? 40 : 24;
   
@@ -67,7 +67,15 @@ export default function SettingsScreen() {
           {label}
         </Text>
       </View>
-      {rightElement || (value ? <Text className={`${isTablet ? "text-base" : "text-sm"} ${theme.textMuted}`}>{value}</Text> : null)}
+      {rightElement || (value ? (
+        <Text
+          numberOfLines={2}
+          className={`${isTablet ? "text-base" : "text-sm"} ${theme.textMuted}`}
+          style={{ flexShrink: 1, maxWidth: "45%", textAlign: language === 'ar' ? 'left' : 'right', marginStart: 8 }}
+        >
+          {value}
+        </Text>
+      ) : null)}
     </Pressable>
   );
 
@@ -86,25 +94,8 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={['top']}>
-      {/* Header: batik + kaligrafi */}
-      <View className={`${theme.bgHeader} overflow-hidden`} style={{ paddingHorizontal: pad, paddingVertical: 18 }}>
-        <BatikPattern width={1200} height={120} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
-        <View className="flex-row items-center">
-          <Pressable
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel={t('back')}
-            className="items-center justify-center rounded-full"
-            style={{ width: 48, height: 48, backgroundColor: "rgba(255,255,255,0.16)" }}
-          >
-            <ArrowLeft size={22} color="#fff" style={flip} />
-          </Pressable>
-          <View className="flex-1 ml-4">
-            <Text className="text-white text-xl font-extrabold">{t('settings')}</Text>
-          </View>
-          <Text style={{ fontFamily: ARABIC_FONT, fontSize: 32, lineHeight: 52, color: "#fde68a" }}>الإعدادات</Text>
-        </View>
-      </View>
+      {/* Header ringkas: batik + kaligrafi */}
+      <TabHeader title={t('settings')} arabic="الإعدادات" />
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
         <View style={isTablet ? { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", paddingHorizontal: pad - 12 } : undefined}>
@@ -217,7 +208,7 @@ export default function SettingsScreen() {
 
       {/* FOOTER */}
       <View className={`absolute bottom-0 left-0 right-0 ${theme.footerBg || 'bg-emerald-800'} px-6 py-5 overflow-hidden`}>
-        <BatikPattern width={1200} height={140} cell={42} opacity={0.12} />
+        <BatikPattern cell={42} opacity={0.12} />
         <Text className="text-white text-center text-sm font-bold mb-3 tracking-wider">{t('aboutUs')}</Text>
         <View className="flex-row items-center justify-center gap-8">
           <Pressable

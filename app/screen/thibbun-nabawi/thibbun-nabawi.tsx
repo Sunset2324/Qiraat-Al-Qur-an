@@ -2,12 +2,13 @@ import { useState, useMemo, useEffect, useDeferredValue, useCallback } from "rea
 import { View, Text, FlatList, Pressable, TextInput, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { ArrowLeft, Search, X, ChevronRight, Heart, Activity, Sparkles, Moon, BookOpen } from "lucide-react-native";
+import { Search, X, ChevronRight, Heart, Activity, Sparkles, Moon, BookOpen } from "lucide-react-native";
 import { useTheme } from "../../../src/context/ThemeContext";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import MedisDisclaimer from "../../../src/components/MedisDisclaimer";
 import { KATEGORI_LIST, TEMA_LIST, JUDUL_BUKU, cariTema, TemaMedis } from "../../../src/data/thibbunNabawi";
 import { getDaftarSurah } from "../../../src/services/quranService";
+import BatikHeader from "../../../src/components/ui/BatikHeader";
 
 const IKON_KATEGORI: Record<string, any> = {
   RUHANI: Heart,
@@ -70,16 +71,7 @@ export default function ThibbunNabawiScreen() {
   return (
     <SafeAreaView className={`flex-1 ${theme.bg}`} edges={["top"]}>
       {/* HEADER */}
-      <View className={`flex-row items-center justify-between px-4 py-4 border-b ${theme.border}`}>
-        <Pressable onPress={() => router.back()} className="h-11 w-11 items-center justify-center rounded-full active:opacity-70">
-          <ArrowLeft size={24} color={theme.iconColor} style={flip} />
-        </Pressable>
-        <View className="items-center flex-1">
-          <Text className={`text-xs font-bold tracking-[2px] ${theme.textSecondary}`}>{t("healthTag")}</Text>
-          <Text className={`text-base font-bold ${theme.text}`}>{t("featThibbun")}</Text>
-        </View>
-        <View className="w-11" />
-      </View>
+      <BatikHeader tag={t("healthTag")} title={t("featThibbun")} arabic="الطب النبوي" />
 
       {/* SEARCH + FILTER (di luar list supaya keyboard tidak tertutup saat mengetik) */}
       <View className="px-6 pt-4">

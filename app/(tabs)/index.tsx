@@ -2,10 +2,10 @@ import { useCallback, useState } from "react";
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Image, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
-import { FileText, CloudSun, MapPin, GraduationCap } from "lucide-react-native";
+import { FileText, MapPin, GraduationCap, BookMarked } from "lucide-react-native";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useLanguage } from "../../src/context/LanguageContext";
-import { useJadwalHariIni, formatCountdown } from "../../src/hooks/useJadwalHariIni";
+import { useJadwalHariIni, formatCountdown, PRAYER_KEYS, toMinutes } from "../../src/hooks/useJadwalHariIni";
 import { formatClock, formatHijri } from "../../src/utils/dateFormat";
 import { getHistoryList, ReadingProgress } from "../../src/utils/readingHistory";
 import BatikPattern from "../../src/components/ui/BatikPattern";
@@ -16,7 +16,12 @@ export default function DashboardScreen() {
   const { isDarkMode, theme } = useTheme();
   const { t, locale } = useLanguage();
   const { width } = useWindowDimensions();
-  const { lokasi, ready, loading, error, next, now } = useJadwalHariIni();
+  const { lokasi, ready, loading, error, next, now, schedule } = useJadwalHariIni();
+  // 5 waktu shalat hari ini untuk strip di header
+  const prayerTimes = PRAYER_KEYS.map((p) => {
+    const min = toMinutes(schedule?.[p.key] ?? (p.key === "dzuhur" ? schedule?.dhuhur : undefined));
+    return { key: p.key, labelKey: p.label as string, time: min === null ? "--:--" : `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}` };
+  });
 
   const isTablet = useIsTablet();
   // Kartu fitur: 2 kolom di HP, 3 kolom di layar lebar (tablet)
@@ -48,13 +53,15 @@ export default function DashboardScreen() {
   const hijri = formatHijri(now, locale);
   const goPicker = () => router.push("/screen/jadwal-shalat/jadwal-shalat");
 
-  const FEATURES = [
+  type Feature = { key: string; label: string; route: string; icon?: any; Icon?: typeof BookMarked };
+  const FEATURES: Feature[] = [
     { key: "qiraat", label: t("featQiraat"), icon: require("../../assets/icons/qiraat.png"), route: "/screen/qiraat/qiraat" },
     { key: "dzikir", label: t("featDzikir"), icon: require("../../assets/icons/dzikir&doa.png"), route: "/screen/dzikir-doa/dzikir-doa" },
     { key: "prayer", label: t("featPrayer"), icon: require("../../assets/icons/jadwal-shalat.png"), route: "/screen/jadwal-shalat/jadwal-shalat" },
     { key: "tajweed", label: t("featTajweed"), icon: require("../../assets/icons/tajweed.png"), route: "/screen/tajweed/tajweed" },
     { key: "thibbun", label: t("featThibbun"), icon: require("../../assets/icons/thibbun-nabawi.png"), route: "/screen/thibbun-nabawi/thibbun-nabawi" },
-  ] as const;
+    { key: "ebook", label: t("featEbook"), Icon: BookMarked, route: "/screen/ebook/ebook" },
+  ];
 
   const pad = isTablet ? 40 : 24;
 
@@ -65,66 +72,89 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {/* 1. HEADER: Jam & Adzan */}
-        <View className={`${theme.bgHeader} rounded-b-[40px] pt-6 pb-24 relative overflow-hidden`} style={{ paddingHorizontal: pad }}>
-          <View className={`absolute -right-10 -top-10 h-40 w-40 ${isDarkMode ? "bg-emerald-900" : "bg-emerald-700"} rounded-full opacity-50`} />
-          <BatikPattern width={isTablet ? 1200 : width} height={260} cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
+        {/* 1. HEADER RINGKAS: salam, jam, adzan berikutnya, 5 waktu shalat */}
+        <View
+          className={`${theme.bgHeader} overflow-hidden`}
+          style={{ paddingHorizontal: pad, paddingTop: 14, paddingBottom: 16, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}
+        >
+          <BatikPattern cell={42} opacity={isDarkMode ? 0.08 : 0.15} />
 
-          <View className="flex-row justify-between items-start mb-4">
-            <View className="flex-1 pr-3">
-              <Pressable onPress={goPicker} className="flex-row items-center gap-1.5 active:opacity-70" hitSlop={8}>
-                <MapPin size={14} color={isDarkMode ? "#6ee7b7" : "#d1fae5"} />
-                <Text
-                  numberOfLines={1}
-                  className={`text-sm font-medium flex-shrink ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}
-                >
-                  {lokasi ? lokasi.kota : t("chooseLocation")}
-                </Text>
-              </Pressable>
-              <Text style={{ fontFamily: ARABIC_FONT, fontSize: 28, lineHeight: 46, color: "#fde68a", marginTop: 4 }}>السلام عليكم</Text>
-              <Text className="text-sm font-semibold text-white">{t(greetKey)}</Text>
-              <Text className="font-bold mt-1 tracking-tight text-white" style={{ fontSize: isTablet ? 56 : 36 }}>{formatClock(now, locale)}</Text>
-              {!!hijri && (
-                <Text className={`text-xs mt-1 ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>{hijri}</Text>
-              )}
-            </View>
-            <View className={`${isDarkMode ? "bg-emerald-800" : "bg-emerald-700/50"} p-3 rounded-2xl`}>
-              <CloudSun size={24} color="#fbbf24" />
-            </View>
-          </View>
-
-          <Pressable
-            onPress={goPicker}
-            className={`${isDarkMode ? "bg-emerald-900/60" : "bg-emerald-700/40"} p-4 rounded-2xl border ${isDarkMode ? "border-emerald-700" : "border-emerald-600/50"} mt-2 active:opacity-90`}
-          >
-            <Text className={`text-xs font-medium mb-1 ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>
-              {!ready || loading ? t("loadingSchedule") : t("nextAdhan")}
+          {/* Baris 1: lokasi · Hijriah */}
+          <Pressable onPress={goPicker} className="flex-row items-center gap-1.5 active:opacity-70 self-start" hitSlop={8}>
+            <MapPin size={13} color={isDarkMode ? "#6ee7b7" : "#d1fae5"} />
+            <Text numberOfLines={1} className={`text-xs font-medium flex-shrink ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>
+              {lokasi ? lokasi.kota : t("chooseLocation")}
+              {hijri ? `  ·  ${hijri}` : ""}
             </Text>
+          </Pressable>
 
-            {!ready || loading ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : next ? (
-              <View className="flex-row items-center justify-between">
-                <View>
-                  <Text className="text-lg font-bold text-white">
-                    {next.tomorrow ? t("p_subuhTomorrow") : t(next.labelKey)}
+          {/* Baris 2: salam + jam (kiri), adzan berikutnya (kanan) */}
+          <View className="flex-row items-end justify-between mt-2" style={{ gap: 12 }}>
+            <View className="flex-shrink">
+              <View className="flex-row items-baseline flex-wrap" style={{ columnGap: 8 }}>
+                <Text style={{ fontFamily: ARABIC_FONT, fontSize: 20, lineHeight: 34, color: "#fde68a" }}>السلام عليكم</Text>
+                <Text className="text-sm font-semibold text-white">{t(greetKey)}</Text>
+              </View>
+              <Text className="font-bold tracking-tight text-white" style={{ fontSize: isTablet ? 40 : 32, lineHeight: isTablet ? 46 : 38 }}>
+                {formatClock(now, locale)}
+              </Text>
+            </View>
+            <Pressable onPress={goPicker} className="items-end active:opacity-80" accessibilityRole="button" accessibilityLabel={t("nextAdhan")}>
+              <Text className={`text-[11px] font-medium ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>{t("nextAdhan")}</Text>
+              {!ready || loading ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : next ? (
+                <>
+                  <Text className="text-base font-bold text-white">
+                    {next.tomorrow ? t("p_subuhTomorrow") : t(next.labelKey)} · {next.time}
                   </Text>
-                  <Text className={`text-xs ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`}>
+                  <Text className={`text-xs ${isDarkMode ? "text-emerald-300" : "text-emerald-100"}`} style={{ fontVariant: ["tabular-nums"] }}>
                     {formatCountdown(next.secondsLeft)}
                   </Text>
-                </View>
-                <Text className="text-2xl font-bold text-white">{next.time}</Text>
-              </View>
-            ) : (
-              <Text className="text-sm text-white">
-                {!lokasi ? t("chooseLocationHint") : error === "not_today" ? t("scheduleNotToday") : t("scheduleLoadFailed")}
-              </Text>
-            )}
-          </Pressable>
+                </>
+              ) : (
+                <Text className="text-xs text-white">—</Text>
+              )}
+            </Pressable>
+          </View>
+
+          {/* Baris 3: strip 5 waktu shalat (waktu berikutnya disorot) */}
+          {schedule ? (
+            <View className="flex-row mt-3" style={{ gap: 6 }}>
+              {prayerTimes.map((p) => {
+                const active = !!next && p.labelKey === (next.tomorrow ? "p_subuh" : next.labelKey);
+                return (
+                  <View
+                    key={p.key}
+                    className="flex-1 items-center rounded-xl"
+                    style={{
+                      paddingVertical: 6,
+                      backgroundColor: active ? "#fde68a" : "rgba(255,255,255,0.12)",
+                    }}
+                  >
+                    <Text numberOfLines={1} className={`text-[11px] font-semibold ${active ? "text-emerald-900" : "text-emerald-100"}`}>
+                      {t(p.labelKey)}
+                    </Text>
+                    <Text numberOfLines={1} className={`text-sm font-bold ${active ? "text-emerald-900" : "text-white"}`} style={{ fontVariant: ["tabular-nums"] }}>
+                      {p.time}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            !loading && (
+              <Pressable onPress={goPicker} className="mt-3 rounded-xl px-3 py-2 active:opacity-80" style={{ backgroundColor: "rgba(255,255,255,0.12)" }}>
+                <Text className="text-xs text-white">
+                  {!lokasi ? t("chooseLocationHint") : error === "not_today" ? t("scheduleNotToday") : t("scheduleLoadFailed")}
+                </Text>
+              </Pressable>
+            )
+          )}
         </View>
 
         {/* 2. MAIN CONTENT */}
-        <View className="flex-1 -mt-16" style={{ paddingHorizontal: pad }}>
+        <View className="flex-1 mt-5" style={{ paddingHorizontal: pad }}>
           {/* Lanjutkan membaca */}
           <Pressable
             onPress={goLast}
@@ -175,7 +205,11 @@ export default function DashboardScreen() {
                 className={`${theme.bgCard} p-4 rounded-2xl border ${theme.border} items-center justify-center mb-4 shadow-sm active:opacity-90`}
               >
                 <View className="bg-emerald-500/20 p-3 rounded-full mb-3">
-                  <Image source={f.icon} style={{ width: 28, height: 28 }} resizeMode="contain" />
+                  {f.Icon ? (
+                    <f.Icon size={28} color={theme.iconColor} />
+                  ) : (
+                    <Image source={f.icon} style={{ width: 28, height: 28 }} resizeMode="contain" />
+                  )}
                 </View>
                 <Text numberOfLines={2} className={`font-bold text-sm text-center ${theme.text}`}>
                   {f.label}

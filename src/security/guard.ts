@@ -35,8 +35,28 @@ let current: GuardStatus = SAFE;
 let inflight: Promise<GuardStatus> | null = null;
 const listeners = new Set<(s: GuardStatus) => void>();
 
+/**
+ * SAKLAR ANTI-DEBUGGING ("mode terbatas"): DIMATIKAN SEMENTARA (keputusan pemilik, 4 Nov 2026).
+ * Selama false, opsi pengembang/ADB/debugger/root/hooking/emulator TIDAK lagi membatasi fitur apa pun
+ * (iklan Jurnal Kesehatan, kiblat online). Pemeriksaan native tetap berjalan, jadi cukup ubah ke true
+ * untuk mengaktifkannya lagi setelah semuanya dirasa ideal. Blokir VPN/proxy (isApiBlocked) TIDAK terpengaruh.
+ */
+export const ANTI_DEBUG_ENABLED = false;
+
 export const isRestricted = (s: GuardStatus = current) =>
-  s.devOptions || s.adb || s.debugger || s.debuggableApp || s.root || s.hooked || s.emulator;
+  ANTI_DEBUG_ENABLED &&
+  (s.devOptions || s.adb || s.debugger || s.debuggableApp || s.root || s.hooked || s.emulator);
+
+/**
+ * Alasan teknis (nama flag) hanya ditampilkan di build PREVIEW (eas.json: EXPO_PUBLIC_APP_VARIANT=preview).
+ * Di production selalu kosong supaya pihak luar tidak tahu apa saja yang diperiksa.
+ */
+export const SHOW_GUARD_REASONS = process.env.EXPO_PUBLIC_APP_VARIANT === "preview";
+
+const REASON_KEYS = ["devOptions", "adb", "debugger", "debuggableApp", "root", "hooked", "emulator", "vpn", "proxy"] as const;
+
+export const guardReasons = (s: GuardStatus = current): string[] =>
+  SHOW_GUARD_REASONS ? REASON_KEYS.filter((k) => s[k]) : [];
 
 export const isApiBlocked = (s: GuardStatus = current) => s.vpn || s.proxy;
 
@@ -49,17 +69,22 @@ export function subscribeGuard(fn: (s: GuardStatus) => void) {
   };
 }
 
+const FLAGS = ["devOptions", "adb", "debugger", "debuggableApp", "root", "hooked", "emulator", "vpn", "proxy", "available"] as const;
+const sameFlags = (a: GuardStatus, b: GuardStatus) => FLAGS.every((k) => a[k] === b[k]);
+
 export function refreshGuard(): Promise<GuardStatus> {
   if (!ENABLED) return Promise.resolve(current);
   if (inflight) return inflight;
   inflight = (async () => {
+    const prev = current;
     try {
       const n = await getNativeGuardStatus();
       current = n ? { ...n, available: true, checkedAt: Date.now() } : { ...SAFE, checkedAt: Date.now() };
     } catch {
       current = { ...SAFE, checkedAt: Date.now() }; // gagal memeriksa = jangan blokir pengguna sah
     }
-    listeners.forEach((fn) => fn(current));
+    // Beri tahu pendengar hanya bila ada flag yang berubah (hindari render ulang berkala tanpa guna)
+    if (!sameFlags(prev, current)) listeners.forEach((fn) => fn(current));
     return current;
   })().finally(() => {
     inflight = null;
