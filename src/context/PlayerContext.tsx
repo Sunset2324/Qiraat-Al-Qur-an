@@ -37,6 +37,10 @@ export interface PlayerSession {
   mushafId: string;
   /** ayah: URL per ayat (index 0 = ayat 1). full: [urlSurah]. */
   urls: string[];
+  /** Asal sesi; "teach" = Mode Mengajar (Bandingkan Riwayat). */
+  origin?: "surah" | "teach";
+  /** true = berhenti di akhir surah, tidak lanjut ke surah berikutnya. */
+  stopAtEnd?: boolean;
 }
 
 interface PlayerControls {
@@ -55,6 +59,9 @@ interface PlayerControls {
   seekBy: (seconds: number) => void;
   /** Putar surah n memakai qari & mushaf dari sesi yang sedang aktif. */
   playSurah: (n: number) => Promise<boolean>;
+  /** Ulangi ayat yang sedang diputar terus-menerus (latihan talaqqi). Direset setiap sesi baru. */
+  repeatOne: boolean;
+  setRepeatOne: (v: boolean) => void;
 }
 
 interface PlayerProgress {
@@ -81,6 +88,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [switching, setSwitching] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [repeatOne, setRepeatOneState] = useState(false);
+  const repeatRef = useRef(false);
+  const setRepeatOne = useCallback((v: boolean) => {
+    repeatRef.current = v;
+    setRepeatOneState(v);
+  }, []);
 
   const sessionRef = useRef<PlayerSession | null>(null);
   const indexRef = useRef(0);
@@ -143,6 +156,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (cancelPending) {
         switchTokenRef.current += 1; // batalkan perpindahan surah yang masih berjalan
         setSwitching(false);
+      }
+      if (sessionRef.current !== s) {
+        repeatRef.current = false; // sesi baru: mode ulangi tidak terbawa
+        setRepeatOneState(false);
       }
       sessionRef.current = s;
       indexRef.current = index;
@@ -218,6 +235,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (lastFinishedRef.current === finished) return; // cegah double-trigger
     lastFinishedRef.current = finished;
 
+    if (s.kind === "ayah" && autoAdvanceRef.current && repeatRef.current) {
+      start(s, finished); // ulangi ayat yang sama
+      return;
+    }
     if (s.kind === "ayah" && autoAdvanceRef.current) {
       let next = finished + 1;
       while (next < s.urls.length && !s.urls[next]) next += 1;
@@ -230,6 +251,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
     // surah selesai
     autoAdvanceRef.current = false;
+    if (s.stopAtEnd) return;
     if (s.surah < 114) playSurah(s.surah + 1);
   }, [status.didJustFinish, start, playSurah]);
 
@@ -262,6 +284,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     autoAdvanceRef.current = false;
     sessionRef.current = null;
     indexRef.current = 0;
+    repeatRef.current = false;
+    setRepeatOneState(false);
     try {
       player.pause();
       player.clearLockScreenControls();
@@ -307,8 +331,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       stop,
       seekBy,
       playSurah,
+      repeatOne,
+      setRepeatOne,
     }),
-    [session, currentIndex, status.playing, isLoading, switching, notice, start, toggle, pause, stop, seekBy, playSurah]
+    [session, currentIndex, status.playing, isLoading, switching, notice, start, toggle, pause, stop, seekBy, playSurah, repeatOne, setRepeatOne]
   );
 
   const progress = useMemo<PlayerProgress>(
