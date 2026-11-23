@@ -46,32 +46,42 @@ export default function QiraatVariantScreen() {
   const accent = isDarkMode ? "#34d399" : "#047857";
 
   const [scope, setScope] = useState<"ayah" | "surah">(hasAyah ? "ayah" : "surah");
-  const [junctures, setJunctures] = useState<QiraatVariantJuncture[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorCode, setErrorCode] = useState<string | null>(null);
+  // Hasil disimpan PER cakupan (ayat / surah):
+  //  - pindah tab tidak memuat ulang & tidak menampilkan spinner bila datanya sudah ada;
+  //  - respons yang datang terlambat (mis. "Seluruh surah" yang lebih lambat) tidak menimpa tab lain.
+  type Slot = { junctures: QiraatVariantJuncture[]; error: string | null };
+  const [slots, setSlots] = useState<Partial<Record<"ayah" | "surah", Slot>>>({});
+  const [pending, setPending] = useState<Partial<Record<"ayah" | "surah", boolean>>>({});
 
-  const load = useCallback(async () => {
-    if (!Number.isFinite(surah) || surah < 1 || surah > 114) {
-      setErrorCode("QF_ERROR");
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setErrorCode(null);
-    try {
-      const res = await getQiraatVariant(surah, scope === "ayah" ? ayahParam : null);
-      setJunctures(res.junctures);
-    } catch (e: any) {
-      setJunctures([]);
-      setErrorCode(e instanceof QiraatVariantError ? e.code : "network");
-    } finally {
-      setLoading(false);
-    }
-  }, [surah, scope, ayahParam]);
+  const load = useCallback(
+    async (target: "ayah" | "surah") => {
+      if (!Number.isFinite(surah) || surah < 1 || surah > 114) {
+        setSlots((s) => ({ ...s, [target]: { junctures: [], error: "QF_ERROR" } }));
+        return;
+      }
+      setPending((p) => ({ ...p, [target]: true }));
+      try {
+        const res = await getQiraatVariant(surah, target === "ayah" ? ayahParam : null);
+        setSlots((s) => ({ ...s, [target]: { junctures: res.junctures, error: null } }));
+      } catch (e: any) {
+        const code = e instanceof QiraatVariantError ? e.code : "network";
+        setSlots((s) => ({ ...s, [target]: { junctures: [], error: code } }));
+      } finally {
+        setPending((p) => ({ ...p, [target]: false }));
+      }
+    },
+    [surah, ayahParam]
+  );
 
+  // Muat hanya bila cakupan ini belum pernah dimuat
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!slots[scope] && !pending[scope]) load(scope);
+  }, [scope, slots, pending, load]);
+
+  const slot = slots[scope];
+  const junctures = slot?.junctures ?? [];
+  const errorCode = slot?.error ?? null;
+  const loading = !slot;
 
   // Kelompokkan per ayat, urut naik
   const groups = useMemo(() => {
@@ -96,7 +106,7 @@ export default function QiraatVariantScreen() {
     return chips;
   };
 
-  const ScopeToggle = () =>
+  const renderScopeToggle = () =>
     hasAyah ? (
       <View className={`flex-row rounded-full p-1 mb-5 ${isDarkMode ? "bg-gray-800" : "bg-[#efe7d2]"}`}>
         {(["ayah", "surah"] as const).map((s) => {
@@ -119,11 +129,12 @@ export default function QiraatVariantScreen() {
       </View>
     ) : null;
 
-  const Reading = ({ rd, idx }: { rd: QiraatVariantReading; idx: number }) => {
+  const renderReading = (rd: QiraatVariantReading, idx: number) => {
     const chips = readerChips(rd);
     const mine = !!myRiwayah && (rd.riwayat.includes(myRiwayah) || chips.some((c) => c.mine));
     return (
       <View
+        key={idx}
         className={`rounded-2xl border px-4 py-3 ${idx > 0 ? "mt-3" : ""} ${
           mine
             ? isDarkMode ? "border-emerald-500 bg-emerald-900/30" : "border-emerald-600 bg-emerald-50"
@@ -158,10 +169,10 @@ export default function QiraatVariantScreen() {
     );
   };
 
-  const Juncture = ({ j }: { j: QiraatVariantJuncture }) => {
+  const renderJuncture = (j: QiraatVariantJuncture, key: string) => {
     const catKey = j.category ? CAT_KEY[j.category] : undefined;
     return (
-      <View className={`mb-4 rounded-3xl border p-4 ${theme.border} ${theme.bgCard}`}>
+      <View key={key} className={`mb-4 rounded-3xl border p-4 ${theme.border} ${theme.bgCard}`}>
         <View className="flex-row items-center justify-between gap-2">
           {catKey ? (
             <View className={`rounded-full px-2.5 py-1 ${isDarkMode ? "bg-amber-900/40" : "bg-amber-100"}`}>
@@ -173,7 +184,7 @@ export default function QiraatVariantScreen() {
         </View>
         <Text style={{ ...quranTextStyle(winW < 360), color: accent }}>{j.text}</Text>
         {j.readings.map((rd, i) => (
-          <Reading key={i} rd={rd} idx={i} />
+          renderReading(rd, i)
         ))}
       </View>
     );
@@ -195,7 +206,7 @@ export default function QiraatVariantScreen() {
         contentContainerStyle={{ padding: pad, paddingBottom: 60, alignItems: "center" }}
       >
         <View style={{ width: "100%", maxWidth: 820 }}>
-          <ScopeToggle />
+          {renderScopeToggle()}
 
           {loading ? (
             <View className="py-16 items-center">
@@ -206,7 +217,7 @@ export default function QiraatVariantScreen() {
               <Text className={`text-sm text-center leading-6 ${theme.textSecondary}`}>{errorText}</Text>
               {errorCode !== "QF_NOT_CONFIGURED" && (
                 <Pressable
-                  onPress={load}
+                  onPress={() => load(scope)}
                   accessibilityRole="button"
                   className={`mt-4 flex-row items-center gap-2 rounded-full px-4 ${isDarkMode ? "bg-emerald-600" : "bg-emerald-700"} active:opacity-80`}
                   style={{ minHeight: 44 }}
@@ -231,7 +242,7 @@ export default function QiraatVariantScreen() {
                   </Text>
                 )}
                 {list.map((j, i) => (
-                  <Juncture key={`${j.verseKey}-${i}`} j={j} />
+                  renderJuncture(j, `${j.verseKey}-${i}`)
                 ))}
               </View>
             ))
