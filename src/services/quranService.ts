@@ -360,3 +360,61 @@ export const getMushafPage = async (mushafId: string, page: number): Promise<Mus
     throw error;
   }
 };
+
+
+// ─────────────────────────────────────────────────────────
+// Perbedaan qiraat per kata (data Quran Foundation, lewat backend kita)
+// ─────────────────────────────────────────────────────────
+export interface QiraatVariantReading {
+  text: string;
+  translation: string | null;
+  /** imam yang seluruh rawinya membaca begini (id standar, mis. "nafi") */
+  imams: string[];
+  /** semua riwayah yang membaca begini (mis. "qalun", "hafsh") */
+  riwayat: string[];
+  /** riwayah yang disebut khusus, bukan imam penuh */
+  riwayatKhusus: string[];
+}
+export interface QiraatVariantJuncture {
+  verseKey: string;
+  ayah: number;
+  text: string;
+  category: "A" | "B" | "C" | string | null;
+  readings: QiraatVariantReading[];
+}
+export interface QiraatVariantResult {
+  surah: number;
+  ayah: number | null;
+  junctures: QiraatVariantJuncture[];
+}
+
+/** Kode error dari backend (QF_NOT_CONFIGURED, QF_SCOPE, QF_CLIENT, QF_ERROR) atau "network". */
+export class QiraatVariantError extends Error {
+  constructor(public code: string, message: string) {
+    super(message);
+    this.name = "QiraatVariantError";
+  }
+}
+
+/**
+ * Perbedaan qiraat untuk satu surah (atau satu ayat bila `ayah` diisi).
+ * Syarat Quran Foundation: konten tidak boleh disimpan > 1 minggu -> segar 24 jam,
+ * data lama hanya dipakai saat offline dan dibuang setelah 6 hari.
+ */
+export const getQiraatVariant = async (surah: number, ayah?: number | null): Promise<QiraatVariantResult> => {
+  const key = ayah ? `qv:${surah}:${ayah}` : `qv:${surah}`;
+  try {
+    return await cachedRequest<QiraatVariantResult>(
+      key,
+      async () => {
+        const res = await http.get(`/qiraat/variant/${surah}`, { params: ayah ? { ayah } : undefined });
+        const d = res.data?.data ?? {};
+        return { surah: d.surah ?? surah, ayah: d.ayah ?? null, junctures: Array.isArray(d.junctures) ? d.junctures : [] };
+      },
+      { ttlMs: DAY, maxStaleMs: 6 * DAY, group: "qiraatVariant", maxEntries: 40 }
+    );
+  } catch (e: any) {
+    const code = e?.response?.data?.code ?? (e?.response ? "QF_ERROR" : "network");
+    throw new QiraatVariantError(code, e?.message ?? "Gagal memuat perbedaan qiraat");
+  }
+};
