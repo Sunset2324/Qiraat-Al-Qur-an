@@ -138,3 +138,52 @@ QIRAAT_SABAH.forEach((im) => im.rawi.forEach((r) => r.rawiKey && BY_KEY.set(norm
 /** id riwayah dari field `rawi` mushaf backend (null bila tidak dikenal). */
 export const riwayahIdOfMushafRawi = (rawi: string | null | undefined): string | null =>
   BY_KEY.get(normAr(rawi)) ?? null;
+
+/**
+ * Tiga imam tambahan qiraat 'asyrah (jalur ad-Durrah), dipakai untuk menampilkan data variant
+ * Quran Foundation yang mencakup 10 imam. Tariq: Tahbir at-Taysir.
+ */
+export const QIRAAT_ASYRAH_TAMBAHAN: ImamSabah[] = [
+  {
+    id: "abu-jafar", urutan: 8, wafat: "±130",
+    nama: { id: "Abu Ja'far al-Madani", en: "Abu Ja'far al-Madani", ar: "أبو جعفر المدني" },
+    kota: { id: "Madinah", en: "Madinah", ar: "المدينة" },
+    rawi: [
+      { id: "ibn-wardan", rawiKey: null, nama: { id: "Ibnu Wardan", en: "Ibn Wardan", ar: "ابن وردان" },
+        label: { id: "Ibnu Wardan 'an Abi Ja'far", en: "Ibn Wardan from Abu Ja'far", ar: "ابن وردان عن أبي جعفر" },
+        tariq: { latin: "al-Fadl ibn Syadzan", ar: "الفضل بن شاذان" } },
+      { id: "ibn-jammaz", rawiKey: null, nama: { id: "Ibnu Jammaz", en: "Ibn Jammaz", ar: "ابن جماز" },
+        label: { id: "Ibnu Jammaz 'an Abi Ja'far", en: "Ibn Jammaz from Abu Ja'far", ar: "ابن جماز عن أبي جعفر" },
+        tariq: { latin: "al-Hasyimi", ar: "الهاشمي" } },
+    ],
+  },
+  {
+    id: "yaqub", urutan: 9, wafat: "205",
+    nama: { id: "Ya'qub al-Hadhrami", en: "Ya'qub al-Hadrami", ar: "يعقوب الحضرمي" },
+    kota: { id: "Basrah", en: "Basra", ar: "البصرة" },
+    rawi: [
+      { id: "ruwais", rawiKey: null, nama: { id: "Ruwais", en: "Ruways", ar: "رويس" },
+        label: { id: "Ruwais 'an Ya'qub", en: "Ruways from Ya'qub", ar: "رويس عن يعقوب" },
+        tariq: { latin: "an-Nakhkhas", ar: "النخاس" } },
+      { id: "rauh", rawiKey: null, nama: { id: "Rauh", en: "Rawh", ar: "روح" },
+        label: { id: "Rauh 'an Ya'qub", en: "Rawh from Ya'qub", ar: "روح عن يعقوب" },
+        tariq: { latin: "Ibnu Wahb", ar: "ابن وهب" } },
+    ],
+  },
+  {
+    id: "khalaf-ashir", urutan: 10, wafat: "229",
+    nama: { id: "Khalaf al-'Asyir", en: "Khalaf (the tenth)", ar: "خلف العاشر" },
+    kota: { id: "Baghdad", en: "Baghdad", ar: "بغداد" },
+    rawi: [
+      { id: "ishaq", rawiKey: null, nama: { id: "Ishaq", en: "Ishaq", ar: "إسحاق" },
+        label: { id: "Ishaq 'an Khalaf", en: "Ishaq from Khalaf", ar: "إسحاق عن خلف" },
+        tariq: { latin: "as-Susanjirdi", ar: "السوسنجردي" } },
+      { id: "idris", rawiKey: null, nama: { id: "Idris", en: "Idris", ar: "إدريس" },
+        label: { id: "Idris 'an Khalaf", en: "Idris from Khalaf", ar: "إدريس عن خلف" },
+        tariq: { latin: "asy-Syatthi", ar: "الشطي" } },
+    ],
+  },
+];
+
+/** 10 imam berurutan (7 sab'ah + 3 tambahan 'asyrah). */
+export const QIRAAT_ASYRAH: ImamSabah[] = [...QIRAAT_SABAH, ...QIRAAT_ASYRAH_TAMBAHAN];

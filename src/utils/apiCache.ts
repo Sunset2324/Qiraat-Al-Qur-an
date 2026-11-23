@@ -15,6 +15,12 @@ interface CacheOptions {
   group?: string;
   /** Jumlah maksimum entri di grup ini; yang paling lama tidak dipakai dihapus. */
   maxEntries?: number;
+  /**
+   * Batas umur data cache lama yang masih boleh dipakai saat server gagal.
+   * Lewat dari ini data dihapus, bukan dipakai (mis. syarat Quran Foundation: simpan maks. 1 minggu).
+   * Default: tanpa batas.
+   */
+  maxStaleMs?: number;
 }
 
 // AsyncStorage di Android gagal membaca satu nilai di atas ~2MB (batas CursorWindow).
@@ -35,7 +41,7 @@ export const DAY = 24 * HOUR;
 export async function cachedRequest<T>(
   key: string,
   fetcher: () => Promise<T>,
-  { ttlMs, group, maxEntries }: CacheOptions
+  { ttlMs, group, maxEntries, maxStaleMs }: CacheOptions
 ): Promise<T> {
   const fullKey = PREFIX + key;
 
@@ -44,6 +50,10 @@ export async function cachedRequest<T>(
     const raw = await AsyncStorage.getItem(fullKey);
     if (raw) cached = JSON.parse(raw) as Entry<T>;
   } catch {
+    cached = null;
+  }
+  if (cached && maxStaleMs != null && Date.now() - cached.t > maxStaleMs) {
+    AsyncStorage.removeItem(fullKey).catch(() => {});
     cached = null;
   }
 

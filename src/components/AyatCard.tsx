@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { View, Text, Pressable } from "react-native";
-import { Bookmark, Volume2 } from "lucide-react-native";
+import { Bookmark, Volume2, Layers } from "lucide-react-native";
 import { quranTextStyle } from "../constants/fonts";
 import TajweedText from "./TajweedText";
 
@@ -32,6 +32,9 @@ export interface AyatCardProps {
   onLayoutY: (nomor: number, y: number) => void;
   onMark: (nomor: number) => void;
   onPlay: (nomor: number) => void;
+  /** Buka layar perbedaan qiraat untuk ayat ini (opsional). */
+  onQiraat?: (nomor: number) => void;
+  qiraatLabel?: string;
 }
 
 // Kartu satu ayat. Dibungkus memo: saat ayat aktif berpindah / state layar berubah,
@@ -72,6 +75,18 @@ function AyatCardBase(p: AyatCardProps) {
           <Text className={`text-xs font-bold ${p.isDark && !p.isLastRead ? "text-emerald-300" : "text-emerald-800"}`}>{p.nomor}</Text>
         </Pressable>
 
+        <View className="flex-row items-center gap-2">
+        {!!p.onQiraat && (
+          <Pressable
+            onPress={() => p.onQiraat?.(p.nomor)}
+            accessibilityRole="button"
+            accessibilityLabel={p.qiraatLabel}
+            className={`p-2.5 rounded-full ${p.isDark ? "bg-gray-700" : "bg-gray-200"} active:opacity-70`}
+            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+          >
+            <Layers size={18} color={p.iconColor} />
+          </Pressable>
+        )}
         <Pressable
           onPress={() => p.onPlay(p.nomor)}
           disabled={!p.hasAudio}
@@ -80,6 +95,7 @@ function AyatCardBase(p: AyatCardProps) {
         >
           <Volume2 size={18} color={p.isPlaying ? "#fff" : p.iconColor} />
         </Pressable>
+        </View>
       </View>
 
       <Text

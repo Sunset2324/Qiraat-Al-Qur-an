@@ -16,6 +16,7 @@ import SurahSidePanel from "../../../src/components/SurahSidePanel";
 import BatikPattern from "../../../src/components/ui/BatikPattern";
 import { ARABIC_FONT } from "../../../src/constants/fonts";
 import AyatCard from "../../../src/components/AyatCard";
+import { riwayahIdOfMushafRawi } from "../../../src/data/qiraatSabah";
 import TajweedLegend from "../../../src/components/TajweedLegend";
 import { TAJWEED_MUSHAF_ID } from "../../../src/utils/tajweedColor";
 
@@ -635,6 +636,14 @@ export default function SurahDetailScreen() {
   cardActionsRef.current = { mark: confirmMarkAyah, play: handlePlayAyat };
   const handleCardMark = useCallback((n: number) => cardActionsRef.current.mark(n), []);
   const handleCardPlay = useCallback((n: number) => cardActionsRef.current.play(n), []);
+  // Riwayah aktif disimpan di ref supaya handler tetap stabil (AyatCard di-memo)
+  const qiraatCtxRef = useRef({ surah: 0, riwayah: "" });
+  qiraatCtxRef.current = { surah: Number(surahData?.info.nomor ?? 0), riwayah: riwayahIdOfMushafRawi(activeRawi) ?? "" };
+  const handleCardQiraat = useCallback((n: number) => {
+    const { surah, riwayah } = qiraatCtxRef.current;
+    if (!surah) return;
+    router.push({ pathname: "/screen/qiraat-variant/[surah]", params: { surah: String(surah), ayah: String(n), riwayah } });
+  }, []);
 
   // Toggle tombol "Ikuti Bacaan": mulai dari ayat 1, atau resume/pause
   // dari posisi terakhir kalau sudah pernah jalan.
@@ -1115,6 +1124,8 @@ export default function SurahDetailScreen() {
                 onLayoutY={handleAyahLayout}
                 onMark={handleCardMark}
                 onPlay={handleCardPlay}
+                onQiraat={handleCardQiraat}
+                qiraatLabel={t("qvButton")}
               />
             );
           })}
