@@ -7,6 +7,8 @@ import { useTheme } from "../../../src/context/ThemeContext";
 import { useLanguage } from "../../../src/context/LanguageContext";
 import BatikPattern from "../../../src/components/ui/BatikPattern";
 import { ARABIC_FONT } from "../../../src/constants/fonts";
+import { useIsTablet } from "../../../src/hooks/useIsTablet";
+import CompareRiwayat from "../../../src/components/teach/CompareRiwayat";
 
 type Rule = { nama: string; judul: string; contoh: { ar: string; arti: string }[]; catatan: string };
 
@@ -64,6 +66,10 @@ export default function MengajarScreen() {
   const [ex, setEx] = useState(0);
   const [size, setSize] = useState(1);
   const [showNote, setShowNote] = useState(true);
+  // Bandingkan Riwayat butuh layar lebar: hanya ditawarkan di tablet
+  const isTablet = useIsTablet();
+  const [mode, setMode] = useState<"board" | "compare">("board");
+  const showCompare = isTablet && mode === "compare";
 
   const rule = RULES[tab];
   const item = rule.contoh[ex % rule.contoh.length];
@@ -102,6 +108,27 @@ export default function MengajarScreen() {
         <Text style={{ fontFamily: ARABIC_FONT, fontSize: 30, color: "#fde68a", lineHeight: 48 }}>عَلِّمُوا وَيَسِّرُوا</Text>
       </View>
 
+      {isTablet && (
+        <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 24, paddingTop: 16 }}>
+          {(["board", "compare"] as const).map((m) => (
+            <Pressable
+              key={m}
+              onPress={() => setMode(m)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: mode === m }}
+              style={pill(mode === m)}
+            >
+              <Text style={{ fontSize: 17, fontWeight: "800", color: mode === m ? "#fff" : isDarkMode ? "#d1fae5" : green }}>
+                {m === "board" ? t("teachTabBoard") : t("teachTabCompare")}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      {showCompare ? (
+        <CompareRiwayat />
+      ) : (
       <ScrollView contentContainerStyle={{ padding: wide ? 32 : 20, paddingBottom: 60 }}>
         <View style={{ flexDirection: wide ? "row" : "column", gap: 24 }}>
           {/* Papan */}
@@ -180,6 +207,7 @@ export default function MengajarScreen() {
           </View>
         </View>
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
