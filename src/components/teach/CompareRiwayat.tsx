@@ -1,6 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, FlatList, ActivityIndicator, type ViewToken } from "react-native";
-import { ChevronDown, ChevronUp, Minus, Plus, ArrowLeftRight, Play, Pause, Repeat1 } from "lucide-react-native";
+import { ChevronDown, ChevronUp, Minus, Plus, ArrowLeftRight, Play, Pause, Repeat1, Highlighter, Undo2, Redo2, Trash2, Eraser } from "lucide-react-native";
+import MarkedAyah from "./MarkedAyah";
+import { applyMark, loadMarks, saveMarks, MARK_COLORS, type WordMark, type MarkType, type MarkColor } from "../../utils/teachMarks";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { usePlayer } from "../../context/PlayerContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -57,11 +59,32 @@ interface PanelProps {
   onTopAyah?: (nomor: number) => void;
   /** Diisi panel: gulir ke ayat bernomor n (atau ayat berikutnya yang ada di riwayat ini). */
   controlRef: React.MutableRefObject<((n: number) => void) | null>;
+  // Tanda per kata
+  marks: WordMark[];
+  markMode: boolean;
+  /** kata awal rentang (tekan lama) di panel ini */
+  pending: { ayah: number; idx: number } | null;
+  onWord: (mushafId: string, ayah: number, idx: number) => void;
+  onWordLong: (mushafId: string, ayah: number, idx: number) => void;
 }
+
+const NO_MARKS: WordMark[] = [];
 
 const RiwayatPanel = memo(function RiwayatPanel(p: PanelProps) {
   const { isDarkMode, theme } = useTheme();
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
+  const marksByAyah = useMemo(() => {
+    const map = new Map<number, WordMark[]>();
+    for (const m of p.marks) map.set(m.ayah, [...(map.get(m.ayah) ?? []), m]);
+    return map;
+  }, [p.marks]);
+  const mushafId = p.mushaf.id;
+  const onWordRef = useRef(p.onWord);
+  onWordRef.current = p.onWord;
+  const onWordLongRef = useRef(p.onWordLong);
+  onWordLongRef.current = p.onWordLong;
+  const handleWord = useCallback((ayah: number, idx: number) => onWordRef.current(mushafId, ayah, idx), [mushafId]);
+  const handleWordLong = useCallback((ayah: number, idx: number) => onWordLongRef.current(mushafId, ayah, idx), [mushafId]);
   const [data, setData] = useState<SurahData | null>(null);
   const [error, setError] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
@@ -348,7 +371,7 @@ const RiwayatPanel = memo(function RiwayatPanel(p: PanelProps) {
           onScrollToIndexFailed={(info) => {
             listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
           }}
-          extraData={activeIdx}
+          extraData={`${activeIdx}|${p.markMode}|${p.pending?.ayah}:${p.pending?.idx}|${p.marks.length}|${p.marks.at(-1)?.id ?? ""}`}
           renderItem={({ item, index }) => (
             <View
               className={`mb-3 rounded-2xl border px-4 py-3 ${
@@ -369,9 +392,18 @@ const RiwayatPanel = memo(function RiwayatPanel(p: PanelProps) {
                 {!!urls[index] && <Play size={10} color={green} />}
                 <Text className={`text-xs font-bold ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>{item.nomor}</Text>
               </Pressable>
-              <Text className={theme.text} style={arab}>
-                {item.teksArab}
-              </Text>
+              <MarkedAyah
+                ayah={item.nomor}
+                text={item.teksArab}
+                marks={marksByAyah.get(item.nomor) ?? NO_MARKS}
+                arab={arab}
+                color={isDarkMode ? "#f3f4f6" : "#022c22"}
+                markMode={p.markMode}
+                pendingIdx={p.pending?.ayah === item.nomor ? p.pending.idx : null}
+                isRTL={isRTL}
+                onWord={handleWord}
+                onWordLong={handleWordLong}
+              />
             </View>
           )}
         />
@@ -403,6 +435,93 @@ export default function CompareRiwayat() {
   }, []);
   // Keluar dari tab/layar: audio Mode Mengajar ikut berhenti
   useEffect(() => stopTeachAudio, [stopTeachAudio]);
+
+  // ── Tanda per kata (disimpan di perangkat per surah per riwayat) ──
+  const [markMode, setMarkMode] = useState(false);
+  const [tool, setTool] = useState<MarkType | "erase">("underline");
+  const [color, setColor] = useState<MarkColor>("red");
+  const [marksBy, setMarksBy] = useState<Record<string, WordMark[]>>({});
+  const [pending, setPending] = useState<{ mushafId: string; ayah: number; idx: number } | null>(null);
+  type Step = { mushafId: string; before: WordMark[]; after: WordMark[] };
+  const [undoStack, setUndoStack] = useState<Step[]>([]);
+  const [redoStack, setRedoStack] = useState<Step[]>([]);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const marksRef = useRef(marksBy);
+  marksRef.current = marksBy;
+  const surahRef = useRef(surah);
+  surahRef.current = surah;
+
+  // Muat tanda tiap kali surah / riwayat panel berubah; riwayat urungkan direset
+  useEffect(() => {
+    let alive = true;
+    const ids = [leftId, rightId].filter(Boolean) as string[];
+    Promise.all(ids.map((id) => loadMarks(surah, id).then((m) => [id, m] as const))).then((pairs) => {
+      if (!alive) return;
+      setMarksBy(Object.fromEntries(pairs));
+      setUndoStack([]);
+      setRedoStack([]);
+      setPending(null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [surah, leftId, rightId]);
+
+  const commit = useCallback((mushafId: string, after: WordMark[], record = true) => {
+    const before = marksRef.current[mushafId] ?? [];
+    setMarksBy((m) => ({ ...m, [mushafId]: after }));
+    saveMarks(surahRef.current, mushafId, after);
+    if (record) {
+      setUndoStack((u) => [...u.slice(-49), { mushafId, before, after }]);
+      setRedoStack([]);
+    }
+  }, []);
+
+  const toolRef = useRef({ tool, color });
+  toolRef.current = { tool, color };
+  const pendingRef = useRef(pending);
+  pendingRef.current = pending;
+
+  const onWord = useCallback(
+    (mushafId: string, ayah: number, idx: number) => {
+      const pd = pendingRef.current;
+      const start = pd && pd.mushafId === mushafId && pd.ayah === ayah ? pd.idx : idx;
+      setPending(null);
+      const { tool: tl, color: cl } = toolRef.current;
+      commit(mushafId, applyMark(marksRef.current[mushafId] ?? [], ayah, start, idx, tl, cl));
+    },
+    [commit]
+  );
+  const onWordLong = useCallback((mushafId: string, ayah: number, idx: number) => {
+    setPending({ mushafId, ayah, idx });
+  }, []);
+
+  const undo = () => {
+    const step = undoStack.at(-1);
+    if (!step) return;
+    setUndoStack((u) => u.slice(0, -1));
+    setRedoStack((r) => [...r, step]);
+    commit(step.mushafId, step.before, false);
+  };
+  const redo = () => {
+    const step = redoStack.at(-1);
+    if (!step) return;
+    setRedoStack((r) => r.slice(0, -1));
+    setUndoStack((u) => [...u, step]);
+    commit(step.mushafId, step.after, false);
+  };
+  // Hapus semua tanda di surah ini (kedua panel): ketuk dua kali untuk konfirmasi
+  useEffect(() => {
+    if (!confirmClear) return;
+    const tm = setTimeout(() => setConfirmClear(false), 3000);
+    return () => clearTimeout(tm);
+  }, [confirmClear]);
+  const clearAll = () => {
+    if (!confirmClear) return setConfirmClear(true);
+    setConfirmClear(false);
+    for (const id of Object.keys(marksRef.current)) if ((marksRef.current[id] ?? []).length) commit(id, []);
+  };
+  const totalMarks = Object.values(marksBy).reduce((n, m) => n + m.length, 0);
 
   const leftCtl = useRef<((n: number) => void) | null>(null);
   const rightCtl = useRef<((n: number) => void) | null>(null);
@@ -505,6 +624,19 @@ export default function CompareRiwayat() {
           <Plus size={20} color={green} />
         </Pressable>
         <Pressable
+          onPress={() => {
+            setMarkMode((v) => !v);
+            setPending(null);
+          }}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: markMode }}
+          className={`flex-row items-center gap-2 px-4 rounded-2xl border ${markMode ? "bg-amber-400 border-amber-400" : `${theme.border} ${theme.bgCard}`}`}
+          style={{ minHeight: 52 }}
+        >
+          <Highlighter size={18} color={markMode ? "#022c22" : green} />
+          <Text className={`text-sm font-extrabold ${markMode ? "text-emerald-950" : theme.text}`}>{t("mkMode")}</Text>
+        </Pressable>
+        <Pressable
           onPress={sync}
           accessibilityRole="button"
           accessibilityHint={t("cmpSyncHint")}
@@ -515,6 +647,88 @@ export default function CompareRiwayat() {
           <Text className="text-sm font-extrabold text-white">{t("cmpSync")}</Text>
         </Pressable>
       </View>
+
+      {/* Alat tanda per kata */}
+      {markMode && (
+        <View className={`mb-3 rounded-2xl border px-3 py-2 ${theme.border} ${theme.bgCard}`}>
+          <View className="flex-row flex-wrap items-center gap-2">
+            {(
+              [
+                ["underline", "mkUnderline"],
+                ["highlight", "mkHighlight"],
+                ["strike", "mkStrike"],
+                ["box", "mkBox"],
+                ["erase", "mkErase"],
+              ] as const
+            ).map(([k, label]) => {
+              const on = tool === k;
+              return (
+                <Pressable
+                  key={k}
+                  onPress={() => setTool(k)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  className={`flex-row items-center gap-1 rounded-full px-4 justify-center ${on ? (isDarkMode ? "bg-emerald-600" : "bg-emerald-700") : isDarkMode ? "bg-gray-700" : "bg-[#f3ecd9]"}`}
+                  style={{ minHeight: 44 }}
+                >
+                  {k === "erase" && <Eraser size={14} color={on ? "#fff" : green} />}
+                  <Text className={`text-sm font-bold ${on ? "text-white" : theme.text}`}>{t(label)}</Text>
+                </Pressable>
+              );
+            })}
+
+            <View className={`mx-1 h-8 w-px ${isDarkMode ? "bg-gray-600" : "bg-gray-300"}`} />
+
+            {(Object.keys(MARK_COLORS) as MarkColor[]).map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setColor(c)}
+                disabled={tool === "erase"}
+                accessibilityRole="button"
+                accessibilityLabel={t(c === "red" ? "mkRed" : c === "green" ? "mkGreen" : "mkBlue")}
+                accessibilityState={{ selected: color === c }}
+                className="items-center justify-center"
+                style={{ width: 44, height: 44, opacity: tool === "erase" ? 0.35 : 1 }}
+              >
+                <View
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 15,
+                    backgroundColor: MARK_COLORS[c].solid,
+                    borderWidth: color === c ? 3 : 0,
+                    borderColor: isDarkMode ? "#fff" : "#022c22",
+                  }}
+                />
+              </Pressable>
+            ))}
+
+            <View className="flex-1" />
+
+            <Pressable onPress={undo} disabled={!undoStack.length} accessibilityRole="button" accessibilityLabel={t("mkUndo")}
+              className={`${btn} ${!undoStack.length ? "opacity-40" : ""}`} style={{ width: 44, height: 44 }}>
+              <Undo2 size={18} color={green} />
+            </Pressable>
+            <Pressable onPress={redo} disabled={!redoStack.length} accessibilityRole="button" accessibilityLabel={t("mkRedo")}
+              className={`${btn} ${!redoStack.length ? "opacity-40" : ""}`} style={{ width: 44, height: 44 }}>
+              <Redo2 size={18} color={green} />
+            </Pressable>
+            <Pressable
+              onPress={clearAll}
+              disabled={!totalMarks}
+              accessibilityRole="button"
+              className={`flex-row items-center gap-1 rounded-2xl px-3 justify-center ${confirmClear ? "bg-red-600" : `border ${theme.border} ${theme.bgCard}`} ${!totalMarks ? "opacity-40" : ""}`}
+              style={{ minHeight: 44 }}
+            >
+              <Trash2 size={16} color={confirmClear ? "#fff" : "#dc2626"} />
+              <Text className={`text-sm font-bold ${confirmClear ? "text-white" : "text-red-600"}`}>
+                {confirmClear ? t("mkClearConfirm") : t("mkClear")}
+              </Text>
+            </Pressable>
+          </View>
+          <Text className={`text-xs mt-1.5 ${theme.textMuted}`}>{pending ? t("mkRangeHint") : t("mkHint")}</Text>
+        </View>
+      )}
 
       {/* Dua panel */}
       <View className="flex-1 flex-row gap-4">
@@ -532,6 +746,11 @@ export default function CompareRiwayat() {
           }}
           onTopAyah={onLeftTop}
           controlRef={leftCtl}
+          marks={marksBy[left.id] ?? NO_MARKS}
+          markMode={markMode}
+          pending={pending?.mushafId === left.id ? pending : null}
+          onWord={onWord}
+          onWordLong={onWordLong}
         />
         <RiwayatPanel
           surah={surah}
@@ -546,6 +765,11 @@ export default function CompareRiwayat() {
             setRightId(id);
           }}
           controlRef={rightCtl}
+          marks={marksBy[right.id] ?? NO_MARKS}
+          markMode={markMode}
+          pending={pending?.mushafId === right.id ? pending : null}
+          onWord={onWord}
+          onWordLong={onWordLong}
         />
       </View>
 
