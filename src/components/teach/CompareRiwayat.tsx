@@ -1,11 +1,13 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, FlatList, ActivityIndicator, type ViewToken } from "react-native";
-import { ChevronDown, ChevronUp, Minus, Plus, ArrowLeftRight } from "lucide-react-native";
+import { ChevronDown, ChevronUp, Minus, Plus, ArrowLeftRight, Play, Pause, Repeat1 } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { usePlayer } from "../../context/PlayerContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useLanguage } from "../../context/LanguageContext";
-import { getMushafList, getDetailSurahMerged, getDaftarSurah } from "../../services/quranService";
+import { getMushafList, getDetailSurahMerged, getDaftarSurah, getReciters, type Reciter } from "../../services/quranService";
 import { quranTextStyle } from "../../constants/fonts";
-import { mushafTitle } from "../../i18n/qiraatI18n";
+import { mushafTitle, reciterName } from "../../i18n/qiraatI18n";
 import { riwayahIdOfMushafRawi } from "../../data/qiraatSabah";
 import { TAJWEED_MUSHAF_ID } from "../../utils/tajweedColor";
 import SurahPickerSheet from "../SurahPickerSheet";
@@ -23,9 +25,15 @@ interface MushafItem {
 interface AyatItem {
   nomor: number;
   teksArab: string;
+  audio?: string;
 }
 interface SurahData {
-  info: { nomor: number; namaLatin: string; ayatTidakLengkap?: number[] };
+  info: {
+    nomor: number;
+    namaLatin: string;
+    ayatTidakLengkap?: number[];
+    reciterAktif?: { id: number; nama: string; perAyah: boolean } | string | null;
+  };
   ayat: AyatItem[];
 }
 
@@ -34,8 +42,12 @@ const SCALES = [1, 1.25, 1.5, 1.85];
 
 type Lang = "id" | "en" | "ar";
 
+// Kunci yang sama dengan layar surah: qari terakhir per riwayat
+const RECITER_STORAGE_KEY = "selected_reciter_id";
+
 interface PanelProps {
   surah: number;
+  surahName: string;
   mushaf: MushafItem;
   options: MushafItem[];
   blockedRiwayah: string | null;
@@ -54,18 +66,98 @@ const RiwayatPanel = memo(function RiwayatPanel(p: PanelProps) {
   const [error, setError] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [retry, setRetry] = useState(0);
+  const player = usePlayer();
+  // Qari: hanya qari riwayat panel ini yang punya audio per-ayat (anti-talfiq)
+  const [reciters, setReciters] = useState<Reciter[] | null>(null);
+  const [reciterId, setReciterId] = useState<number | null>(null);
+  const [showReciters, setShowReciters] = useState(false);
+  const [repeat, setRepeat] = useState(false);
 
   useEffect(() => {
     let alive = true;
+    setReciters(null);
+    const rawi = p.mushaf.rawi ?? null;
+    Promise.all([
+      getReciters(rawi, p.surah).catch(() => [] as Reciter[]),
+      AsyncStorage.getItem(`${RECITER_STORAGE_KEY}_${rawi ?? "all"}`).catch(() => null),
+    ]).then(([list, saved]) => {
+      if (!alive) return;
+      const perAyah = list.filter((r) => r.hasAyah ?? r.perAyah);
+      setReciters(perAyah);
+      setReciterId((prev) => {
+        const ok = (id: number | null) => id != null && perAyah.some((r) => r.id === id);
+        if (ok(prev)) return prev;
+        const s = saved ? Number(saved) : null;
+        if (ok(s)) return s;
+        return perAyah[0]?.id ?? null;
+      });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [p.surah, p.mushaf.id, p.mushaf.rawi]);
+
+  // Teks (+ audio per ayat dari qari terpilih). Ditunggu sampai daftar qari siap.
+  useEffect(() => {
+    if (reciters === null) return;
+    let alive = true;
     setData(null);
     setError(false);
-    getDetailSurahMerged(p.surah, p.mushaf.id)
+    getDetailSurahMerged(p.surah, p.mushaf.id, "05", reciterId ?? undefined)
       .then((d: SurahData) => alive && setData(d))
       .catch(() => alive && setError(true));
     return () => {
       alive = false;
     };
-  }, [p.surah, p.mushaf.id, retry]);
+  }, [p.surah, p.mushaf.id, reciterId, reciters, retry]);
+
+  // Audio hanya dipakai bila server benar-benar memakai qari yang dipilih (bukan qari bawaan riwayat lain)
+  const ra = data?.info.reciterAktif;
+  const audioOk = reciterId != null && !!ra && typeof ra === "object" && ra.id === reciterId;
+  const urls = useMemo(() => (audioOk && data ? data.ayat.map((a) => a.audio || "") : []), [audioOk, data]);
+  const hasAudio = urls.some(Boolean);
+  const activeReciter = reciters?.find((r) => r.id === reciterId);
+
+  const isMine =
+    player.session?.origin === "teach" && player.session.mushafId === p.mushaf.id && player.session.surah === p.surah;
+  const activeIdx = isMine && player.session?.kind === "ayah" ? player.currentIndex : -1;
+  const playingHere = isMine && player.isPlaying;
+
+  const playFrom = (i: number) => {
+    if (!data || !urls[i]) return;
+    const ok = player.start(
+      {
+        kind: "ayah",
+        surah: p.surah,
+        surahName: p.surahName,
+        reciterId,
+        reciterName: activeReciter ? reciterName(activeReciter.reciter || activeReciter.name, p.lang) : undefined,
+        mushafId: p.mushaf.id,
+        urls,
+        origin: "teach",
+        stopAtEnd: true,
+      },
+      i
+    );
+    if (ok && repeat) player.setRepeatOne(true);
+  };
+  const onMainPlay = () => {
+    if (isMine) return player.toggle();
+    const first = urls.findIndex(Boolean);
+    if (first >= 0) playFrom(first);
+  };
+  const onRepeat = () => {
+    const v = !repeat;
+    setRepeat(v);
+    if (isMine) player.setRepeatOne(v);
+  };
+  const pickReciter = (id: number) => {
+    setShowReciters(false);
+    if (id === reciterId) return;
+    if (isMine) player.stop(); // audio lama milik qari sebelumnya
+    setReciterId(id);
+    AsyncStorage.setItem(`${RECITER_STORAGE_KEY}_${p.mushaf.rawi ?? "all"}`, String(id)).catch(() => {});
+  };
 
   const base = quranTextStyle(false);
   const arab = { ...base, fontSize: base.fontSize * p.scale, lineHeight: base.lineHeight * p.scale };
@@ -86,10 +178,22 @@ const RiwayatPanel = memo(function RiwayatPanel(p: PanelProps) {
     if (idx >= 0) listRef.current?.scrollToIndex({ index: idx, animated: true });
   };
 
+  // Ikuti ayat yang sedang dibaca
+  useEffect(() => {
+    if (activeIdx >= 0) {
+      try {
+        listRef.current?.scrollToIndex({ index: activeIdx, animated: true, viewPosition: 0.2 });
+      } catch {}
+    }
+  }, [activeIdx]);
+
   const missing = data?.info.ayatTidakLengkap ?? [];
 
   return (
-    <View className={`flex-1 rounded-3xl border overflow-hidden ${theme.border} ${theme.bgCard}`}>
+    <View
+      className={`flex-1 rounded-3xl overflow-hidden ${theme.bgCard} ${isMine ? (isDarkMode ? "border-emerald-500" : "border-emerald-700") : theme.border}`}
+      style={{ borderWidth: isMine ? 2 : 1 }}
+    >
       {/* Kepala panel: riwayat yang tampil + pilihan riwayat lain */}
       <Pressable
         onPress={() => setShowOptions((v) => !v)}
@@ -99,7 +203,14 @@ const RiwayatPanel = memo(function RiwayatPanel(p: PanelProps) {
         style={{ minHeight: 56 }}
       >
         <View className="flex-1">
-          <Text className={`text-[11px] font-bold ${theme.textMuted}`}>{t("cmpRiwayah")}</Text>
+          <View className="flex-row items-center gap-2">
+            <Text className={`text-[11px] font-bold ${theme.textMuted}`}>{t("cmpRiwayah")}</Text>
+            {playingHere && (
+              <View className="rounded-full px-2 py-0.5 bg-emerald-600">
+                <Text className="text-[10px] font-extrabold text-white">{t("cmpPlaying")}</Text>
+              </View>
+            )}
+          </View>
           <Text numberOfLines={1} className={`text-base font-extrabold ${theme.text}`}>
             {mushafTitle(p.mushaf, p.lang)}
           </Text>
@@ -127,6 +238,73 @@ const RiwayatPanel = memo(function RiwayatPanel(p: PanelProps) {
                 style={{ minHeight: 44 }}
               >
                 <Text className={`text-sm font-bold ${on ? "text-white" : theme.text}`}>{mushafTitle(m, p.lang)}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Baris audio: qari per-ayat riwayat ini + putar + ulangi */}
+      <View className={`flex-row items-center gap-2 px-3 py-2 border-b ${theme.border}`}>
+        {reciters === null ? (
+          <ActivityIndicator size="small" color={green} />
+        ) : reciters.length === 0 ? (
+          <Text className={`flex-1 text-xs ${theme.textMuted}`}>{t("cmpNoAyahAudio")}</Text>
+        ) : (
+          <>
+            <Pressable
+              onPress={onMainPlay}
+              disabled={!hasAudio}
+              accessibilityRole="button"
+              accessibilityLabel={playingHere ? t("cmpPause") : t("cmpPlay")}
+              className={`items-center justify-center rounded-full ${playingHere ? "bg-emerald-600" : isDarkMode ? "bg-emerald-700" : "bg-emerald-700"} ${!hasAudio ? "opacity-40" : ""}`}
+              style={{ width: 44, height: 44 }}
+            >
+              {playingHere ? <Pause size={18} color="#fff" /> : <Play size={18} color="#fff" />}
+            </Pressable>
+            <Pressable
+              onPress={() => setShowReciters((v) => !v)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showReciters }}
+              accessibilityLabel={t("cmpPickReciter")}
+              className={`flex-1 flex-row items-center gap-1 rounded-xl px-3 ${isDarkMode ? "bg-gray-800" : "bg-[#f3ecd9]"}`}
+              style={{ minHeight: 44 }}
+            >
+              <Text numberOfLines={1} className={`flex-1 text-sm font-semibold ${theme.text}`}>
+                {activeReciter ? reciterName(activeReciter.reciter || activeReciter.name, p.lang) : t("cmpPickReciter")}
+              </Text>
+              {showReciters ? <ChevronUp size={16} color={green} /> : <ChevronDown size={16} color={green} />}
+            </Pressable>
+            <Pressable
+              onPress={onRepeat}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: repeat }}
+              accessibilityLabel={t("cmpRepeat")}
+              className={`items-center justify-center rounded-full ${repeat ? "bg-amber-400" : isDarkMode ? "bg-gray-700" : "bg-gray-200"}`}
+              style={{ width: 44, height: 44 }}
+            >
+              <Repeat1 size={18} color={repeat ? "#022c22" : green} />
+            </Pressable>
+          </>
+        )}
+      </View>
+
+      {showReciters && !!reciters?.length && (
+        <View className={`flex-row flex-wrap gap-2 p-3 border-b ${theme.border}`}>
+          {reciters.map((r) => {
+            const on = r.id === reciterId;
+            return (
+              <Pressable
+                key={r.id}
+                onPress={() => pickReciter(r.id)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                className={`rounded-full px-4 justify-center ${on ? (isDarkMode ? "bg-emerald-600" : "bg-emerald-700") : isDarkMode ? "bg-gray-700" : "bg-[#f3ecd9]"}`}
+                style={{ minHeight: 44 }}
+              >
+                <Text className={`text-sm font-bold ${on ? "text-white" : theme.text}`}>
+                  {reciterName(r.reciter || r.name, p.lang)}
+                </Text>
               </Pressable>
             );
           })}
@@ -170,13 +348,27 @@ const RiwayatPanel = memo(function RiwayatPanel(p: PanelProps) {
           onScrollToIndexFailed={(info) => {
             listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
           }}
-          renderItem={({ item }) => (
-            <View className={`mb-3 rounded-2xl border px-4 py-3 ${theme.border}`}>
-              <View
-                className={`self-start rounded-full px-2.5 py-1 ${isDarkMode ? "bg-emerald-900/50" : "bg-[#f5f0e1]"}`}
+          extraData={activeIdx}
+          renderItem={({ item, index }) => (
+            <View
+              className={`mb-3 rounded-2xl border px-4 py-3 ${
+                index === activeIdx
+                  ? isDarkMode ? "border-emerald-500 bg-emerald-900/30" : "border-emerald-600 bg-emerald-50"
+                  : theme.border
+              }`}
+            >
+              {/* Ketuk nomor ayat = putar mulai ayat ini */}
+              <Pressable
+                onPress={() => playFrom(index)}
+                disabled={!urls[index]}
+                accessibilityRole="button"
+                accessibilityLabel={t("cmpPlayFrom", { n: item.nomor })}
+                hitSlop={8}
+                className={`self-start flex-row items-center gap-1 rounded-full px-2.5 py-1 ${isDarkMode ? "bg-emerald-900/50" : "bg-[#f5f0e1]"}`}
               >
+                {!!urls[index] && <Play size={10} color={green} />}
                 <Text className={`text-xs font-bold ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>{item.nomor}</Text>
-              </View>
+              </Pressable>
               <Text className={theme.text} style={arab}>
                 {item.teksArab}
               </Text>
@@ -202,6 +394,15 @@ export default function CompareRiwayat() {
   const [rightId, setRightId] = useState<string | null>(null);
   const [scaleIdx, setScaleIdx] = useState(0);
   const [showPicker, setShowPicker] = useState(false);
+
+  const player = usePlayer();
+  const playerRef = useRef(player);
+  playerRef.current = player;
+  const stopTeachAudio = useCallback(() => {
+    if (playerRef.current.session?.origin === "teach") playerRef.current.stop();
+  }, []);
+  // Keluar dari tab/layar: audio Mode Mengajar ikut berhenti
+  useEffect(() => stopTeachAudio, [stopTeachAudio]);
 
   const leftCtl = useRef<((n: number) => void) | null>(null);
   const rightCtl = useRef<((n: number) => void) | null>(null);
@@ -243,6 +444,7 @@ export default function CompareRiwayat() {
   const pickSurah = (n: number) => {
     setShowPicker(false);
     leftTopAyah.current = 1;
+    if (n !== surah) stopTeachAudio();
     setSurah(n);
   };
 
@@ -323,7 +525,11 @@ export default function CompareRiwayat() {
           blockedRiwayah={riwayahIdOfMushafRawi(right.rawi)}
           scale={SCALES[scaleIdx]}
           lang={lang}
-          onPickMushaf={setLeftId}
+          surahName={surahNames[surah] ?? `Surah ${surah}`}
+          onPickMushaf={(id) => {
+            if (player.session?.origin === "teach" && player.session.mushafId === leftId) player.stop();
+            setLeftId(id);
+          }}
           onTopAyah={onLeftTop}
           controlRef={leftCtl}
         />
@@ -334,7 +540,11 @@ export default function CompareRiwayat() {
           blockedRiwayah={riwayahIdOfMushafRawi(left.rawi)}
           scale={SCALES[scaleIdx]}
           lang={lang}
-          onPickMushaf={setRightId}
+          surahName={surahNames[surah] ?? `Surah ${surah}`}
+          onPickMushaf={(id) => {
+            if (player.session?.origin === "teach" && player.session.mushafId === rightId) player.stop();
+            setRightId(id);
+          }}
           controlRef={rightCtl}
         />
       </View>
