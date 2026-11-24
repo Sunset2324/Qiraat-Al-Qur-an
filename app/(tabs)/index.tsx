@@ -53,12 +53,12 @@ export default function DashboardScreen() {
   const hijri = formatHijri(now, locale);
   const goPicker = () => router.push("/screen/jadwal-shalat/jadwal-shalat");
 
-  type Feature = { key: string; label: string; route: string; icon?: any; Icon?: typeof BookMarked };
+  type Feature = { key: string; label: string; route: string; icon?: any; Icon?: typeof BookMarked; soon?: boolean };
   const FEATURES: Feature[] = [
     { key: "qiraat", label: t("featQiraat"), icon: require("../../assets/icons/qiraat.png"), route: "/screen/qiraat/qiraat" },
     { key: "dzikir", label: t("featDzikir"), icon: require("../../assets/icons/dzikir&doa.png"), route: "/screen/dzikir-doa/dzikir-doa" },
     { key: "prayer", label: t("featPrayer"), icon: require("../../assets/icons/jadwal-shalat.png"), route: "/screen/jadwal-shalat/jadwal-shalat" },
-    { key: "tajweed", label: t("featTajweed"), icon: require("../../assets/icons/tajweed.png"), route: "/screen/tajweed/tajweed" },
+    { key: "tajweed", label: t("featTajweed"), icon: require("../../assets/icons/tajweed.png"), route: "/screen/tajweed/tajweed", soon: true },
     { key: "thibbun", label: t("featThibbun"), icon: require("../../assets/icons/thibbun-nabawi.png"), route: "/screen/thibbun-nabawi/thibbun-nabawi" },
     { key: "ebook", label: t("featEbook"), Icon: BookMarked, route: "/screen/ebook/ebook" },
   ];
@@ -214,6 +214,11 @@ export default function DashboardScreen() {
                 <Text numberOfLines={2} className={`font-bold text-sm text-center ${theme.text}`}>
                   {f.label}
                 </Text>
+                {f.soon && (
+                  <View className="absolute top-2 right-2 rounded-full px-2 py-0.5 bg-amber-400">
+                    <Text className="text-[10px] font-extrabold text-emerald-950">{t("comingSoon")}</Text>
+                  </View>
+                )}
               </Pressable>
             ))}
             {isTablet && (
