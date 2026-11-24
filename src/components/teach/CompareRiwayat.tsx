@@ -1,8 +1,9 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, FlatList, ActivityIndicator, type ViewToken } from "react-native";
-import { ChevronDown, ChevronUp, Minus, Plus, ArrowLeftRight, Play, Pause, Repeat1, Highlighter, Undo2, Redo2, Trash2, Eraser } from "lucide-react-native";
+import { ChevronDown, ChevronUp, Minus, Plus, ArrowLeftRight, Play, Pause, Repeat1, Highlighter, Undo2, Redo2, Trash2, Eraser, PenLine, TriangleAlert } from "lucide-react-native";
 import MarkedAyah from "./MarkedAyah";
-import { applyMark, loadMarks, saveMarks, MARK_COLORS, type WordMark, type MarkType, type MarkColor } from "../../utils/teachMarks";
+import InkLayer from "./InkLayer";
+import { applyMark, loadAnnot, saveAnnot, MARK_COLORS, EMPTY_ANNOT, type WordMark, type InkStroke, type TeachAnnot, type MarkType, type MarkColor } from "../../utils/teachMarks";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { usePlayer } from "../../context/PlayerContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -59,9 +60,15 @@ interface PanelProps {
   onTopAyah?: (nomor: number) => void;
   /** Diisi panel: gulir ke ayat bernomor n (atau ayat berikutnya yang ada di riwayat ini). */
   controlRef: React.MutableRefObject<((n: number) => void) | null>;
-  // Tanda per kata
+  // Tanda per kata + tinta bebas
   marks: WordMark[];
+  ink: InkStroke[];
   markMode: boolean;
+  /** alat tinta yang aktif (null = alat tanda kata / mode baca) */
+  inkTool: "pen" | "erase" | null;
+  inkColor: MarkColor;
+  onStroke: (mushafId: string, s: InkStroke) => void;
+  onInkErase: (mushafId: string, ids: string[]) => void;
   /** kata awal rentang (tekan lama) di panel ini */
   pending: { ayah: number; idx: number } | null;
   onWord: (mushafId: string, ayah: number, idx: number) => void;
@@ -69,6 +76,70 @@ interface PanelProps {
 }
 
 const NO_MARKS: WordMark[] = [];
+const NO_INK: InkStroke[] = [];
+
+interface BodyProps {
+  ayah: number;
+  text: string;
+  marks: WordMark[];
+  ink: InkStroke[];
+  arab: any;
+  color: string;
+  markMode: boolean;
+  pendingIdx: number | null;
+  isRTL: boolean;
+  inkTool: "pen" | "erase" | null;
+  inkColor: MarkColor;
+  scale: number;
+  driftLabel: string;
+  onWord: (ayah: number, idx: number) => void;
+  onWordLong: (ayah: number, idx: number) => void;
+  onStroke: (s: InkStroke) => void;
+  onInkErase: (ids: string[]) => void;
+}
+
+/** Teks ayat (tanda per kata) + lapisan tinta bebas yang ukurannya mengikuti area teks. */
+const AyahBody = memo(function AyahBody(b: BodyProps) {
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  // Coretan dibuat dengan ukuran huruf / lebar berbeda -> bisa bergeser dari kata aslinya
+  const drift =
+    size.w > 0 && b.ink.some((s) => s.scale !== b.scale || Math.abs(s.cw - size.w) / size.w > 0.05);
+  return (
+    <View>
+      <View onLayout={(e) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+        <MarkedAyah
+          ayah={b.ayah}
+          text={b.text}
+          marks={b.marks}
+          arab={b.arab}
+          color={b.color}
+          markMode={b.markMode && !b.inkTool}
+          pendingIdx={b.pendingIdx}
+          isRTL={b.isRTL}
+          onWord={b.onWord}
+          onWordLong={b.onWordLong}
+        />
+        <InkLayer
+          ayah={b.ayah}
+          strokes={b.ink}
+          width={size.w}
+          height={size.h}
+          active={b.inkTool}
+          color={b.inkColor}
+          scale={b.scale}
+          onStroke={b.onStroke}
+          onErase={b.onInkErase}
+        />
+      </View>
+      {drift && (
+        <View className="flex-row items-center gap-1 self-start rounded-full px-2 py-0.5 bg-amber-100">
+          <TriangleAlert size={12} color="#b45309" />
+          <Text className="text-[11px] font-semibold text-amber-800">{b.driftLabel}</Text>
+        </View>
+      )}
+    </View>
+  );
+});
 
 const RiwayatPanel = memo(function RiwayatPanel(p: PanelProps) {
   const { isDarkMode, theme } = useTheme();
@@ -78,7 +149,18 @@ const RiwayatPanel = memo(function RiwayatPanel(p: PanelProps) {
     for (const m of p.marks) map.set(m.ayah, [...(map.get(m.ayah) ?? []), m]);
     return map;
   }, [p.marks]);
+  const inkByAyah = useMemo(() => {
+    const map = new Map<number, InkStroke[]>();
+    for (const s of p.ink) map.set(s.ayah, [...(map.get(s.ayah) ?? []), s]);
+    return map;
+  }, [p.ink]);
   const mushafId = p.mushaf.id;
+  const onStrokeRef = useRef(p.onStroke);
+  onStrokeRef.current = p.onStroke;
+  const onInkEraseRef = useRef(p.onInkErase);
+  onInkEraseRef.current = p.onInkErase;
+  const handleStroke = useCallback((s: InkStroke) => onStrokeRef.current(mushafId, s), [mushafId]);
+  const handleInkErase = useCallback((ids: string[]) => onInkEraseRef.current(mushafId, ids), [mushafId]);
   const onWordRef = useRef(p.onWord);
   onWordRef.current = p.onWord;
   const onWordLongRef = useRef(p.onWordLong);
@@ -371,7 +453,9 @@ const RiwayatPanel = memo(function RiwayatPanel(p: PanelProps) {
           onScrollToIndexFailed={(info) => {
             listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
           }}
-          extraData={`${activeIdx}|${p.markMode}|${p.pending?.ayah}:${p.pending?.idx}|${p.marks.length}|${p.marks.at(-1)?.id ?? ""}`}
+          // Saat alat tinta aktif, jari dipakai untuk menggambar: gulir dimatikan
+          scrollEnabled={!p.inkTool}
+          extraData={`${activeIdx}|${p.markMode}|${p.inkTool}|${p.inkColor}|${p.scale}|${p.pending?.ayah}:${p.pending?.idx}|${p.marks.length}|${p.marks.at(-1)?.id ?? ""}|${p.ink.length}|${p.ink.at(-1)?.id ?? ""}`}
           renderItem={({ item, index }) => (
             <View
               className={`mb-3 rounded-2xl border px-4 py-3 ${
@@ -392,17 +476,24 @@ const RiwayatPanel = memo(function RiwayatPanel(p: PanelProps) {
                 {!!urls[index] && <Play size={10} color={green} />}
                 <Text className={`text-xs font-bold ${isDarkMode ? "text-emerald-300" : "text-emerald-800"}`}>{item.nomor}</Text>
               </Pressable>
-              <MarkedAyah
+              <AyahBody
                 ayah={item.nomor}
                 text={item.teksArab}
                 marks={marksByAyah.get(item.nomor) ?? NO_MARKS}
+                ink={inkByAyah.get(item.nomor) ?? NO_INK}
                 arab={arab}
                 color={isDarkMode ? "#f3f4f6" : "#022c22"}
                 markMode={p.markMode}
                 pendingIdx={p.pending?.ayah === item.nomor ? p.pending.idx : null}
                 isRTL={isRTL}
+                inkTool={p.inkTool}
+                inkColor={p.inkColor}
+                scale={p.scale}
+                driftLabel={t("inkDrift")}
                 onWord={handleWord}
                 onWordLong={handleWordLong}
+                onStroke={handleStroke}
+                onInkErase={handleInkErase}
               />
             </View>
           )}
@@ -438,16 +529,16 @@ export default function CompareRiwayat() {
 
   // ── Tanda per kata (disimpan di perangkat per surah per riwayat) ──
   const [markMode, setMarkMode] = useState(false);
-  const [tool, setTool] = useState<MarkType | "erase">("underline");
+  const [tool, setTool] = useState<MarkType | "erase" | "pen" | "inkErase">("underline");
   const [color, setColor] = useState<MarkColor>("red");
-  const [marksBy, setMarksBy] = useState<Record<string, WordMark[]>>({});
+  const [annotBy, setAnnotBy] = useState<Record<string, TeachAnnot>>({});
   const [pending, setPending] = useState<{ mushafId: string; ayah: number; idx: number } | null>(null);
-  type Step = { mushafId: string; before: WordMark[]; after: WordMark[] };
+  type Step = { mushafId: string; before: TeachAnnot; after: TeachAnnot };
   const [undoStack, setUndoStack] = useState<Step[]>([]);
   const [redoStack, setRedoStack] = useState<Step[]>([]);
   const [confirmClear, setConfirmClear] = useState(false);
-  const marksRef = useRef(marksBy);
-  marksRef.current = marksBy;
+  const annotRef = useRef(annotBy);
+  annotRef.current = annotBy;
   const surahRef = useRef(surah);
   surahRef.current = surah;
 
@@ -455,9 +546,9 @@ export default function CompareRiwayat() {
   useEffect(() => {
     let alive = true;
     const ids = [leftId, rightId].filter(Boolean) as string[];
-    Promise.all(ids.map((id) => loadMarks(surah, id).then((m) => [id, m] as const))).then((pairs) => {
+    Promise.all(ids.map((id) => loadAnnot(surah, id).then((a) => [id, a] as const))).then((pairs) => {
       if (!alive) return;
-      setMarksBy(Object.fromEntries(pairs));
+      setAnnotBy(Object.fromEntries(pairs));
       setUndoStack([]);
       setRedoStack([]);
       setPending(null);
@@ -467,10 +558,11 @@ export default function CompareRiwayat() {
     };
   }, [surah, leftId, rightId]);
 
-  const commit = useCallback((mushafId: string, after: WordMark[], record = true) => {
-    const before = marksRef.current[mushafId] ?? [];
-    setMarksBy((m) => ({ ...m, [mushafId]: after }));
-    saveMarks(surahRef.current, mushafId, after);
+  const commit = useCallback((mushafId: string, after: TeachAnnot, record = true) => {
+    const before = annotRef.current[mushafId] ?? EMPTY_ANNOT;
+    annotRef.current = { ...annotRef.current, [mushafId]: after };
+    setAnnotBy((m) => ({ ...m, [mushafId]: after }));
+    saveAnnot(surahRef.current, mushafId, after);
     if (record) {
       setUndoStack((u) => [...u.slice(-49), { mushafId, before, after }]);
       setRedoStack([]);
@@ -488,10 +580,28 @@ export default function CompareRiwayat() {
       const start = pd && pd.mushafId === mushafId && pd.ayah === ayah ? pd.idx : idx;
       setPending(null);
       const { tool: tl, color: cl } = toolRef.current;
-      commit(mushafId, applyMark(marksRef.current[mushafId] ?? [], ayah, start, idx, tl, cl));
+      if (tl === "pen" || tl === "inkErase") return;
+      const cur = annotRef.current[mushafId] ?? EMPTY_ANNOT;
+      commit(mushafId, { ...cur, marks: applyMark(cur.marks, ayah, start, idx, tl, cl) });
     },
     [commit]
   );
+  const onStroke = useCallback(
+    (mushafId: string, st: InkStroke) => {
+      const cur = annotRef.current[mushafId] ?? EMPTY_ANNOT;
+      commit(mushafId, { ...cur, ink: [...cur.ink, st] });
+    },
+    [commit]
+  );
+  const onInkErase = useCallback(
+    (mushafId: string, ids: string[]) => {
+      const cur = annotRef.current[mushafId] ?? EMPTY_ANNOT;
+      const ink = cur.ink.filter((s) => !ids.includes(s.id));
+      if (ink.length !== cur.ink.length) commit(mushafId, { ...cur, ink });
+    },
+    [commit]
+  );
+  const inkTool: "pen" | "erase" | null = markMode ? (tool === "pen" ? "pen" : tool === "inkErase" ? "erase" : null) : null;
   const onWordLong = useCallback((mushafId: string, ayah: number, idx: number) => {
     setPending({ mushafId, ayah, idx });
   }, []);
@@ -519,9 +629,12 @@ export default function CompareRiwayat() {
   const clearAll = () => {
     if (!confirmClear) return setConfirmClear(true);
     setConfirmClear(false);
-    for (const id of Object.keys(marksRef.current)) if ((marksRef.current[id] ?? []).length) commit(id, []);
+    for (const id of Object.keys(annotRef.current)) {
+      const a = annotRef.current[id];
+      if (a && (a.marks.length || a.ink.length)) commit(id, EMPTY_ANNOT);
+    }
   };
-  const totalMarks = Object.values(marksBy).reduce((n, m) => n + m.length, 0);
+  const totalMarks = Object.values(annotBy).reduce((n, a) => n + a.marks.length + a.ink.length, 0);
 
   const leftCtl = useRef<((n: number) => void) | null>(null);
   const rightCtl = useRef<((n: number) => void) | null>(null);
@@ -659,6 +772,8 @@ export default function CompareRiwayat() {
                 ["strike", "mkStrike"],
                 ["box", "mkBox"],
                 ["erase", "mkErase"],
+                ["pen", "inkPen"],
+                ["inkErase", "inkErase"],
               ] as const
             ).map(([k, label]) => {
               const on = tool === k;
@@ -671,7 +786,8 @@ export default function CompareRiwayat() {
                   className={`flex-row items-center gap-1 rounded-full px-4 justify-center ${on ? (isDarkMode ? "bg-emerald-600" : "bg-emerald-700") : isDarkMode ? "bg-gray-700" : "bg-[#f3ecd9]"}`}
                   style={{ minHeight: 44 }}
                 >
-                  {k === "erase" && <Eraser size={14} color={on ? "#fff" : green} />}
+                  {(k === "erase" || k === "inkErase") && <Eraser size={14} color={on ? "#fff" : green} />}
+                  {k === "pen" && <PenLine size={14} color={on ? "#fff" : green} />}
                   <Text className={`text-sm font-bold ${on ? "text-white" : theme.text}`}>{t(label)}</Text>
                 </Pressable>
               );
@@ -683,12 +799,12 @@ export default function CompareRiwayat() {
               <Pressable
                 key={c}
                 onPress={() => setColor(c)}
-                disabled={tool === "erase"}
+                disabled={tool === "erase" || tool === "inkErase"}
                 accessibilityRole="button"
                 accessibilityLabel={t(c === "red" ? "mkRed" : c === "green" ? "mkGreen" : "mkBlue")}
                 accessibilityState={{ selected: color === c }}
                 className="items-center justify-center"
-                style={{ width: 44, height: 44, opacity: tool === "erase" ? 0.35 : 1 }}
+                style={{ width: 44, height: 44, opacity: tool === "erase" || tool === "inkErase" ? 0.35 : 1 }}
               >
                 <View
                   style={{
@@ -726,7 +842,7 @@ export default function CompareRiwayat() {
               </Text>
             </Pressable>
           </View>
-          <Text className={`text-xs mt-1.5 ${theme.textMuted}`}>{pending ? t("mkRangeHint") : t("mkHint")}</Text>
+          <Text className={`text-xs mt-1.5 ${theme.textMuted}`}>{inkTool === "pen" ? t("inkHint") : inkTool === "erase" ? t("inkEraseHint") : pending ? t("mkRangeHint") : t("mkHint")}</Text>
         </View>
       )}
 
@@ -746,7 +862,12 @@ export default function CompareRiwayat() {
           }}
           onTopAyah={onLeftTop}
           controlRef={leftCtl}
-          marks={marksBy[left.id] ?? NO_MARKS}
+          marks={annotBy[left.id]?.marks ?? NO_MARKS}
+          ink={annotBy[left.id]?.ink ?? NO_INK}
+          inkTool={inkTool}
+          inkColor={color}
+          onStroke={onStroke}
+          onInkErase={onInkErase}
           markMode={markMode}
           pending={pending?.mushafId === left.id ? pending : null}
           onWord={onWord}
@@ -765,7 +886,12 @@ export default function CompareRiwayat() {
             setRightId(id);
           }}
           controlRef={rightCtl}
-          marks={marksBy[right.id] ?? NO_MARKS}
+          marks={annotBy[right.id]?.marks ?? NO_MARKS}
+          ink={annotBy[right.id]?.ink ?? NO_INK}
+          inkTool={inkTool}
+          inkColor={color}
+          onStroke={onStroke}
+          onInkErase={onInkErase}
           markMode={markMode}
           pending={pending?.mushafId === right.id ? pending : null}
           onWord={onWord}
